@@ -1,17 +1,9 @@
 import {ref} from 'vue';
 import type {Ref} from 'vue';
 import axios, {type AxiosResponse, type AxiosError} from 'axios'; // 导入 axios 及相关类型
+import type { ApiResponse } from '~/types/api'; // 从共享文件导入
 
-// 定义API响应的通用结构
-export interface ApiResponse<T = any> { // 使用 any 作为默认泛型，可以根据需要具体化
-    success: boolean;
-    message?: string;
-    data?: T;
-    error?: string;
-}
 
-// 占位符：获取认证令牌的函数
-// 在实际应用中，这应该从你的 useAuth composable 或其他安全存储中获取
 const getAuthToken = (): string | null => {
     if (typeof localStorage !== 'undefined') {
         return localStorage.getItem('authToken');

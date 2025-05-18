@@ -107,8 +107,7 @@
 
 <script setup lang="ts">
 import {ref, watch, reactive} from 'vue';
-import type {PropType} from 'vue';
-
+import type { PropType } from 'vue';
 type EditModeType = 'username' | 'email' | 'password';
 
 interface EditableValues {
@@ -129,7 +128,7 @@ const props = defineProps({
     required: true,
   },
   editMode: {
-    type: String as PropType<EditModeType | null>,
+    type: String as PropType<EditModeType | null>, // 允许 null
     required: true,
   },
   initialUsername: {
@@ -154,7 +153,7 @@ const props = defineProps({
   }
 });
 
-const emit = defineEmits(['close', 'save', 'clearApiMessages']); // 添加 clearApiMessages 事件
+const emit = defineEmits(['close', 'save', 'clearApiMessages']);
 
 const editableValue = reactive<EditableValues>({
   username: '',
@@ -164,31 +163,23 @@ const editableValue = reactive<EditableValues>({
   confirmNewPassword: '',
 });
 
-const clientValidationError = ref<string | null>(null); // 新增：用于存储客户端校验错误
+const clientValidationError = ref<string | null>(null);
 
 watch(() => props.isOpen, (newVal) => {
   if (newVal) {
     clientValidationError.value = null; // 打开模态框时清除客户端错误
-    emit('clearApiMessages'); // 请求父组件清除API消息
+    emit('clearApiMessages');         // 请求父组件清除API消息
     if (props.editMode === 'username') {
       editableValue.username = props.initialUsername;
     } else if (props.editMode === 'email') {
       editableValue.email = props.initialEmail;
     }
+    // 重置密码字段
     editableValue.currentPassword = '';
     editableValue.newPassword = '';
     editableValue.confirmNewPassword = '';
   }
 });
-
-// 当用户开始编辑时，清除客户端校验错误
-watch(editableValue, () => {
-  if (clientValidationError.value) {
-    clientValidationError.value = null;
-  }
-  // 当用户编辑时，也可以考虑清除从父组件传递过来的API错误和成功消息
-  // emit('clearApiMessages'); // 或者仅在特定条件下清除
-}, {deep: true});
 
 
 const handleClose = () => {
@@ -200,7 +191,7 @@ const handleClose = () => {
 const handleSubmit = () => {
   if (props.isLoading) return;
   clientValidationError.value = null; // 提交前清除上一次的客户端错误
-  emit('clearApiMessages'); // 提交前清除API消息，避免新旧消息混淆
+  emit('clearApiMessages');         // 提交前也清除API消息
 
   let validationPassed = true;
   let tempValidationMessage = '';
@@ -209,7 +200,7 @@ const handleSubmit = () => {
     if (!editableValue.username.trim()) {
       tempValidationMessage = "新用户名不能为空。";
       validationPassed = false;
-    } else if (editableValue.username.trim().length < 3) { // 示例：用户名最小长度
+    } else if (editableValue.username.trim().length < 3) {
       tempValidationMessage = "新用户名长度至少需要3位。";
       validationPassed = false;
     }
@@ -230,7 +221,7 @@ const handleSubmit = () => {
       validationPassed = false;
     } else {
       const newPass = editableValue.newPassword;
-      const minLength = 8; // 与后端 password.put.js 中的 MIN_PASSWORD_LENGTH 一致
+      const minLength = 8;
       if (newPass.length < minLength) {
         tempValidationMessage = `新密码长度至少需要 ${minLength} 位。`;
         validationPassed = false;
@@ -255,7 +246,7 @@ const handleSubmit = () => {
 
   if (!validationPassed && tempValidationMessage) {
     clientValidationError.value = tempValidationMessage; // 设置客户端错误信息
-    return; // 阻止事件冒泡和后续操作，模态框保持打开
+    return; // 模态框保持打开，错误信息会显示
   }
 
   // 如果客户端校验通过，则触发 save 事件
