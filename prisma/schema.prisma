@@ -1,0 +1,21 @@
+// prisma/schema.prisma
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite" // 你在初始化时选择的数据库类型
+  url      = env("DATABASE_URL") // 从 .env 文件读取
+}
+
+model User {
+  id        String   @id @default(cuid()) // 主键，使用 CUID 作为默认值
+  email     String   @unique // 邮箱，必须唯一
+  username  String   @unique // 用户名，必须唯一
+  password  String // 存储哈希后的密码
+  createdAt DateTime @default(now()) // 用户创建时间
+  updatedAt DateTime @updatedAt // 用户信息更新时间
+
+  @@map("users") // 可选：指定数据库中的表名为 'users'
+}
