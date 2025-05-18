@@ -3,8 +3,8 @@
     <h2 class="title">用户登录</h2>
 
     <div
-v-if="serverMessage"
-         :class="['server-message', messageType === 'error' ? 'error-message' : 'success-message']">
+        v-if="serverMessage"
+        :class="['server-message', messageType === 'error' ? 'error-message' : 'success-message']">
       {{ serverMessage }}
     </div>
 
@@ -12,14 +12,14 @@ v-if="serverMessage"
       <div class="form-group">
         <label for="username">用户名或邮箱</label>
         <input
-id="username" v-model="username" type="text" :disabled="auth.isLoadingAuth.value" required
-               placeholder="请输入用户名或邮箱">
+            id="username" v-model="username" type="text" :disabled="auth.isLoadingAuth.value" required
+            placeholder="请输入用户名或邮箱">
       </div>
       <div class="form-group">
         <label for="password">密码</label>
         <input
-id="password" v-model="password" type="password" :disabled="auth.isLoadingAuth.value" required
-               placeholder="请输入密码">
+            id="password" v-model="password" type="password" :disabled="auth.isLoadingAuth.value" required
+            placeholder="请输入密码">
       </div>
       <button type="submit" class="submit-button" :disabled="auth.isLoadingAuth.value">
         {{ auth.isLoadingAuth.value ? '登录中...' : '登录' }}
