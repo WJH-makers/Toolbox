@@ -14,25 +14,25 @@
           title="日常领域"
           :domain-data="dailyLifeDomain"
           :is-loading="isLoadingData"
-          class="quadrant top-left"
+          class="quadrant"
       />
       <QuadrantCard
           title="学习领域"
           :domain-data="learningDomain"
           :is-loading="isLoadingData"
-          class="quadrant top-right"
+          class="quadrant"
       />
       <QuadrantCard
           title="金融领域"
           :domain-data="financeDomain"
           :is-loading="isLoadingData"
-          class="quadrant bottom-left"
+          class="quadrant"
       />
       <QuadrantCard
           title="编程领域"
           :domain-data="programmingDomain"
           :is-loading="isLoadingData"
-          class="quadrant bottom-right"
+          class="quadrant"
       />
     </div>
   </div>
@@ -55,7 +55,7 @@ const fetchAllToolData = async () => {
     allDomains.value = [
       {
         id: 'daily_life', name: '日常领域', description: '提升生活品质与效率', icon: 'ph:house-line-bold',
-        tools: [ /* ... tools data ... */
+        tools: [
           {id: 'todo', name: '待办清单', usage: 230, description: '高效管理每日任务', path: '/tools/daily/todo'},
           {
             id: 'recipe_finder',
@@ -75,7 +75,7 @@ const fetchAllToolData = async () => {
       },
       {
         id: 'finance', name: '金融领域', description: '理财规划与金融计算', icon: 'ph:bank-bold',
-        tools: [ /* ... tools data ... */
+        tools: [
           {
             id: 'currency_converter',
             name: '汇率转换',
@@ -101,7 +101,7 @@ const fetchAllToolData = async () => {
       },
       {
         id: 'learning', name: '学习领域', description: '助力知识获取与技能提升', icon: 'ph:student-bold',
-        tools: [ /* ... tools data ... */
+        tools: [
           {
             id: 'mind_map',
             name: '思维导图',
@@ -127,7 +127,7 @@ const fetchAllToolData = async () => {
       },
       {
         id: 'programming', name: '编程领域', description: '开发者实用工具集', icon: 'ph:code-bold',
-        tools: [ /* ... tools data ... */
+        tools: [
           {
             id: 'json_formatter',
             name: 'JSON格式化',
@@ -182,7 +182,7 @@ const programmingDomain = computed(() => allDomains.value.find(d => d.id === 'pr
   padding: 2rem 1rem;
   box-sizing: border-box;
   color: var(--color-text);
-  overflow: hidden;
+  /* overflow: hidden; */ /* Removed to allow page scrolling */
 }
 
 .toolbox-header-minimal {
@@ -200,11 +200,11 @@ const programmingDomain = computed(() => allDomains.value.find(d => d.id === 'pr
 
 .large-frosted-glass-container {
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  grid-template-rows: repeat(2, auto);
+  grid-template-columns: 1fr; /* Changed for 1x4 layout */
+  /* grid-template-rows: repeat(2, auto); */ /* Removed or change to repeat(4, auto) */
   gap: 25px;
   width: 100%;
-  max-width: 1100px;
+  max-width: 1100px; /* You might want to adjust max-width for a single column layout if it looks too narrow */
   padding: 25px;
   box-sizing: border-box;
   background-color: var(--glass-bg-large);
@@ -217,6 +217,7 @@ const programmingDomain = computed(() => allDomains.value.find(d => d.id === 'pr
 
 .quadrant {
 }
+
 .global-error-message {
   width: 100%;
   max-width: 600px;
@@ -268,7 +269,7 @@ const programmingDomain = computed(() => allDomains.value.find(d => d.id === 'pr
   }
 
   .large-frosted-glass-container {
-    grid-template-columns: 1fr;
+    /* grid-template-columns: 1fr; Already 1fr by default now */
     gap: 20px;
     padding: 15px;
   }

@@ -3,75 +3,25 @@
     <div v-if="isOpen" class="confirm-modal-overlay" @click.self="handleClose">
       <div class="confirm-modal edit-profile-modal">
         <h4 class="modal-title">{{ title }}</h4>
-        <template>
-          <transition name="modal-fade">
-            <div v-if="isOpen" class="confirm-modal-overlay" @click.self="handleClose">
-              <div class="confirm-modal edit-profile-modal">
-                <h4 class="modal-title">{{ title }}</h4>
 
-                <div v-if="clientValidationError" class="server-message error-message">{{ clientValidationError }}</div>
-
-                <div v-if="apiError && !clientValidationError" class="server-message error-message">{{ apiError }}</div>
-                <div v-if="apiSuccessMessage && !clientValidationError" class="server-message success-message">
-                  {{ apiSuccessMessage }}
-                </div>
-
-                <form @submit.prevent="handleSubmit">
-                  <div v-if="editMode === 'username'" class="form-group">
-                    <label for="editValueUsername">新用户名:</label>
-                    <input
-                        id="editValueUsername" v-model="editableValue.username" type="text" :disabled="isLoading"
-                        required>
-                  </div>
-                  <div v-if="editMode === 'email'" class="form-group">
-                    <label for="editValueEmail">新邮箱:</label>
-                    <input
-                        id="editValueEmail" v-model="editableValue.email" type="email" :disabled="isLoading"
-                        required>
-                  </div>
-                  <div v-if="editMode === 'password'">
-                    <div class="form-group">
-                      <label for="currentPasswordModal">当前密码:</label>
-                      <input
-                          id="currentPasswordModal" v-model="editableValue.currentPassword" type="password"
-                          :disabled="isLoading" required>
-                    </div>
-                    <div class="form-group">
-                      <label for="newPasswordModal">新密码:</label>
-                      <input
-                          id="newPasswordModal" v-model="editableValue.newPassword" type="password"
-                          :disabled="isLoading"
-                          required>
-                    </div>
-                    <div class="form-group">
-                      <label for="confirmNewPasswordModal">确认新密码:</label>
-                      <input
-                          id="confirmNewPasswordModal" v-model="editableValue.confirmNewPassword" type="password"
-                          :disabled="isLoading" required>
-                    </div>
-                  </div>
-                  <div class="modal-actions">
-                    <button type="button" class="button-cancel" :disabled="isLoading" @click="handleClose">取消</button>
-                    <button type="submit" class="button-save" :disabled="isLoading">
-                      {{ isLoading ? '保存中...' : '保存更改' }}
-                    </button>
-                  </div>
-                </form>
-              </div>
-            </div>
-          </transition>
-        </template>
-        <div v-if="apiError" class="server-message error-message">{{ apiError }}</div>
-        <div v-if="apiSuccessMessage" class="server-message success-message">{{ apiSuccessMessage }}</div>
+        <div v-if="clientValidationError" class="server-message error-message">{{ clientValidationError }}</div>
+        <div v-if="apiError && !clientValidationError" class="server-message error-message">{{ apiError }}</div>
+        <div v-if="apiSuccessMessage && !clientValidationError" class="server-message success-message">
+          {{ apiSuccessMessage }}
+        </div>
 
         <form @submit.prevent="handleSubmit">
           <div v-if="editMode === 'username'" class="form-group">
             <label for="editValueUsername">新用户名:</label>
-            <input id="editValueUsername" v-model="editableValue.username" type="text" :disabled="isLoading" required>
+            <input
+                id="editValueUsername" v-model="editableValue.username" type="text" :disabled="isLoading"
+                required>
           </div>
           <div v-if="editMode === 'email'" class="form-group">
             <label for="editValueEmail">新邮箱:</label>
-            <input id="editValueEmail" v-model="editableValue.email" type="email" :disabled="isLoading" required>
+            <input
+                id="editValueEmail" v-model="editableValue.email" type="email" :disabled="isLoading"
+                required>
           </div>
           <div v-if="editMode === 'password'">
             <div class="form-group">
@@ -83,7 +33,8 @@
             <div class="form-group">
               <label for="newPasswordModal">新密码:</label>
               <input
-                  id="newPasswordModal" v-model="editableValue.newPassword" type="password" :disabled="isLoading"
+                  id="newPasswordModal" v-model="editableValue.newPassword" type="password"
+                  :disabled="isLoading"
                   required>
             </div>
             <div class="form-group">
@@ -107,7 +58,8 @@
 
 <script setup lang="ts">
 import {ref, watch, reactive} from 'vue';
-import type { PropType } from 'vue';
+import type {PropType} from 'vue';
+
 type EditModeType = 'username' | 'email' | 'password';
 
 interface EditableValues {
@@ -128,7 +80,7 @@ const props = defineProps({
     required: true,
   },
   editMode: {
-    type: String as PropType<EditModeType | null>, // 允许 null
+    type: String as PropType<EditModeType | null>,
     required: true,
   },
   initialUsername: {
@@ -167,14 +119,14 @@ const clientValidationError = ref<string | null>(null);
 
 watch(() => props.isOpen, (newVal) => {
   if (newVal) {
-    clientValidationError.value = null; // 打开模态框时清除客户端错误
-    emit('clearApiMessages');         // 请求父组件清除API消息
+    clientValidationError.value = null;
+    emit('clearApiMessages');
     if (props.editMode === 'username') {
       editableValue.username = props.initialUsername;
-    } else if (props.editMode === 'email') {
+    }
+    if (props.editMode === 'email') {
       editableValue.email = props.initialEmail;
     }
-    // 重置密码字段
     editableValue.currentPassword = '';
     editableValue.newPassword = '';
     editableValue.confirmNewPassword = '';
@@ -190,82 +142,82 @@ const handleClose = () => {
 
 const handleSubmit = () => {
   if (props.isLoading) return;
-  clientValidationError.value = null; // 提交前清除上一次的客户端错误
-  emit('clearApiMessages');         // 提交前也清除API消息
-
-  let validationPassed = true;
-  let tempValidationMessage = '';
+  clientValidationError.value = null;
+  emit('clearApiMessages');
 
   if (props.editMode === 'username') {
     if (!editableValue.username.trim()) {
-      tempValidationMessage = "新用户名不能为空。";
-      validationPassed = false;
-    } else if (editableValue.username.trim().length < 3) {
-      tempValidationMessage = "新用户名长度至少需要3位。";
-      validationPassed = false;
+      clientValidationError.value = "新用户名不能为空。";
+      return;
     }
-  } else if (props.editMode === 'email') {
+    if (editableValue.username.trim().length < 3) {
+      clientValidationError.value = "新用户名长度至少需要3位。";
+      return;
+    }
+  }
+
+  if (props.editMode === 'email') {
     if (!editableValue.email.trim() || !/^\S+@\S+\.\S+$/.test(editableValue.email)) {
-      tempValidationMessage = "请输入有效的邮箱地址。";
-      validationPassed = false;
+      clientValidationError.value = "请输入有效的邮箱地址。";
+      return;
     }
-  } else if (props.editMode === 'password') {
+  }
+
+  if (props.editMode === 'password') {
     if (!editableValue.currentPassword?.trim()) {
-      tempValidationMessage = "当前密码不能为空。";
-      validationPassed = false;
-    } else if (!editableValue.newPassword?.trim()) {
-      tempValidationMessage = "新密码不能为空。";
-      validationPassed = false;
-    } else if (editableValue.newPassword !== editableValue.confirmNewPassword) {
-      tempValidationMessage = "新密码和确认密码不匹配。";
-      validationPassed = false;
-    } else {
-      const newPass = editableValue.newPassword;
-      const minLength = 8;
-      if (newPass.length < minLength) {
-        tempValidationMessage = `新密码长度至少需要 ${minLength} 位。`;
-        validationPassed = false;
-      } else {
-        const hasUpperCase = /[A-Z]/.test(newPass);
-        const hasLowerCase = /[a-z]/.test(newPass);
-        const hasNumber = /[0-9]/.test(newPass);
-        const strengthErrors = [];
-        if (!hasUpperCase) strengthErrors.push('大写字母');
-        if (!hasLowerCase) strengthErrors.push('小写字母');
-        if (!hasNumber) strengthErrors.push('数字');
-        if (strengthErrors.length > 0) {
-          tempValidationMessage = `新密码必须至少包含：${strengthErrors.join('、')}。`;
-          validationPassed = false;
-        } else if (editableValue.currentPassword === newPass) {
-          tempValidationMessage = '新密码不能与当前密码相同。';
-          validationPassed = false;
-        }
-      }
+      clientValidationError.value = "当前密码不能为空。";
+      return;
+    }
+    if (!editableValue.newPassword?.trim()) {
+      clientValidationError.value = "新密码不能为空。";
+      return;
+    }
+    if (editableValue.newPassword !== editableValue.confirmNewPassword) {
+      clientValidationError.value = "新密码和确认密码不匹配。";
+      return;
+    }
+    const newPass = editableValue.newPassword;
+    const minLength = 8;
+    if (newPass.length < minLength) {
+      clientValidationError.value = `新密码长度至少需要 ${minLength} 位。`;
+      return;
+    }
+    const hasUpperCase = /[A-Z]/.test(newPass);
+    const hasLowerCase = /[a-z]/.test(newPass);
+    const hasNumber = /[0-9]/.test(newPass);
+    const strengthErrors = [];
+    if (!hasUpperCase) strengthErrors.push('大写字母');
+    if (!hasLowerCase) strengthErrors.push('小写字母');
+    if (!hasNumber) strengthErrors.push('数字');
+    if (strengthErrors.length > 0) {
+      clientValidationError.value = `新密码必须至少包含：${strengthErrors.join('、')}。`;
+      return;
+    }
+    if (editableValue.currentPassword === newPass) {
+      clientValidationError.value = '新密码不能与当前密码相同。';
+      return;
     }
   }
 
-  if (!validationPassed && tempValidationMessage) {
-    clientValidationError.value = tempValidationMessage; // 设置客户端错误信息
-    return; // 模态框保持打开，错误信息会显示
-  }
-
-  // 如果客户端校验通过，则触发 save 事件
+  let payload: any = {};
   if (props.editMode === 'username') {
-    emit('save', {mode: props.editMode, value: editableValue.username.trim()});
-  } else if (props.editMode === 'email') {
-    emit('save', {mode: props.editMode, value: editableValue.email.trim()});
-  } else if (props.editMode === 'password') {
-    emit('save', {
+    payload = {mode: props.editMode, value: editableValue.username.trim()};
+  }
+  if (props.editMode === 'email') {
+    payload = {mode: props.editMode, value: editableValue.email.trim()};
+  }
+  if (props.editMode === 'password') {
+    payload = {
       mode: props.editMode,
       currentPassword: editableValue.currentPassword,
       newPassword: editableValue.newPassword,
-    });
+    };
   }
+  emit('save', payload);
 };
 </script>
 
 <style scoped>
-/* 从 UserProfileSettings.vue 复制并调整模态框相关样式 */
 .confirm-modal-overlay {
   position: fixed;
   top: 0;
@@ -404,7 +356,6 @@ const handleSubmit = () => {
   border: 1px solid var(--success-border-color);
 }
 
-/* 过渡动画 (与 UserProfileSettings.vue 中的 modal-fade 一致) */
 .modal-fade-enter-active, .modal-fade-leave-active {
   transition: opacity 0.25s ease;
 }

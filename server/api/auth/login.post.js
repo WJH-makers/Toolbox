@@ -33,7 +33,6 @@ export default defineEventHandler(async (event) => {
             setResponseStatus(event, 401);
             return {success: false, message: '用户不存在或密码错误'};
         }
-
         // 创建不包含密码的用户信息对象
         const userResponse = {
             id: user.id,
@@ -41,7 +40,6 @@ export default defineEventHandler(async (event) => {
             email: user.email,
             createdAt: user.createdAt,
             updatedAt: user.updatedAt,
-            // avatarUrl: user.avatarUrl, // 如果你的模型中有这个字段
         };
 
         const token = jwt.sign(
@@ -67,7 +65,6 @@ export default defineEventHandler(async (event) => {
 
     } catch (error) {
         console.error('登录时发生错误:', error);
-        // 确保错误时也返回一致的结构（如果适用）
         let errorMessage = '服务器内部错误，登录失败';
         if (error.name === 'JsonWebTokenError' || error.name === 'TokenExpiredError') {
             errorMessage = '无法生成身份验证令牌，请稍后再试';

@@ -75,9 +75,9 @@
 import {ref, onMounted, onUnmounted, computed} from 'vue';
 import {useRouter} from '#imports';
 import {useUserProfile} from '~/composables/useUserProfile';
-import {useAuth, type AuthenticatedUser} from '~/composables/useAuth';
+import {useAuth} from '~/composables/useAuth';
 import {useThemeManager} from '~/composables/useThemeManager';
-import EditProfileModal from '~/components/global/EditProfileModal.vue'; // 显式导入新组件
+import EditProfileModal from '~/components/global/EditProfileModal.vue';
 
 const {user: authUser, isLoggedIn, logout: performLogout, fetchCurrentUser: refreshAuthUser} = useAuth();
 const profileActions = useUserProfile();
@@ -90,9 +90,8 @@ const dropdownMenuEl = ref<HTMLDivElement | null>(null);
 const isConfirmDeleteModalOpen = ref(false);
 const isDeletingAccount = ref(false);
 
-// 编辑模态框相关状态
 const isEditModalOpen = ref(false);
-type EditModeType = 'username' | 'email' | 'password'; // 确保与 EditProfileModal 中的一致
+type EditModeType = 'username' | 'email' | 'password';
 const currentEditMode = ref<EditModeType | null>(null);
 const editModalTitle = ref('');
 
@@ -100,6 +99,7 @@ const themeClasses = computed(() => ({
   'theme-dark': currentTheme.value === 'dark',
   'theme-light': currentTheme.value === 'light',
 }));
+
 
 const toggleDropdown = () => {
   if (!isLoggedIn.value) {
@@ -130,57 +130,55 @@ onUnmounted(() => {
 const openEditModal = (mode: EditModeType) => {
   isDropdownOpen.value = false;
   currentEditMode.value = mode;
-  profileActions.clearMessages(); // 清除 useUserProfile 中的旧消息
-
+  profileActions.clearMessages();
   if (mode === 'username') editModalTitle.value = '编辑用户名';
   else if (mode === 'email') editModalTitle.value = '编辑邮箱';
   else if (mode === 'password') editModalTitle.value = '更改密码';
-
   isEditModalOpen.value = true;
 };
 
 const closeEditModal = () => {
   isEditModalOpen.value = false;
-  // currentEditMode.value = null; // 可选：在关闭时重置模式
 };
 
 const handleProfileUpdateSave = async (payload: any) => {
-  let result: { success: boolean; error?: string; message?: string } | undefined;
+  let result: { success: boolean; error?: string; message?: string; data?: any } | undefined;
 
   if (payload.mode === 'username') {
-    if (!payload.value?.trim()) {
-      profileActions.error.value = "用户名不能为空。"; // 或者让模态框处理这个？
+    if (!payload.value?.trim()) { // Basic check, modal should ideally ensure this
+      profileActions.error.value = "用户名不能为空。";
       return;
     }
     result = await profileActions.updateUsername(payload.value);
   } else if (payload.mode === 'email') {
-    if (!payload.value?.trim() || !/^\S+@\S+\.\S+$/.test(payload.value)) {
+    if (!payload.value?.trim() || !/^\S+@\S+\.\S+$/.test(payload.value)) { // Basic check
       profileActions.error.value = "请输入有效的邮箱地址。";
       return;
     }
     result = await profileActions.updateEmail(payload.value);
   } else if (payload.mode === 'password') {
-    // 模态框内部已处理密码不匹配等校验，这里直接调用API
     result = await profileActions.changePassword(payload.currentPassword, payload.newPassword);
   }
 
   if (result?.success) {
-    await refreshAuthUser(); // 刷新全局用户状态
+    await refreshAuthUser();
     setTimeout(() => {
-      if (!profileActions.error.value) closeEditModal(); // 如果没有新错误则关闭
+      if (!profileActions.error.value) {
+        closeEditModal();
+      }
     }, 1500);
   }
 };
 
-const promptDeleteAccount = () => { /* ... 保持不变 ... */
+const promptDeleteAccount = () => {
   isDropdownOpen.value = false;
   isConfirmDeleteModalOpen.value = true;
 };
-const cancelDeleteAccount = () => { /* ... 保持不变 ... */
+const cancelDeleteAccount = () => {
   if (isDeletingAccount.value) return;
   isConfirmDeleteModalOpen.value = false;
 };
-const confirmDeleteAccount = async () => { /* ... 保持不变，确保调用 profileActions.deleteUserAccountAPI() ... */
+const confirmDeleteAccount = async () => {
   if (isDeletingAccount.value) return;
   isDeletingAccount.value = true;
   try {
@@ -329,7 +327,6 @@ const handleLogout = async () => {
   background-color: var(--error-bg, rgba(220, 53, 69, 0.1)) !important;
 }
 
-/* 注销账户确认模态框样式 */
 .confirm-modal-overlay {
   position: fixed;
   top: 0;
@@ -343,7 +340,7 @@ const handleLogout = async () => {
   z-index: 1200;
 }
 
-.confirm-modal { /* 这个类名现在主要用于删除确认框，编辑框有自己的 .edit-profile-modal */
+.confirm-modal {
   background-color: var(--content-box-background, var(--color-background));
   padding: 1.8rem 2rem;
   border-radius: var(--glass-border-radius-small, 10px);
@@ -444,5 +441,4 @@ const handleLogout = async () => {
   margin-right: 0.5em;
   vertical-align: -0.125em;
 }
-
 </style>

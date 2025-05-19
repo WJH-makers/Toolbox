@@ -44,10 +44,6 @@ export default defineEventHandler(async (event) => {
     if (!hasNumber) {
         strengthValidationErrors.push('数字');
     }
-    // if (!hasSpecialChar) { // 如果启用特殊字符检查
-    //     strengthValidationErrors.push('特殊字符');
-    // }
-
     if (strengthValidationErrors.length > 0) {
         setResponseStatus(event, 400);
         return {success: false, error: `新密码必须至少包含：${strengthValidationErrors.join('、')}`};
@@ -58,8 +54,6 @@ export default defineEventHandler(async (event) => {
         setResponseStatus(event, 400);
         return {success: false, error: '新密码不能与当前密码相同'};
     }
-
-
     try {
         const user = await prisma.user.findUnique({
             where: {id: userId},
@@ -69,7 +63,6 @@ export default defineEventHandler(async (event) => {
             setResponseStatus(event, 404); // Not Found
             return {success: false, error: '用户不存在'};
         }
-
         // 3. 验证当前密码是否正确
         const isCurrentPasswordValid = await bcrypt.compare(currentPassword, user.password);
         if (!isCurrentPasswordValid) {
@@ -85,7 +78,6 @@ export default defineEventHandler(async (event) => {
             where: {id: userId},
             data: {password: hashedNewPassword},
         });
-
         setResponseStatus(event, 200); // OK
         return {success: true, message: '密码修改成功！'};
 

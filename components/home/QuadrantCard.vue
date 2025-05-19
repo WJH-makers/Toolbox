@@ -14,7 +14,6 @@
 <script setup lang="ts">
 import type {PropType} from 'vue';
 
-// 从 toolbox.vue 复制过来的接口定义，理想情况下可以放到共享的 types 文件中
 interface Tool {
   id: string;
   name: string;
@@ -24,7 +23,7 @@ interface Tool {
   path?: string;
 }
 
-export interface Domain { // 导出Domain接口，以便toolbox.vue可以导入并确保类型一致
+export interface Domain {
   id: string;
   name: string;
   description?: string;
@@ -47,14 +46,11 @@ defineProps({
   },
 });
 
-// Nuxt 3 会自动从 components/ 目录导入 DomainSection (如果存在)
-// import DomainSection from './DomainSection.vue'; // 或者更具体的路径
 </script>
 
 <style scoped>
-/* .quadrant-card-container 确保组件在Grid布局中正确占据位置 */
 .quadrant-card-container {
-  display: flex; /* 使内部 .small-frosted-glass 能够撑满 */
+  display: flex;
 }
 
 .small-frosted-glass {
@@ -69,24 +65,24 @@ defineProps({
   box-shadow: var(--shadow-elevation-medium, 0 6px 15px -5px rgba(0, 0, 0, 0.15));
   display: flex;
   flex-direction: column;
-  min-height: 280px; /* 与 toolbox.vue 中一致或根据内容调整 */
-  color: var(--color-text); /* 确保文字颜色继承 */
+  min-height: 280px;
+  color: var(--color-text);
 }
 
 .quadrant-title {
   font-size: 1.6rem;
   font-weight: 600;
   color: var(--color-text);
-  margin: 0 0 1.25rem 0; /* 调整 margin-top 为 0 */
+  margin: 0 0 1.25rem 0;
   padding-bottom: 0.6rem;
   border-bottom: 1px solid var(--glass-border-color, rgba(255, 255, 255, 0.1));
   text-align: left;
 }
 
 .quadrant-content {
-  flex-grow: 1; /* 使内容区域填满剩余空间 */
-  display: flex; /* 用于居中 loading/info message */
-  flex-direction: column; /* 确保 DomainSection 能正常布局 */
+  flex-grow: 1;
+  display: flex;
+  flex-direction: column;
 }
 
 .loading-placeholder,
