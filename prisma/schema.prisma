@@ -13,7 +13,7 @@ model User {
   id        String   @id @default(cuid()) // 主键，使用 CUID 作为默认值
   email     String   @unique // 邮箱，必须唯一
   username  String   @unique // 用户名，必须唯一
-  password  String // 存储哈希后的密码
+  password  String
   createdAt DateTime @default(now()) // 用户创建时间
   updatedAt DateTime @updatedAt // 用户信息更新时间
   Todo      Todo[]
@@ -22,15 +22,18 @@ model User {
 }
 
 model Todo {
-  id        String   @id @default(cuid())
-  content   String // 待办事项的内容
-  completed Boolean  @default(false) // 是否完成，默认为未完成
-  important Boolean  @default(false) // 是否重要，默认为普通 (false)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id        String    @id @default(cuid())
+  content   String
+  completed Boolean   @default(false)
+  important Boolean   @default(false)
+  startDate DateTime? // 新增：开始日期时间，可选
+  endDate   DateTime? // 新增：结束日期时间（原dueDate的概念），可选
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  userId String // 外键，关联到 User 模型
-  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade) // onDelete: Cascade 表示删除用户时，其待办事项也会被删除
-
-  @@index([userId, createdAt]) // 为常用查询添加索引
+  @@index([userId, createdAt])
+  @@index([userId, startDate]) // 为新日期字段添加索引
+  @@index([userId, endDate])
 }

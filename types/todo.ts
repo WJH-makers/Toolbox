@@ -1,9 +1,11 @@
 export interface TodoItem {
-    id: string;          // 待办事项的唯一ID
-    content: string;       // 待办事项的内容文本
-    completed: boolean;    // 标记是否已完成
-    important: boolean;    // 标记是否为重要事项
-    createdAt: string | Date; // 创建时间 (从后端API获取时，Date类型常被序列化为string)
-    updatedAt: string | Date; // 最后更新时间
-    userId: string;        // 关联的用户ID
+    id: string;
+    content: string;
+    completed: boolean;
+    important: boolean;
+    startDate?: Date | string | null; // 修改：开始日期，可选
+    endDate?: Date | string | null;   // 修改：结束日期（替换原dueDate），可选
+    createdAt: Date | string;
+    updatedAt: Date | string;
+    userId: string;
 }

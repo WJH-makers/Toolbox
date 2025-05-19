@@ -11,6 +11,7 @@ export default defineEventHandler(async (event) => {
         '/api/user/profile/email',
         '/api/user/profile/password',
         '/api/user/me',
+        '/api/todos',
     ];
 
     const path = event.path || event.node.req.url || '';
