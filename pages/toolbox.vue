@@ -40,6 +40,8 @@
 
 <script setup lang="ts">
 import {ref, onMounted, computed} from 'vue';
+// 假设 Domain 和 Tool 类型在 QuadrantCard.vue 中定义，并且 Tool 类型可以扩展
+// 例如，Tool 接口可能需要更新为包含 statusPreview?: string;
 import type {Domain} from '~/components/home/QuadrantCard.vue';
 import QuadrantCard from '~/components/home/QuadrantCard.vue';
 
@@ -51,24 +53,34 @@ const fetchAllToolData = async () => {
   isLoadingData.value = true;
   loadingError.value = null;
   try {
-    await new Promise(resolve => setTimeout(resolve, 1000));
+    // 模拟API调用延迟
+    await new Promise(resolve => setTimeout(resolve, 500)); // 减少延迟以便更快看到效果
+
+    // @ts-expect-error // 临时忽略下一行，因为我们假设 Tool 类型将包含 statusPreview
     allDomains.value = [
       {
         id: 'daily_life', name: '日常领域', description: '提升生活品质与效率', icon: 'ph:house-line-bold',
         tools: [
-          {id: 'todo', name: '待办清单', usage: 230, description: '高效管理每日任务', path: '/tools/daily/todo'},
+          {
+            id: 'todo',
+            name: '待办清单',
+            usage: 250, // 可以调整使用频率使其更突出
+            description: '您的个人任务管理器，助您高效规划每一天！', // 修改描述
+            path: '/tools/daily/todo', // 确保这是你实际的TodoList页面路径
+            statusPreview: '查看今日任务' // 新增字段，用于新颖呈现，内容可以动态获取
+          },
           {
             id: 'recipe_finder',
             name: '食谱查找',
             usage: 190,
-            description: '发现美味食谱',
+            description: '发现美味食谱，开启烹饪灵感。',
             path: '/tools/daily/recipes'
           },
           {
             id: 'package_tracker',
             name: '快递追踪',
             usage: 170,
-            description: '实时追踪包裹位置',
+            description: '实时追踪您的包裹位置与状态。',
             path: '/tools/daily/tracker'
           },
         ],
@@ -80,21 +92,21 @@ const fetchAllToolData = async () => {
             id: 'currency_converter',
             name: '汇率转换',
             usage: 280,
-            description: '全球货币实时汇率',
+            description: '全球货币实时汇率查询与计算。',
             path: '/tools/finance/currency'
           },
           {
             id: 'loan_calculator',
             name: '贷款计算器',
             usage: 210,
-            description: '精准计算贷款详情',
+            description: '精准计算各类贷款详情与还款计划。',
             path: '/tools/finance/loan'
           },
           {
             id: 'stock_screener',
             name: '股票筛选器',
             usage: 150,
-            description: '筛选优质股票',
+            description: '根据多种指标筛选潜力股票。',
             path: '/tools/finance/stocks'
           },
         ],
@@ -106,21 +118,21 @@ const fetchAllToolData = async () => {
             id: 'mind_map',
             name: '思维导图',
             usage: 260,
-            description: '构建清晰知识结构',
+            description: '构建清晰知识结构，激发创意。',
             path: '/tools/learning/mindmap'
           },
           {
             id: 'online_dictionary',
             name: '在线词典',
             usage: 200,
-            description: '多语言词汇查询',
+            description: '多语言词汇即时查询与释义。',
             path: '/tools/learning/dictionary'
           },
           {
             id: 'code_playground',
             name: '代码演练场',
             usage: 180,
-            description: '在线练习编程',
+            description: '在线练习与测试不同编程语言片段。',
             path: '/tools/learning/playground'
           },
         ],
@@ -132,28 +144,28 @@ const fetchAllToolData = async () => {
             id: 'json_formatter',
             name: 'JSON格式化',
             usage: 300,
-            description: '美化与校验JSON',
+            description: '美化、校验与转换JSON数据。',
             path: '/tools/programming/json'
           },
           {
             id: 'regex_tester',
             name: '正则测试器',
             usage: 270,
-            description: '在线调试正则表达式',
+            description: '在线调试与验证正则表达式。',
             path: '/tools/programming/regex'
           },
           {
             id: 'api_client',
             name: 'API客户端',
             usage: 220,
-            description: '测试HTTP API接口',
+            description: '简单易用的HTTP API接口测试工具。',
             path: '/tools/programming/api-client'
           },
         ],
       },
     ];
-  } catch (e) {
-    loadingError.value = e as Error;
+  } catch (e: any) { // 显式声明 e 的类型
+    loadingError.value = e as Error; // 类型断言
     console.error("Toolbox Quadrant: Failed to fetch tool data:", e);
   } finally {
     isLoadingData.value = false;
@@ -182,7 +194,6 @@ const programmingDomain = computed(() => allDomains.value.find(d => d.id === 'pr
   padding: 2rem 1rem;
   box-sizing: border-box;
   color: var(--color-text);
-  /* overflow: hidden; */ /* Removed to allow page scrolling */
 }
 
 .toolbox-header-minimal {
@@ -201,7 +212,6 @@ const programmingDomain = computed(() => allDomains.value.find(d => d.id === 'pr
 .large-frosted-glass-container {
   display: grid;
   grid-template-columns: 1fr; /* Changed for 1x4 layout */
-  /* grid-template-rows: repeat(2, auto); */ /* Removed or change to repeat(4, auto) */
   gap: 25px;
   width: 100%;
   max-width: 1100px; /* You might want to adjust max-width for a single column layout if it looks too narrow */
@@ -215,8 +225,6 @@ const programmingDomain = computed(() => allDomains.value.find(d => d.id === 'pr
   box-shadow: var(--shadow-elevation-high, 0 12px 30px -10px rgba(0, 0, 0, 0.2));
 }
 
-.quadrant {
-}
 
 .global-error-message {
   width: 100%;
