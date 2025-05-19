@@ -239,7 +239,7 @@ const programmingDomain = computed(() => allDomains.value.find(d => d.id === 'pr
   font-size: 0.9rem;
   font-weight: 500;
   color: #ffffff;
-  background-color: var(--button-bg, var(--color-primary));
+  background-color: var(--color-primary, var(--color-primary));
   border: none;
   border-radius: 6px;
   cursor: pointer;
@@ -247,7 +247,7 @@ const programmingDomain = computed(() => allDomains.value.find(d => d.id === 'pr
 }
 
 .retry-button:hover {
-  background-color: var(--button-hover-bg, var(--color-primary-hover));
+  background-color: var(--color-primary-hover, var(--color-primary-hover));
   transform: translateY(-1px);
 }
 

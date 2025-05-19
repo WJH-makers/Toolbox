@@ -16,6 +16,21 @@ model User {
   password  String // 存储哈希后的密码
   createdAt DateTime @default(now()) // 用户创建时间
   updatedAt DateTime @updatedAt // 用户信息更新时间
+  Todo      Todo[]
 
   @@map("users") // 可选：指定数据库中的表名为 'users'
+}
+
+model Todo {
+  id        String   @id @default(cuid())
+  content   String // 待办事项的内容
+  completed Boolean  @default(false) // 是否完成，默认为未完成
+  important Boolean  @default(false) // 是否重要，默认为普通 (false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  userId String // 外键，关联到 User 模型
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade) // onDelete: Cascade 表示删除用户时，其待办事项也会被删除
+
+  @@index([userId, createdAt]) // 为常用查询添加索引
 }

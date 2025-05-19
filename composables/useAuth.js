@@ -1,21 +1,14 @@
+// composables/useAuth.js
 import {ref, computed, readonly} from 'vue';
-import {useRouter} from '#imports';
-import axios, {type AxiosResponse, type AxiosError} from 'axios';
-import type {ApiResponse} from '~/types/api';
+import {useRouter} from '#imports'; // Nuxt 3 自动导入 useRouter
+import axios from 'axios';
 
-export interface AuthenticatedUser {
-    id: string;
-    username: string;
-    email: string;
-    avatarUrl?: string;
-    createdAt?: Date | string;
-    updatedAt?: Date | string;
-}
+// --- 模块作用域内的响应式状态 ---
+const user = ref(null); // 原为: ref<AuthenticatedUser | null>(null)
+const isLoadingAuth = ref(false); // 原为: ref<boolean>(false)
+const authStatusResolved = ref(false); // 原为: ref<boolean>(false)
 
-const user = ref<AuthenticatedUser | null>(null);
-const isLoadingAuth = ref(false);
-const authStatusResolved = ref(false);
-
+// --- 模块首次加载时执行的辅助函数 (仅客户端) ---
 const _loadUserFromStorage = () => {
     if (typeof window !== 'undefined' && typeof localStorage !== 'undefined') {
         const storedUser = localStorage.getItem('user');
@@ -25,27 +18,28 @@ const _loadUserFromStorage = () => {
                 user.value = parsedUser;
             } catch (e) {
                 console.error("[useAuth] _loadUserFromStorage: Failed to parse stored user data:", e);
-                localStorage.removeItem('user');
+                localStorage.removeItem('user'); // 清理损坏的数据
             }
         }
     }
 };
 
+// 确保这个初始化仅在客户端首次导入模块时执行
 if (typeof window !== 'undefined') {
     _loadUserFromStorage();
 }
 
 export function useAuth() {
     const router = useRouter();
+
     const isLoggedIn = computed(() => !!user.value);
 
-    const fetchCurrentUser = async (isInitialCheck = false): Promise<void> => {
+    const fetchCurrentUser = async (isInitialCheck = false) => { // 原为: Promise<void>
         if (isInitialCheck && !isLoadingAuth.value) {
             isLoadingAuth.value = true;
         }
         try {
-            const response: AxiosResponse<ApiResponse<{ user: AuthenticatedUser }>> =
-                await axios.get('/api/user/me');
+            const response = await axios.get('/api/user/me'); // 类型由 AxiosResponse<ApiResponse<{ user: AuthenticatedUser }>> 变为 any 或由运行时推断
             if (response.data?.success && response.data.data?.user) {
                 const userData = response.data.data.user;
                 if (userData && typeof userData.id === 'string') {
@@ -54,32 +48,26 @@ export function useAuth() {
                         localStorage.setItem('user', JSON.stringify(user.value));
                     }
                 } else {
-                    console.error('[useAuth] Invalid user data structure from /api/user/me. userData:', userData ? JSON.parse(JSON.stringify(userData)) : 'undefined/null');
-                    throw new Error('未能从API (/api/user/me) 获取有效的用户信息结构。');
+                    console.error('[useAuth] fetchCurrentUser: Received success but invalid user data structure from /api/user/me.');
                 }
             } else {
-                console.error('[useAuth] API call to /api/user/me was not successful or data structure mismatch. Response success:', response.data?.success, 'Response data field:', response.data?.data);
-                if (response.data.data?.user) {
-                    console.log('[useAuth] Note: response.data.user exists, value:', JSON.parse(JSON.stringify(response.data.data.user)));
-                }
+                console.warn('[useAuth] fetchCurrentUser: API call to /api/user/me not logically successful or data missing. Keeping existing user state (if any). Response:', response.data);
+            }
+        } catch (error) { // error 类型为 any
+            // console.warn(`[useAuth] fetchCurrentUser ERROR: ${error?.message}`); // Debugging log
+            let httpStatus = 0;
+            if (axios.isAxiosError(error)) { // Axios 提供了类型守卫
+                httpStatus = error.response?.status || 0;
+            }
+            // 关键：仅当错误是明确的认证失败时，才将用户登出
+            if (httpStatus === 401 || httpStatus === 403) {
                 if (typeof localStorage !== 'undefined') {
                     localStorage.removeItem('user');
                 }
                 user.value = null;
-            }
-        } catch (error: any) {
-            console.warn(`[useAuth] fetchCurrentUser ERROR: ${error?.message}`);
-            if (error.isAxiosError) {
-                const axiosError = error as AxiosError<ApiResponse>; // 假设 ApiResponse 包含 error 字段
-                console.warn(`[useAuth] AxiosError details - Status: ${axiosError.response?.status}, Response Data:`, axiosError.response?.data ? JSON.parse(JSON.stringify(axiosError.response.data)) : 'No response data');
             } else {
-                console.warn('[useAuth] Non-Axios error in fetchCurrentUser:', error);
+                console.warn(`[useAuth] fetchCurrentUser: Non-authentication error (status ${httpStatus}) occurred. Existing user state (if any) preserved. Error: ${error?.message}`);
             }
-
-            if (typeof localStorage !== 'undefined') {
-                localStorage.removeItem('user');
-            }
-            user.value = null;
         } finally {
             if (isInitialCheck) {
                 authStatusResolved.value = true;
@@ -88,16 +76,15 @@ export function useAuth() {
         }
     };
 
-    const login = async (loginIdentifier: string, passwordVal: string): Promise<ApiResponse<{
-        user: AuthenticatedUser
-    }>> => {
+    const login = async (loginIdentifier, passwordVal) => { // 原为: loginIdentifier: string, passwordVal: string): Promise<ApiResponse<{ user: AuthenticatedUser }>>
         isLoadingAuth.value = true;
-        let apiError: string | null = null;
+        let apiError = null; // 原为: string | null
         try {
-            const response: AxiosResponse<ApiResponse<{ user: AuthenticatedUser }>> = await axios.post(
+            const response = await axios.post( // 类型由 AxiosResponse<ApiResponse<{ user: AuthenticatedUser }>> 变为 any
                 '/api/auth/login',
                 {loginIdentifier, password: passwordVal}
             );
+
             if (response.data?.success && response.data.data?.user) {
                 user.value = response.data.data.user;
                 if (typeof localStorage !== 'undefined') {
@@ -111,21 +98,20 @@ export function useAuth() {
                 };
             } else {
                 apiError = response.data?.message || '登录凭据无效或服务器响应不完整。';
-                console.error('[useAuth] Login API call not successful or user data missing. Message:', apiError);
+                // console.error('[useAuth] Login API call not successful or user data missing. Message:', apiError); // Debugging log
                 throw new Error(apiError);
             }
-        } catch (error: any) {
-            console.error(`[useAuth] Login failed: ${error?.message}`, error);
+        } catch (error) { // error 类型为 any
             user.value = null;
             if (typeof localStorage !== 'undefined') localStorage.removeItem('user');
-            const finalErrorMessage = apiError || (error as AxiosError<ApiResponse>)?.response?.data?.message || error.message || '登录失败，请重试。';
+            const finalErrorMessage = apiError || (axios.isAxiosError(error) && error.response?.data?.message) || error.message || '登录失败，请重试。';
             return {success: false, error: finalErrorMessage};
         } finally {
             isLoadingAuth.value = false;
         }
     };
 
-    const logout = async (redirectToLogin = true): Promise<ApiResponse> => {
+    const logout = async (redirectToLogin = true) => { // 原为: Promise<ApiResponse>
         isLoadingAuth.value = true;
         user.value = null;
         if (typeof localStorage !== 'undefined') {
@@ -133,17 +119,21 @@ export function useAuth() {
         }
 
         try {
+            // console.log('[useAuth] Calling /api/auth/logout API.'); // Debugging log
             await axios.post('/api/auth/logout');
-        } catch (error: any) {
-            console.error("[useAuth] Logout API call failed:", error?.message, error);
+            // console.log('[useAuth] Logout API call processed.'); // Debugging log
+        } catch (error) { // error 类型为 any
+            console.error("[useAuth] Logout API call failed:", error?.message, error); // 保留这个错误日志比较重要
         } finally {
             isLoadingAuth.value = false;
             authStatusResolved.value = true;
+            // console.log(`[useAuth] logout finished. isLoadingAuth: ${isLoadingAuth.value}, authStatusResolved: ${authStatusResolved.value}`); // Debugging log
             if (redirectToLogin) {
                 try {
+                    // console.log('[useAuth] Redirecting to /login.'); // Debugging log
                     await router.push('/login');
                 } catch (routerError) {
-                    console.error("[useAuth] Failed to redirect after logout:", routerError);
+                    console.error("[useAuth] Failed to redirect after logout:", routerError); // 保留这个错误日志
                     if (typeof window !== 'undefined') window.location.pathname = '/login';
                 }
             }
@@ -151,11 +141,11 @@ export function useAuth() {
         return {success: true, message: '已成功退出登录。'};
     };
 
-    const handleSuccessfulAccountDeletion = (): void => {
+    const handleSuccessfulAccountDeletion = () => { // 原为: (): void
         logout(true);
     };
 
-    const initializeAuthState = async (): Promise<void> => {
+    const initializeAuthState = async () => { // 原为: Promise<void>
         if (typeof window !== 'undefined' && !authStatusResolved.value) {
             await fetchCurrentUser(true);
         }

@@ -321,12 +321,12 @@ const handleSubmit = () => {
 }
 
 .button-save {
-  background-color: var(--button-bg, var(--color-primary));
+  background-color: var(--color-primary, var(--color-primary));
   color: white;
 }
 
 .button-save:hover {
-  background-color: var(--button-hover-bg, var(--color-primary-hover));
+  background-color: var(--color-primary-hover, var(--color-primary-hover));
 }
 
 .button-save:disabled {

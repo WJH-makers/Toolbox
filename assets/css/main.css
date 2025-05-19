@@ -1,7 +1,6 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
 
 :root {
-    /* 默认主题 (亮色主题) 变量 */
     --font-primary: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol';
     --font-monospace: 'Fira Code', 'Consolas', 'Monaco', 'Andale Mono', 'Ubuntu Mono', monospace;
 
@@ -13,6 +12,13 @@
     --color-border: #e5e7eb; /* 亮色主题 - 边框颜色 */
     --color-input-bg: #ffffff; /* 亮色主题 - 输入框背景 */
     --color-input-bg-hover: #f3f4f6; /* 亮色主题 - 输入框背景悬浮 */
+
+     /* 为 TodoListComponent 或其他组件可能需要的通用颜色补充或调整 */
+    --color-border-light: #e5e7eb;       /* 亮色主题 - 更浅的边框, 你可以根据需要调整，或直接使用 --color-border */
+    --color-background-mute: #f3f4f6;     /* 亮色主题 - 用于一般悬停或次级背景, 可用 --color-input-bg-hover 或 --color-background 调整 */
+
+    --color-warning: #f59e0b;             /* 亮色主题 - 警告/强调色 (例如，一个友好的橙黄色) */
+
 
     /* ContentBox.vue - 亮色主题适配 */
     --content-box-background: rgba(255, 255, 255, 0.85); /* 亮色背景下的内容盒背景，可略带透明 */
@@ -27,9 +33,6 @@
     --input-placeholder-color: #9ca3af;
     --input-focus-border-color: var(--color-primary);
     --input-focus-shadow-color: rgba(59, 130, 246, 0.15);
-
-    --button-bg: var(--color-primary);
-    --button-hover-bg: var(--color-primary-hover);
     --button-active-bg: #1d4ed8; /* 比hover更深的蓝色 */
     --button-disabled-bg: #d1d5db; /* 亮色主题的禁用按钮背景 */
 
@@ -62,6 +65,12 @@ html.dark-theme { /* 或者你用于切换到暗色主题的类名，例如 body
     --color-input-bg: #1e293b;
     --color-input-bg-hover: #334155;
 
+    /* 为 TodoListComponent 或其他组件可能需要的通用颜色补充或调整 (暗色主题) */
+    --color-border-light: #334155;       /* 暗色主题 - 更浅的边框, 你可以根据需要调整，或直接使用 --color-border */
+    --color-background-mute: #1e293b;     /* 暗色主题 - 用于一般悬停或次级背景, 可用 --color-input-bg-hover 或 --color-background 调整 */
+    --color-warning: #facc15;             /* 暗色主题 - 警告/强调色 (例如，一个亮眼的黄色) */
+
+
     /* ContentBox.vue - 暗色主题适配 */
     --content-box-background: rgba(30, 41, 59, 0.8); /* 这是你原有的值 */
     --content-box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05); /* 保持或调整 */
@@ -72,9 +81,6 @@ html.dark-theme { /* 或者你用于切换到暗色主题的类名，例如 body
     --input-disabled-bg: #111827;
     --input-placeholder-color: #6b7280;
 
-    --button-bg: var(--color-primary);
-    --button-hover-bg: var(--color-primary-hover);
-    /* --button-active-bg: #1d4ed8; */
     --button-disabled-bg: #334155; /* 暗色主题的禁用按钮背景 */
     /* RegisterForm.vue - 错误/成功提示 (这些颜色通常在不同主题下保持其功能性，但背景和边框可能需要微调以适应暗色背景) */
     --error-bg: #581c22;

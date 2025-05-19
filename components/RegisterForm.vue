@@ -187,7 +187,7 @@ const handleRegister = async () => {
   font-size: 1rem;
   font-weight: 600;
   color: #ffffff;
-  background-color: var(--button-bg);
+  background-color: var(--color-primary);
   border: none;
   border-radius: 6px;
   cursor: pointer;
@@ -201,7 +201,7 @@ const handleRegister = async () => {
 }
 
 .submit-button:hover:not(:disabled) {
-  background-color: var(--button-hover-bg);
+  background-color: var(--color-primary-hover);
 }
 
 .submit-button:active:not(:disabled) {
@@ -221,7 +221,7 @@ const handleRegister = async () => {
 }
 
 .nav-link {
-  color: var(--link-color, var(--button-bg));
+  color: var(--link-color, var(--color-primary));
   text-decoration: none;
   font-weight: 500;
 }

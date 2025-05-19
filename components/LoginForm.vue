@@ -37,7 +37,7 @@
 <script setup> // 如果你其他地方用的是 lang="ts"，这里也建议加上
 import {ref} from 'vue';
 import {useRouter} from '#imports'; // 在Nuxt 3中，推荐使用 #imports
-import {useAuth} from '~/composables/useAuth'; // 导入全局的 useAuth
+import {useAuth} from '~/composables/useAuth.js'; // 导入全局的 useAuth
 
 const username = ref('');
 const password = ref('');
@@ -140,7 +140,7 @@ const handleLogin = async () => {
   font-size: 1rem;
   font-weight: 600;
   color: #ffffff;
-  background-color: var(--button-bg);
+  background-color: var(--color-primary);
   border: none;
   border-radius: 6px;
   cursor: pointer;
@@ -154,7 +154,7 @@ const handleLogin = async () => {
 }
 
 .submit-button:hover:not(:disabled) {
-  background-color: var(--button-hover-bg);
+  background-color: var(--color-primary-hover);
 }
 
 .submit-button:active:not(:disabled) {
@@ -174,7 +174,7 @@ const handleLogin = async () => {
 }
 
 .register-link {
-  color: var(--link-color, var(--button-bg));
+  color: var(--link-color, var(--color-primary));
   text-decoration: none;
   font-weight: 500;
 }

@@ -47,7 +47,7 @@ defineProps({
 
 .back-link:hover {
   text-decoration: underline;
-  color: var(--button-hover-bg); /* 鼠标悬停时的颜色 */
+  color: var(--color-primary-hover); /* 鼠标悬停时的颜色 */
 }
 
 @media (max-width: 640px) {

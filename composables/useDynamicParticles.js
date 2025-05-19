@@ -1,12 +1,11 @@
-// ~/composables/useDynamicParticles.ts
+// composables/useDynamicParticles.js
 import {computed} from 'vue';
-import type {ISourceOptions, Container} from 'tsparticles-engine';
-import {baseParticlesOptions} from '~/config/particles.base.config';
-import type {Ref} from 'vue';
+import {baseParticlesOptions} from '~/config/particles.base.config'; // 假设这个配置文件存在且能被正确导入
 
-const darkThemeParticleColors: Partial<ISourceOptions> = {
-    background: { // 新增/修改：深色主题时，粒子画布背景为深色 (例如黑色)
-        color: {value: '#000000'}, // 或者一个深灰色，如 '#1f2937'
+// 这些对象在 JavaScript 中就是普通的对象
+const darkThemeParticleColors = {
+    background: { // 深色主题时，粒子画布背景
+        color: {value: '#000000'}, // 例如黑色
         opacity: 1,
     },
     particles: {
@@ -16,8 +15,8 @@ const darkThemeParticleColors: Partial<ISourceOptions> = {
     interactivity: {modes: {grab: {links: {opacity: 0.7}}}}
 };
 
-const lightThemeParticleColors: Partial<ISourceOptions> = {
-    background: { // 新增/修改：浅色主题时，粒子画布背景为白色
+const lightThemeParticleColors = {
+    background: { // 浅色主题时，粒子画布背景
         color: {value: '#FFFFFF'},
         opacity: 1,
     },
@@ -28,12 +27,12 @@ const lightThemeParticleColors: Partial<ISourceOptions> = {
     interactivity: {modes: {grab: {links: {opacity: 0.9}}}}
 };
 
-export function useDynamicParticles(currentTheme: Ref<'light' | 'night'>) {
-    const currentParticlesOptions = computed<ISourceOptions>(() => {
+export function useDynamicParticles(currentTheme) { // 移除了 currentTheme 的类型 Ref<'light' | 'night'>
+    const currentParticlesOptions = computed(() => { // 移除了 <ISourceOptions> 泛型
         const themeColorsToApply = currentTheme.value === 'light' ? lightThemeParticleColors : darkThemeParticleColors;
 
         // 深拷贝基础配置
-        const finalOptions: ISourceOptions = JSON.parse(JSON.stringify(baseParticlesOptions));
+        const finalOptions = JSON.parse(JSON.stringify(baseParticlesOptions)); // 移除了 finalOptions 的 ISourceOptions 类型
 
         // 1. 合并主题特定的背景配置
         if (themeColorsToApply.background) {
@@ -61,11 +60,8 @@ export function useDynamicParticles(currentTheme: Ref<'light' | 'night'>) {
             }
         } else if (finalOptions.particles && baseParticlesOptions.particles) {
             // 如果主题没有提供 particles 配置，确保使用基础配置（通常 JSON.parse 已处理）
-            // 但如果只想确保颜色和链接颜色重置回基础配置的占位符（如果主题切换逻辑复杂）
-            // finalOptions.particles.color = baseParticlesOptions.particles.color;
-            // finalOptions.particles.links = { ...baseParticlesOptions.particles.links };
+            // （此处的注释逻辑在JS中同样适用）
         }
-
 
         // 3. 合并 interactivity.modes.grab.links.opacity 部分
         const opacityToApply = themeColorsToApply.interactivity?.modes?.grab?.links?.opacity;
@@ -81,9 +77,9 @@ export function useDynamicParticles(currentTheme: Ref<'light' | 'night'>) {
             const currentGrabConfig = finalOptions.interactivity.modes.grab;
 
             finalOptions.interactivity.modes.grab = {
-                ...baseGrabConfig, // 先从基础配置获取 grab 的所有设置 (如 distance)
-                ...currentGrabConfig, // 再覆盖当前 finalOptions 中已有的 grab 设置 (如果有的话)
-                ...themeColorsToApply.interactivity?.modes?.grab, // 应用主题中的整个 grab 配置 (如果存在)
+                ...(baseGrabConfig || {}), // 先从基础配置获取 grab 的所有设置 (如 distance)
+                ...(currentGrabConfig || {}), // 再覆盖当前 finalOptions 中已有的 grab 设置 (如果有的话)
+                ...(themeColorsToApply.interactivity?.modes?.grab || {}), // 应用主题中的整个 grab 配置 (如果存在)
                 links: { // 精细控制 links
                     ...(baseGrabConfig?.links || {}),
                     ...(currentGrabConfig?.links || {}),
@@ -98,11 +94,10 @@ export function useDynamicParticles(currentTheme: Ref<'light' | 'night'>) {
                 finalOptions.interactivity.modes.grab.distance = distanceToApply;
             }
         }
-
         return finalOptions;
     });
 
-    const onParticlesLoaded = (container?: Container): void => {
+    const onParticlesLoaded = (container) => { // 移除了 container 的类型 Container 和返回类型 void
         console.log('Particles loaded with theme:', currentTheme.value, container?.id);
     };
 
