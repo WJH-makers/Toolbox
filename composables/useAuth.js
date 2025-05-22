@@ -2,11 +2,12 @@
 import {ref, computed, readonly} from 'vue';
 import {useRouter} from '#imports'; // Nuxt 3 自动导入 useRouter
 import axios from 'axios';
-
-// --- 模块作用域内的响应式状态 ---
-const user = ref(null); // 原为: ref<AuthenticatedUser | null>(null)
-const isLoadingAuth = ref(false); // 原为: ref<boolean>(false)
-const authStatusResolved = ref(false); // 原为: ref<boolean>(false)
+/**
+ * @type {import('vue').Ref<import('~/types/auth').AuthenticatedUser | null>}
+ */
+const user = ref(null);
+const isLoadingAuth = ref(false);
+const authStatusResolved = ref(false);
 
 // --- 模块首次加载时执行的辅助函数 (仅客户端) ---
 const _loadUserFromStorage = () => {

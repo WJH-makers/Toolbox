@@ -9,7 +9,7 @@
           <li v-for="tool in domainData.tools" :key="tool.id" class="tool-item">
             <NuxtLink :to="tool.path || '#'" class="tool-link">
               <h4>
-                <span v-if="tool.icon" class="tool-icon-placeholder"></span> {{ tool.name }}
+                <span v-if="tool.icon" class="tool-icon-placeholder"/> {{ tool.name }}
               </h4>
               <p class="tool-description">{{ tool.description }}</p>
 

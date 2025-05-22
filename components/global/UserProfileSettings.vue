@@ -79,6 +79,7 @@ import {useAuth} from '~/composables/useAuth';
 import {useThemeManager} from '~/composables/useThemeManager';
 import EditProfileModal from '~/components/global/EditProfileModal.vue';
 
+
 const {user: authUser, isLoggedIn, logout: performLogout, fetchCurrentUser: refreshAuthUser} = useAuth();
 const profileActions = useUserProfile();
 const {currentTheme} = useThemeManager();
@@ -146,13 +147,13 @@ const handleProfileUpdateSave = async (payload: any) => {
 
   if (payload.mode === 'username') {
     if (!payload.value?.trim()) { // Basic check, modal should ideally ensure this
-      profileActions.error.value = "用户名不能为空。";
+      profileActions.setClientError("用户名不能为空。"); // 使用新方法
       return;
     }
     result = await profileActions.updateUsername(payload.value);
   } else if (payload.mode === 'email') {
     if (!payload.value?.trim() || !/^\S+@\S+\.\S+$/.test(payload.value)) { // Basic check
-      profileActions.error.value = "请输入有效的邮箱地址。";
+      profileActions.setClientError("请输入有效的邮箱地址。"); // 使用新方法
       return;
     }
     result = await profileActions.updateEmail(payload.value);

@@ -9,27 +9,27 @@
           :disabled="isLoading"
           class="todo-input-content"
           rows="3"
-      ></textarea>
+      />
       <div class="date-inputs-container">
         <div class="date-input-group">
           <label for="newItemStartDate">开始时间 (可选)</label>
           <input
               id="newItemStartDate"
-              type="datetime-local"
               v-model="newItemStartDate"
+              type="datetime-local"
               :disabled="isLoading"
               class="todo-input-datetime"
-          />
+          >
         </div>
         <div class="date-input-group">
           <label for="newItemEndDate">结束时间 (可选)</label>
           <input
               id="newItemEndDate"
-              type="datetime-local"
               v-model="newItemEndDate"
+              type="datetime-local"
               :disabled="isLoading"
               class="todo-input-datetime"
-          />
+          >
         </div>
       </div>
       <button type="submit" :disabled="isLoading || !newItemContent.trim()">
@@ -40,7 +40,8 @@
     <div v-if="error" class="error-message">{{ error }}</div>
 
     <h3>进行中 ({{ activeTodos.length }})</h3>
-    <div v-if="isLoading && !activeTodos.length && !expiredTodos.length && !completedTodos.length"
+    <div
+v-if="isLoading && !activeTodos.length && !expiredTodos.length && !completedTodos.length"
          class="loading-message">加载中...
     </div>
     <ul v-if="activeTodos.length" class="todo-items-list active-todos">
@@ -62,7 +63,8 @@
           </div>
           <div class="todo-dates">
             <span v-if="item.startDate" class="date-chip">起: {{ formatDate(item.startDate) }}</span>
-            <span v-if="item.endDate" class="date-chip end-date"
+            <span
+v-if="item.endDate" class="date-chip end-date"
                   :class="{'is-past-due': !item.completed && item.endDate && new Date(item.endDate) < now}">
               止: {{ formatDate(item.endDate) }}
             </span>
@@ -83,7 +85,8 @@
         </div>
       </li>
     </ul>
-    <div v-if="!isLoading && !activeTodos.length && !expiredTodos.length && !completedTodos.length && !error"
+    <div
+v-if="!isLoading && !activeTodos.length && !expiredTodos.length && !completedTodos.length && !error"
          class="empty-message">
       太棒了，当前没有待办事项！
     </div>
@@ -319,13 +322,13 @@ const formatDate = (dateInput: string | Date | null | undefined): string => {
 }
 
 .expired-title {
-  color: var(--color-danger, red);
-  border-bottom-color: var(--color-danger, red);
+  color: red;
+  border-bottom-color: red;
 }
 
 .completed-title {
-  color: var(--color-success-text, green);
-  border-bottom-color: var(--color-success-text, green);
+  color:  green;
+  border-bottom-color: green;
 }
 
 .add-todo-form {
@@ -431,13 +434,13 @@ const formatDate = (dateInput: string | Date | null | undefined): string => {
 
 .date-chip.is-past-due,
 .todo-item.expired .todo-dates .end-date {
-  color: var(--color-danger);
-  background-color: var(--color-danger-soft-bg);
+  color:red;
+  background-color: red;
   font-weight: bold;
 }
 
 .todo-item.expired .item-text {
-  color: var(--color-danger);
+  color: red;
 }
 
 .todo-item.completed .item-text {
