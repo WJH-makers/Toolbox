@@ -5,8 +5,9 @@ generator client {
 }
 
 datasource db {
-  provider = "sqlite" // 你在初始化时选择的数据库类型
-  url      = env("DATABASE_URL") // 从 .env 文件读取
+  provider          = "mysql" // 你在初始化时选择的数据库类型
+  url               = env("DATABASE_URL") // 从 .env 文件读取
+  shadowDatabaseUrl = env("SHADOW_DATABASE_URL") // 新增这行
 }
 
 model User {
