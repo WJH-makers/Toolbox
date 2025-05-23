@@ -1,7 +1,5 @@
 <template>
-  <div class="todo-list-container">
     <h2>我的待办事项</h2>
-
     <form class="add-todo-form" @submit.prevent="handleAddItem">
       <textarea
           v-model="newItemContent"
@@ -176,8 +174,6 @@ v-if="!isLoading && !activeTodos.length && !expiredTodos.length && !completedTod
         </li>
       </ul>
     </template>
-
-  </div>
 </template>
 
 <script setup lang="ts">
@@ -297,30 +293,6 @@ const formatDate = (dateInput: string | Date | null | undefined): string => {
 </script>
 
 <style scoped>
-/* 样式与上一版本相同，此处省略以保持简洁 */
-.todo-list-container {
-  max-width: 700px;
-  margin: 2rem auto;
-  padding: 1.5rem 2rem;
-  background-color: var(--content-box-background, #fff);
-  border-radius: 12px;
-  box-shadow: var(--shadow-elevation-high, 0 8px 25px rgba(0, 0, 0, 0.1));
-}
-
-.todo-list-container h2,
-.todo-list-container h3 {
-  text-align: center;
-  margin-bottom: 1.5rem;
-  color: var(--color-text);
-}
-
-.todo-list-container h3 {
-  margin-top: 2rem;
-  font-size: 1.3rem;
-  border-bottom: 1px solid var(--color-border-light);
-  padding-bottom: 0.5rem;
-}
-
 .expired-title {
   color: red;
   border-bottom-color: red;

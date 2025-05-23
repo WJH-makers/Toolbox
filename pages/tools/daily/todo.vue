@@ -1,18 +1,20 @@
 <template>
-  <div class="todo-page-container">
+  <ContentCard>
+    <BackButton class="card-internal-back-button"/>
     <TodoListComponent/>
-  </div>
+  </ContentCard>
 </template>
 
 <script setup lang="ts">
 import TodoListComponent from '~/components/tools/daily/TodoListComponent.vue';
-
+import ContentCard from '~/components/global/ContentCard.vue';
+import BackButton from '~/components/global/BackButton.vue'; // 导入 BackButton
 
 definePageMeta({
   middleware: ['auth'],
+  layout: 'tool-page-layout', // 页面仍然使用外层布局
 });
 
-// 3. (可选) 设置页面的头部信息 (用于SEO和浏览器标签页)
 useHead({
   title: '我的待办清单 - 万能工具箱',
   meta: [
@@ -23,15 +25,13 @@ useHead({
   ]
 });
 
-
 onMounted(() => {
+  // 页面挂载后的逻辑
 });
 </script>
 
 <style scoped>
-.todo-page-container {
-  width: 100%;
-  padding: 1rem;
+.card-internal-back-button {
+  margin-bottom: 1.5rem;
 }
-
 </style>

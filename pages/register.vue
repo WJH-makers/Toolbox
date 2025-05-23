@@ -7,8 +7,8 @@
 </template>
 
 <script setup>
-import ContentBox from '~/components/ContentBox.vue'; // 确保路径正确
-import RegisterForm from '~/components/RegisterForm.vue';   // 确保路径正确
+import ContentBox from '~/components/global/ContentBox.vue'; // 确保路径正确
+import RegisterForm from '~/components/global/RegisterForm.vue';   // 确保路径正确
 </script>
 
 <style>

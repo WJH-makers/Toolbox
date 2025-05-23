@@ -40,10 +40,8 @@
 
 <script setup lang="ts">
 import {ref, onMounted, computed} from 'vue';
-// 假设 Domain 和 Tool 类型在 QuadrantCard.vue 中定义，并且 Tool 类型可以扩展
-// 例如，Tool 接口可能需要更新为包含 statusPreview?: string;
-import type {Domain} from '~/components/home/QuadrantCard.vue';
-import QuadrantCard from '~/components/home/QuadrantCard.vue';
+import type {Domain} from '~/components/global/QuadrantCard.vue';
+import QuadrantCard from '~/components/global/QuadrantCard.vue';
 
 const allDomains = ref<Domain[]>([]);
 const isLoadingData = ref(true);
@@ -55,8 +53,6 @@ const fetchAllToolData = async () => {
   try {
     // 模拟API调用延迟
     await new Promise(resolve => setTimeout(resolve, 500)); // 减少延迟以便更快看到效果
-
-    // @ts-expect-error // 临时忽略下一行，因为我们假设 Tool 类型将包含 statusPreview
     allDomains.value = [
       {
         id: 'daily_life', name: '日常领域', description: '提升生活品质与效率', icon: 'ph:house-line-bold',
