@@ -13,10 +13,18 @@ export default defineNuxtConfig({
     devtools: {enabled: true},
     modules: [
         'nuxt-particles',
-        // 'nuxt-lottie-player',
+        // '@nuxtjs/google-fonts',
         '@nuxt/eslint',
         '@nuxt/ui'],
     css: [
         '~/assets/css/main.css', // 引入全局 CSS
     ],
+    googleFonts: {
+        families: {
+        },
+        download: false,
+        preconnect: false,
+        prefetch: false,
+        preload: false,
+    }
 })

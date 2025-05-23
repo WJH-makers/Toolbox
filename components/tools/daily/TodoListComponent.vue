@@ -1,186 +1,239 @@
 <template>
-    <h2>我的待办事项</h2>
-    <form class="add-todo-form" @submit.prevent="handleAddItem">
-      <textarea
-          v-model="newItemContent"
-          placeholder="添加新的待办事项内容..."
-          :disabled="isLoading"
-          class="todo-input-content"
-          rows="3"
-      />
-      <div class="date-inputs-container">
-        <div class="date-input-group">
-          <label for="newItemStartDate">开始时间 (可选)</label>
-          <input
-              id="newItemStartDate"
-              v-model="newItemStartDate"
-              type="datetime-local"
+  <n-space vertical :size="24">
+    <n-h2 style="text-align: center;">我的待办事项</n-h2>
+
+    <n-form class="add-todo-form" @submit.prevent="handleAddItem">
+      <n-form-item-row label="待办内容">
+        <n-input
+            v-model:value="newItemContent"
+            type="textarea"
+            placeholder="添加新的待办事项内容..."
+            :autosize="{ minRows: 3 }"
+            :disabled="isLoading"
+        />
+      </n-form-item-row>
+      <n-grid :cols="2" :x-gap="12">
+        <n-form-item-gi label="开始时间 (可选)">
+          <n-date-picker
+              v-model:formatted-value="newItemStartDate"
+              type="datetime"
+              clearable
+              format="yyyy-MM-dd HH:mm"
+              value-format="yyyy-MM-dd'T'HH:mm:ss.SSS'Z'"
+              style="width: 100%;"
               :disabled="isLoading"
-              class="todo-input-datetime"
-          >
-        </div>
-        <div class="date-input-group">
-          <label for="newItemEndDate">结束时间 (可选)</label>
-          <input
-              id="newItemEndDate"
-              v-model="newItemEndDate"
-              type="datetime-local"
+          />
+        </n-form-item-gi>
+        <n-form-item-gi label="结束时间 (可选)">
+          <n-date-picker
+              v-model:formatted-value="newItemEndDate"
+              type="datetime"
+              clearable
+              format="yyyy-MM-dd HH:mm"
+              value-format="yyyy-MM-dd'T'HH:mm:ss.SSS'Z'"
+              style="width: 100%;"
               :disabled="isLoading"
-              class="todo-input-datetime"
-          >
-        </div>
-      </div>
-      <button type="submit" :disabled="isLoading || !newItemContent.trim()">
+          />
+        </n-form-item-gi>
+      </n-grid>
+      <n-button type="primary" attr-type="submit" :loading="isLoading" :disabled="!newItemContent.trim()">
         {{ isLoading ? '添加中...' : '添加' }}
-      </button>
-    </form>
+      </n-button>
+    </n-form>
 
-    <div v-if="error" class="error-message">{{ error }}</div>
+    <n-alert v-if="error" title="错误" type="error" closable @close="error = null">
+      {{ error }}
+    </n-alert>
 
-    <h3>进行中 ({{ activeTodos.length }})</h3>
-    <div
-v-if="isLoading && !activeTodos.length && !expiredTodos.length && !completedTodos.length"
-         class="loading-message">加载中...
-    </div>
-    <ul v-if="activeTodos.length" class="todo-items-list active-todos">
-      <li
-          v-for="item in activeTodos"
-          :key="item.id"
-          :class="{ completed: item.completed, important: item.important }"
-          class="todo-item"
-      >
-        <div class="todo-main">
-          <div class="todo-content" @click="handleToggleComplete(item)">
-            <input
-                type="checkbox"
-                :checked="item.completed"
-                class="todo-checkbox"
-                @change.stop="handleToggleComplete(item)"
-            >
-            <span class="item-text">{{ item.content }}</span>
-          </div>
-          <div class="todo-dates">
-            <span v-if="item.startDate" class="date-chip">起: {{ formatDate(item.startDate) }}</span>
-            <span
-v-if="item.endDate" class="date-chip end-date"
-                  :class="{'is-past-due': !item.completed && item.endDate && new Date(item.endDate) < now}">
-              止: {{ formatDate(item.endDate) }}
-            </span>
-          </div>
-        </div>
-        <div class="todo-actions">
-          <button
-              :class="['importance-toggle', item.important ? 'is-important' : 'is-general']"
-              title="标记重要/一般"
-              @click="handleToggleImportant(item)"
-          >
-            <span v-if="item.important">🌟 重要</span>
-            <span v-else>⚪ 一般</span>
-          </button>
-          <button class="delete-button" title="删除" @click="handleDeleteItem(item.id)">
-            🗑️
-          </button>
-        </div>
-      </li>
-    </ul>
-    <div
-v-if="!isLoading && !activeTodos.length && !expiredTodos.length && !completedTodos.length && !error"
-         class="empty-message">
-      太棒了，当前没有待办事项！
-    </div>
+    <n-h3>进行中 ({{ activeTodos.length }})</n-h3>
+    <n-spin :show="isLoading && !activeTodos.length && !expiredTodos.length && !completedTodos.length">
+      <n-list v-if="activeTodos.length" bordered class="todo-items-list">
+        <n-list-item v-for="item in activeTodos" :key="item.id">
+          <template #prefix>
+            <n-checkbox :checked="item.completed" @update:checked="() => handleToggleComplete(item)"/>
+          </template>
+          <template #suffix>
+            <n-space>
+              <n-button
+                  size="small"
+                  :type="item.important ? 'warning' : 'default'"
+                  ghost
+                  @click="() => handleToggleImportant(item)"
+              >
+                <template #icon>
+                  <n-icon>
+                    <StarIcon/>
+                  </n-icon>
+                </template>
+                {{ item.important ? '重要' : '一般' }}
+              </n-button>
+              <n-button size="small" type="error" ghost @click="() => confirmDeleteItem(item.id)">
+                <template #icon>
+                  <n-icon>
+                    <DeleteIcon/>
+                  </n-icon>
+                </template>
+                删除
+              </n-button>
+            </n-space>
+          </template>
+          <n-thing style="cursor: pointer;" @click="() => handleToggleComplete(item)">
+            <template #header>
+              <span :class="{ 'completed-text': item.completed }">{{ item.content }}</span>
+            </template>
+            <template #description>
+              <n-space v-if="item.startDate || item.endDate" vertical size="small">
+                <n-tag v-if="item.startDate" size="small" type="info">
+                  起: {{ formatDate(item.startDate, 'yyyy-MM-dd HH:mm') }}
+                </n-tag>
+                <n-tag
+                    v-if="item.endDate"
+                    size="small"
+                    :type="!item.completed && item.endDate && new Date(item.endDate) < now ? 'error' : 'info'"
+                >
+                  止: {{ formatDate(item.endDate, 'yyyy-MM-dd HH:mm') }}
+                  <span v-if="!item.completed && item.endDate && new Date(item.endDate) < now"> (已过期)</span>
+                </n-tag>
+              </n-space>
+            </template>
+          </n-thing>
+        </n-list-item>
+      </n-list>
+      <n-empty
+          v-if="!isLoading && !activeTodos.length && !expiredTodos.length && !completedTodos.length && !error"
+          description="太棒了，当前没有进行中的待办事项！"
+      />
+    </n-spin>
 
     <template v-if="expiredTodos.length > 0">
-      <h3 class="expired-title">已过期未完成 ({{ expiredTodos.length }})</h3>
-      <ul class="todo-items-list expired-todos">
-        <li
-            v-for="item in expiredTodos"
-            :key="item.id"
-            :class="{ important: item.important, expired: true }"
-            class="todo-item"
-        >
-          <div class="todo-main">
-            <div class="todo-content" @click="handleToggleComplete(item)">
-              <input
-                  type="checkbox"
-                  :checked="item.completed"
-                  class="todo-checkbox"
-                  @change.stop="handleToggleComplete(item)"
-              >
-              <span class="item-text">{{ item.content }}</span>
-            </div>
-            <div class="todo-dates">
-              <span v-if="item.startDate" class="date-chip">起: {{ formatDate(item.startDate) }}</span>
-              <span v-if="item.endDate" class="date-chip end-date is-past-due">
-                已于 {{ formatDate(item.endDate) }} 过期
-                </span>
-            </div>
-          </div>
-          <div class="todo-actions">
-            <button
-                :class="['importance-toggle', item.important ? 'is-important' : 'is-general']"
-                title="标记重要/一般"
-                @click="handleToggleImportant(item)"
-            >
-              <span v-if="item.important">🌟 重要</span>
-              <span v-else>⚪ 一般</span>
-            </button>
-            <button class="delete-button" title="删除" @click="handleDeleteItem(item.id)">
-              🗑️
-            </button>
-          </div>
-        </li>
-      </ul>
+      <n-h3 class="expired-title">已过期未完成 ({{ expiredTodos.length }})</n-h3>
+      <n-list bordered class="todo-items-list">
+        <n-list-item v-for="item in expiredTodos" :key="item.id">
+          <template #prefix>
+            <n-checkbox :checked="item.completed" @update:checked="() => handleToggleComplete(item)"/>
+          </template>
+          <template #suffix>
+            <n-space>
+              <n-button
+size="small" :type="item.important ? 'warning' : 'default'" ghost
+                        @click="() => handleToggleImportant(item)">
+                <template #icon>
+                  <n-icon>
+                    <StarIcon/>
+                  </n-icon>
+                </template>
+                {{ item.important ? '重要' : '一般' }}
+              </n-button>
+              <n-button size="small" type="error" ghost @click="() => confirmDeleteItem(item.id)">
+                <template #icon>
+                  <n-icon>
+                    <DeleteIcon/>
+                  </n-icon>
+                </template>
+                删除
+              </n-button>
+            </n-space>
+          </template>
+          <n-thing style="cursor: pointer;" @click="() => handleToggleComplete(item)">
+            <template #header>
+              <span class="expired-text">{{ item.content }}</span>
+            </template>
+            <template #description>
+              <n-space v-if="item.startDate || item.endDate" vertical size="small">
+                <n-tag v-if="item.startDate" size="small" type="info">
+                  起: {{ formatDate(item.startDate, 'yyyy-MM-dd HH:mm') }}
+                </n-tag>
+                <n-tag v-if="item.endDate" size="small" type="error">
+                  已于 {{ formatDate(item.endDate, 'yyyy-MM-dd HH:mm') }} 过期
+                </n-tag>
+              </n-space>
+            </template>
+          </n-thing>
+        </n-list-item>
+      </n-list>
     </template>
 
     <template v-if="completedTodos.length > 0">
-      <h3 class="completed-title">已完成 ({{ completedTodos.length }})</h3>
-      <ul class="todo-items-list completed-todos">
-        <li
-            v-for="item in completedTodos"
-            :key="item.id"
-            :class="{ completed: true, important: item.important }"
-            class="todo-item"
-        >
-          <div class="todo-main">
-            <div class="todo-content" @click="handleToggleComplete(item)">
-              <input
-                  type="checkbox"
-                  :checked="item.completed"
-                  class="todo-checkbox"
-                  @change.stop="handleToggleComplete(item)"
-              >
-              <span class="item-text">{{ item.content }}</span>
-            </div>
-            <div class="todo-dates">
-              <span v-if="item.startDate" class="date-chip">起: {{ formatDate(item.startDate) }}</span>
-              <span v-if="item.endDate" class="date-chip end-date">
-                  止: {{ formatDate(item.endDate) }}
-                </span>
-            </div>
-          </div>
-          <div class="todo-actions">
-            <button
-                :class="['importance-toggle', item.important ? 'is-important' : 'is-general']"
-                title="标记重要/一般"
-                @click="handleToggleImportant(item)"
-            >
-              <span v-if="item.important">🌟 重要</span>
-              <span v-else>⚪ 一般</span>
-            </button>
-            <button class="delete-button" title="删除" @click="handleDeleteItem(item.id)">
-              🗑️
-            </button>
-          </div>
-        </li>
-      </ul>
+      <n-h3 class="completed-title">已完成 ({{ completedTodos.length }})</n-h3>
+      <n-list bordered class="todo-items-list">
+        <n-list-item v-for="item in completedTodos" :key="item.id">
+          <template #prefix>
+            <n-checkbox :checked="item.completed" @update:checked="() => handleToggleComplete(item)"/>
+          </template>
+          <template #suffix>
+            <n-space>
+              <n-button
+size="small" :type="item.important ? 'warning' : 'default'" ghost
+                        @click="() => handleToggleImportant(item)">
+                <template #icon>
+                  <n-icon>
+                    <StarIcon/>
+                  </n-icon>
+                </template>
+                {{ item.important ? '重要' : '一般' }}
+              </n-button>
+              <n-button size="small" type="error" ghost @click="() => confirmDeleteItem(item.id)">
+                <template #icon>
+                  <n-icon>
+                    <DeleteIcon/>
+                  </n-icon>
+                </template>
+                删除
+              </n-button>
+            </n-space>
+          </template>
+          <n-thing style="cursor: pointer;" @click="() => handleToggleComplete(item)">
+            <template #header>
+              <span class="completed-text">{{ item.content }}</span>
+            </template>
+            <template #description>
+              <n-space v-if="item.startDate || item.endDate" vertical size="small">
+                <n-tag v-if="item.startDate" size="small" type="info">
+                  起: {{ formatDate(item.startDate, 'yyyy-MM-dd HH:mm') }}
+                </n-tag>
+                <n-tag v-if="item.endDate" size="small" type="info">
+                  止: {{ formatDate(item.endDate, 'yyyy-MM-dd HH:mm') }}
+                </n-tag>
+              </n-space>
+            </template>
+          </n-thing>
+        </n-list-item>
+      </n-list>
     </template>
+  </n-space>
 </template>
 
 <script setup lang="ts">
 import {ref, onMounted, computed, type Ref} from 'vue';
 import {useTodos} from '~/composables/useTodos';
 import type {TodoItem} from '~/types/todo';
+import {
+  NSpace,
+  NForm,
+  NFormItemRow,
+  NFormItemGi,
+  NInput,
+  NDatePicker,
+  NButton,
+  NAlert,
+  NH2,
+  NH3,
+  NList,
+  NListItem,
+  NCheckbox,
+  NThing,
+  NTag,
+  NIcon,
+  NSpin,
+  NEmpty,
+  NGrid,
+  useDialog // 导入 Naive UI 组件 和 useDialog
+} from 'naive-ui';
+// 建议从 @vicons/ionicons5 或其他图标库导入图标
+import {StarOutline as StarIcon, TrashOutline as DeleteIcon} from '@vicons/ionicons5'; // 示例图标
+import {format as formatDateFns} from 'date-fns'; // 使用 date-fns 进行日期格式化
 
+// interface UseTodosReturnType (保持不变)
 interface UseTodosReturnType {
   todos: Ref<TodoItem[]>;
   isLoading: Ref<boolean>;
@@ -199,6 +252,7 @@ interface UseTodosReturnType {
   }) => Promise<TodoItem | null>;
 }
 
+
 const {
   todos,
   isLoading,
@@ -211,17 +265,20 @@ const {
 } = useTodos() as UseTodosReturnType;
 
 const newItemContent = ref('');
-const newItemStartDate = ref('');
-const newItemEndDate = ref('');
+const newItemStartDate = ref<string | null>(null); // Naive date-picker v-model:formatted-value
+const newItemEndDate = ref<string | null>(null);   // Naive date-picker v-model:formatted-value
+
+const dialog = useDialog(); // Naive UI Hook for dialogs
 
 onMounted(() => {
   fetchTodos();
 });
 
-const now = new Date(); // 'now' and 'todayStart' should be reactive or updated if tasks can span across day changes without page reload
+const now = new Date();
 const todayStart = new Date();
 todayStart.setHours(0, 0, 0, 0);
 
+// computed properties (activeTodos, expiredTodos, completedTodos) 保持不变
 const activeTodos = computed(() =>
     todos.value
         .filter(todo => !todo.completed && (!todo.endDate || new Date(todo.endDate) >= todayStart))
@@ -244,15 +301,24 @@ const expiredTodos = computed(() =>
 const completedTodos = computed(() =>
     todos.value
         .filter(todo => todo.completed)
-        .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())
+        .sort((a, b) => {
+          const dateA = a.updatedAt || a.createdAt;
+          const dateB = b.updatedAt || b.createdAt;
+          return new Date(dateB).getTime() - new Date(dateA).getTime();
+        })
 );
+
 
 const handleAddItem = async () => {
   if (!newItemContent.value.trim()) return;
+
+  // Naive UI's date picker v-model:formatted-value gives string as per value-format
+  // Ensure they are valid dates if provided
   const startDateValue = newItemStartDate.value ? new Date(newItemStartDate.value) : null;
   const endDateValue = newItemEndDate.value ? new Date(newItemEndDate.value) : null;
 
-  if (startDateValue && endDateValue && startDateValue >= endDateValue) {
+
+  if (startDateValue && endDateValue && startDateValue.getTime() >= endDateValue.getTime()) {
     error.value = "结束时间必须晚于开始时间";
     return;
   }
@@ -261,15 +327,21 @@ const handleAddItem = async () => {
   const added = await addTodo(newItemContent.value.trim(), false, startDateValue, endDateValue);
   if (added) {
     newItemContent.value = '';
-    newItemStartDate.value = '';
-    newItemEndDate.value = '';
+    newItemStartDate.value = null;
+    newItemEndDate.value = null;
   }
 };
 
-const handleDeleteItem = async (id: string) => {
-  if (confirm('确定要删除这个待办事项吗？')) {
-    await deleteTodo(id);
-  }
+const confirmDeleteItem = (id: string) => {
+  dialog.warning({ // 使用 Naive UI 的 dialog
+    title: '确认删除',
+    content: '确定要删除这个待办事项吗？',
+    positiveText: '确定',
+    negativeText: '取消',
+    onPositiveClick: async () => {
+      await deleteTodo(id);
+    },
+  });
 };
 
 const handleToggleComplete = async (item: TodoItem) => {
@@ -280,189 +352,44 @@ const handleToggleImportant = async (item: TodoItem) => {
   await toggleImportant(item);
 };
 
-const formatDate = (dateInput: string | Date | null | undefined): string => {
+// 使用 date-fns 进行日期格式化，Naive UI 内部也使用它
+const formatDate = (dateInput: string | Date | null | undefined, formatString: string = 'yyyy-MM-dd HH:mm:ss'): string => {
   if (!dateInput) return '';
-  const date = new Date(dateInput);
-  if (isNaN(date.getTime())) return '无效日期';
-  return date.toLocaleString('zh-CN', {
-    year: 'numeric', month: '2-digit', day: '2-digit',
-    hour: '2-digit', minute: '2-digit', hour12: false
-  }).replace(/\//g, '-');
+  try {
+    const date = new Date(dateInput);
+    if (isNaN(date.getTime())) return '无效日期';
+    return formatDateFns(date, formatString);
+  } catch (e) {
+    return '日期格式化错误';
+  }
 };
 
 </script>
-
 <style scoped>
-.expired-title {
-  color: red;
-  border-bottom-color: red;
+.add-todo-form .n-button {
+  margin-top: 8px;
+  width: 100%;
 }
-
-.completed-title {
-  color:  green;
-  border-bottom-color: green;
-}
-
-.add-todo-form {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.75rem;
-  margin-bottom: 2rem;
-  align-items: flex-end;
-}
-
-.todo-input-content {
-  flex: 1 1 100%;
-  min-height: 60px;
-  padding: 0.75rem;
-  border: 1px solid var(--color-border, #ccc);
-  border-radius: 6px;
-  font-size: 1rem;
-  font-family: inherit;
-  resize: vertical;
-  margin-bottom: 0.5rem;
-}
-
-.date-inputs-container {
-  display: flex;
-  gap: 0.75rem;
-  flex-grow: 1;
-  min-width: 380px;
-}
-
-.date-input-group {
-  display: flex;
-  flex-direction: column;
-  flex-basis: 50%;
-}
-
-.date-input-group label {
-  font-size: 0.75rem;
-  color: var(--color-text-muted);
-  margin-bottom: 0.25rem;
-}
-
-.todo-input-datetime {
-  padding: 0.65rem;
-  border: 1px solid var(--color-border, #ccc);
-  border-radius: 6px;
-  font-size: 0.9rem;
-  background-color: var(--color-input-bg);
-  color: var(--color-text);
-  flex-grow: 1;
-}
-
-.add-todo-form button {
-  padding: 0.7rem 1.2rem;
-  background-color: var(--color-primary);
-  color: white;
-  border: none;
-  border-radius: 6px;
-  cursor: pointer;
-  font-size: 1rem;
-  transition: background-color 0.2s;
-  height: fit-content;
-}
-
-.todo-item {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  padding: 0.85rem 0.5rem;
-  border-bottom: 1px solid var(--color-border-light);
-}
-
-.todo-main {
-  flex-grow: 1;
-  margin-right: 1rem;
-}
-
-.todo-content {
-  display: flex;
-  align-items: center;
-  cursor: pointer;
-  margin-bottom: 0.3em;
-}
-
-.item-text {
-  line-height: 1.4;
-}
-
-.todo-dates {
-  font-size: 0.75em;
-  color: var(--color-text-muted);
-  margin-left: calc(18px + 0.75rem);
-  display: flex;
-  flex-direction: column;
-  gap: 0.2em;
-}
-
-.date-chip {
-  display: inline-block;
-  padding: 0.1em 0.4em;
-  border-radius: 3px;
-  background-color: var(--color-background-mute);
-}
-
-.date-chip.is-past-due,
-.todo-item.expired .todo-dates .end-date {
-  color:red;
-  background-color: red;
-  font-weight: bold;
-}
-
-.todo-item.expired .item-text {
-  color: red;
-}
-
-.todo-item.completed .item-text {
-  text-decoration: line-through;
-  color: var(--color-text-muted);
-}
-
-.todo-item.completed.expired .item-text,
-.todo-item.completed.expired .todo-dates .end-date {
-  color: var(--color-text-muted);
-  background-color: var(--color-background-mute);
-  font-weight: normal;
-}
-
-.importance-toggle span {
-  display: inline-block;
-  padding: 0.2em 0.5em;
-  border-radius: 3px;
-  border: 1px solid var(--color-border);
-  font-size: 0.8rem;
-}
-
-.importance-toggle.is-important span {
-  background-color: var(--color-warning);
-  color: white;
-  border-color: var(--color-warning);
-}
-
-.todo-actions button {
-  padding: 0.2rem 0.4rem;
-}
-
-.error-message {
-  color: var(--error-text-color);
-  background-color: var(--error-bg);
-  border: 1px solid var(--error-border-color);
-  padding: 0.75rem;
-  border-radius: 4px;
-  margin-bottom: 1rem;
-  text-align: center;
-}
-
-.loading-message, .empty-message {
-  text-align: center;
-  color: var(--color-text-muted);
-  padding: 1rem;
-}
-
 .todo-items-list {
-  list-style-type: none;
-  padding: 0;
+  background-color: #F7F7F9;
+}
+.completed-text {
+  text-decoration: line-through;
+  color: #aaa;
+}
+.expired-text {
+  color: red;
+}
+.expired-title .n-h3,
+:deep(.expired-title .n-text) {
+  color: red !important;
+}
+.completed-title .n-h3,
+:deep(.completed-title .n-text) {
+  color: green !important;
+}
+
+.n-list-item .n-thing .n-thing-header {
+  margin-bottom: 4px; /* 微调 n-thing 内部间距 */
 }
 </style>
