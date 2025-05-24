@@ -207,18 +207,18 @@ const programmingDomain = computed(() => allDomains.value.find(d => d.id === 'pr
 
 .large-frosted-glass-container {
   display: grid;
-  grid-template-columns: 1fr; /* Changed for 1x4 layout */
+  grid-template-columns: 1fr; /* 保持之前的单列布局 */
   gap: 25px;
   width: 100%;
-  max-width: 1100px; /* You might want to adjust max-width for a single column layout if it looks too narrow */
+  max-width: 1100px;
   padding: 25px;
   box-sizing: border-box;
-  background-color: var(--glass-bg-large);
+  background-color: rgba(255, 255, 255, 0.1); /* 例如 rgba(255, 255, 255, 0.1) 或类似的半透明色 */
   backdrop-filter: blur(18px) saturate(120%);
   -webkit-backdrop-filter: blur(18px) saturate(120%);
   border-radius: var(--glass-border-radius-large, 16px);
-  border: 1px solid var(--glass-border-color);
-  box-shadow: var(--shadow-elevation-high, 0 12px 30px -10px rgba(0, 0, 0, 0.2));
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  box-shadow: var(--shadow-elevation-high, 0 12px 30px -10px rgba(0, 0, 0, 0.2)); /* 阴影可以保留，它有助于突出层次感 */
 }
 
 

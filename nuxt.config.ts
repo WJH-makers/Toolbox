@@ -1,3 +1,4 @@
+// 文件：nuxt.config.ts
 export default defineNuxtConfig({
     app: {
         head: {
@@ -13,18 +14,10 @@ export default defineNuxtConfig({
     devtools: {enabled: true},
     modules: [
         'nuxt-particles',
-        // '@nuxtjs/google-fonts',
         '@nuxt/eslint',
-        '@nuxt/ui'],
-    css: [
-        '~/assets/css/main.css', // 引入全局 CSS
+        '@nuxt/ui'
     ],
-    googleFonts: {
-        families: {
-        },
-        download: false,
-        preconnect: false,
-        prefetch: false,
-        preload: false,
-    }
+    css: [
+        '~/assets/css/main.css',
+    ],
 })

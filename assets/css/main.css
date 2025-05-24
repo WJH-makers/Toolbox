@@ -4,6 +4,7 @@
     --font-primary: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol';
     --font-monospace: 'Fira Code', 'Consolas', 'Monaco', 'Andale Mono', 'Ubuntu Mono', monospace;
 
+    --back-button-color: #ffffff; /* 亮色主题 - 返回按钮颜色 */
     --color-text: #1f2937; /* 亮色主题 - 深色文字 */
     --color-text-muted: #6b7280; /* 亮色主题 - 次要文字颜色 */
     --color-primary: #3b82f6; /* 亮色主题 - 主色调 (蓝色) */
@@ -15,7 +16,7 @@
 
      /* 为 TodoListComponent 或其他组件可能需要的通用颜色补充或调整 */
     --color-border-light: #e5e7eb;       /* 亮色主题 - 更浅的边框, 你可以根据需要调整，或直接使用 --color-border */
-    --color-background-mute: #f3f4f6;     /* 亮色主题 - 用于一般悬停或次级背景, 可用 --color-input-bg-hover 或 --color-background 调整 */
+    --color-background-mute: #000000; /* 亮色主题 - 用于一般悬停或次级背景, 可用 --color-input-bg-hover 或 --color-background 调整 */
 
     --color-warning: #f59e0b;             /* 亮色主题 - 警告/强调色 (例如，一个友好的橙黄色) */
 
@@ -55,7 +56,8 @@
     --shadow-elevation-high: 0 12px 30px -10px rgba(0, 0, 0, 0.08);
 }
 
-html.dark-theme { /* 或者你用于切换到暗色主题的类名，例如 body.dark-theme */
+html.dark-theme {
+    --back-button-color: #000000;
     --color-text: #e2e8f0; /* 暗色主题 - 亮色文字 */
     --color-text-muted: #94a3b8;
     --color-primary: #60a5fa; /* 暗色主题 - 主色调 (可与亮色一致或调整) */
@@ -67,7 +69,7 @@ html.dark-theme { /* 或者你用于切换到暗色主题的类名，例如 body
 
     /* 为 TodoListComponent 或其他组件可能需要的通用颜色补充或调整 (暗色主题) */
     --color-border-light: #334155;       /* 暗色主题 - 更浅的边框, 你可以根据需要调整，或直接使用 --color-border */
-    --color-background-mute: #1e293b;     /* 暗色主题 - 用于一般悬停或次级背景, 可用 --color-input-bg-hover 或 --color-background 调整 */
+    --color-background-mute: #ffffff; /* 暗色主题 - 用于一般悬停或次级背景, 可用 --color-input-bg-hover 或 --color-background 调整 */
     --color-warning: #facc15;             /* 暗色主题 - 警告/强调色 (例如，一个亮眼的黄色) */
 
 

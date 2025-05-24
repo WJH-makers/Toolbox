@@ -52,7 +52,7 @@ export default defineEventHandler(async (event) => {
             httpOnly: true,
             secure: process.env.NODE_ENV === 'production',
             sameSite: 'lax',
-            maxAge: 60 * 60 * 1, // 1 小时
+            maxAge: 60 * 60 * 3, // 3 小时
             path: '/',
         });
 
