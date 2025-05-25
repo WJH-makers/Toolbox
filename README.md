@@ -11,15 +11,15 @@
 * **Node.js**: 建议使用 LTS 版本 (例如 `v18.x` 或更高版本)。您可以从 [Node.js官网](https://nodejs.org/) 下载。
 * **npm** (或 **yarn** / **pnpm**): 通常随 Node.js 一起安装。
 * **MySQL 服务器**: 项目使用 MySQL 数据库。
-  * **重要**: 您需要自行安装并运行一个 MySQL 服务器实例。
-  * **如何安装 MySQL?**
-    * **Windows**: 推荐从 [MySQL Installer for Windows](https://dev.mysql.com/downloads/installer/) 下载并根据向导安装。
-    * **macOS**: 可以使用 [Homebrew](https://brew.sh/) (`brew install mysql`)
-      或从 [MySQL Community Downloads](https://dev.mysql.com/downloads/mysql/) 下载 `.dmg` 安装包。
-    * **Linux (以 Ubuntu 为例)**: 通常可以通过包管理器安装，例如 `sudo apt update && sudo apt install mysql-server`。其他
-      Linux 发行版请参考其官方文档。
-    * **Docker**: 如果您熟悉 Docker，也可以使用官方的 [MySQL Docker 镜像](https://hub.docker.com/_/mysql)。
-  * 安装完成后，请确保 MySQL 服务已启动，并且您知道如何连接到它（例如，知道 root 用户密码或已创建了专用的数据库用户）。
+    * **重要**: 您需要自行安装并运行一个 MySQL 服务器实例。
+    * **如何安装 MySQL?**
+        * **Windows**: 推荐从 [MySQL Installer for Windows](https://dev.mysql.com/downloads/installer/) 下载并根据向导安装。
+        * **macOS**: 可以使用 [Homebrew](https://brew.sh/) (`brew install mysql`)
+          或从 [MySQL Community Downloads](https://dev.mysql.com/downloads/mysql/) 下载 `.dmg` 安装包。
+        * **Linux (以 Ubuntu 为例)**: 通常可以通过包管理器安装，例如 `sudo apt update && sudo apt install mysql-server`
+          。其他 Linux 发行版请参考其官方文档。
+        * **Docker**: 如果您熟悉 Docker，也可以使用官方的 [MySQL Docker 镜像](https://hub.docker.com/_/mysql)。
+    * 安装完成后，请确保 MySQL 服务已启动，并且您知道如何连接到它（例如，知道 root 用户密码或已创建了专用的数据库用户）。
 
 ---
 
@@ -46,12 +46,14 @@ npm install
 ```bash
 npm run setup
 ```
-
 * 该脚本会引导您完成以下操作：
-  * 创建或覆盖 `.env` 文件。
-  * **数据库配置**：如果您还没有为本项目创建MySQL数据库和用户，脚本会提供相应的SQL命令示例，请您在自己的MySQL客户端执行这些命令。之后，脚本会要求您输入实际使用的数据库名、用户名、密码、主机和端口。
-  * **JWT密钥生成**：自动为您生成一个安全的 `JWT_SECRET`。
-  * **(可选) 腾讯翻译API配置**：如果您需要使用菜谱翻译功能，脚本也会引导您配置相关的腾讯云API密钥和地域。
+    * 创建或覆盖 `.env` 文件。
+    * **数据库配置**：如果您还没有为本项目创建MySQL数据库和用户，脚本会提供相应的SQL命令示例，请您在自己的MySQL客户端执行这些命令。之后，脚本会要求您输入实际使用的数据库名、用户名、密码、主机和端口。
+    * **JWT密钥生成**：自动为您生成一个安全的 `JWT_SECRET`。
+    * **(可选) API 配置**：脚本会询问您是否需要配置以下API：
+        * **DeepSeek AI 助手 API** (用于AI助手聊天功能)。
+        * **腾讯翻译 API** (用于菜谱等内容的翻译功能)。
+          如果您选择配置，脚本会引导您输入相应的密钥和区域信息。
 * 请按照脚本的提示完成所有步骤。
 
 > **手动配置 (如果不想使用安装向导)**:
@@ -59,10 +61,34 @@ npm run setup
 > 1. 复制项目根目录下的 `.env.example` 文件为 `.env` (`cp .env.example .env`)。
 > 2. **仔细阅读并编辑** `.env` 文件中的所有配置项，特别是 `DATABASE_URL`, `SHADOW_DATABASE_URL` 和 `JWT_SECRET`。
      >
-* `DATABASE_URL` 和 `SHADOW_DATABASE_URL` 需要您预先在MySQL中创建好对应的数据库和用户。`README.md` 中有SQL命令示例。
+* `DATABASE_URL` 和 `SHADOW_DATABASE_URL` 需要您预先在MySQL中创建好对应的数据库和用户。本 `README.md` 的数据库创建提示部分有SQL命令示例。
+>     * `JWT_SECRET` **必须**是一个长且随机的安全字符串。您可以使用
+        `node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"` 生成。
+> 3. **(可选) 配置 API 密钥**:
+     >
+* **DeepSeek AI 助手 API (`.env` 文件中)**:
+  >       ```env
+>       DEEPSEEK_API_KEY="your_deepseek_api_key_here"
+>       ```
+  >
+* `DEEPSEEK_API_KEY`: 您的 DeepSeek API 密钥。
+>       * *要获取此密钥，您需要拥有一个 DeepSeek 账户并创建 API
+          密钥。更多信息请访问 [DeepSeek Platform](https://platform.deepseek.com/)。*
+>
+>     * **腾讯翻译 API (`.env` 文件中，如果项目使用此功能，例如菜谱翻译)**:
+        >       ```env
+>       TENCENT_SECRET_ID="your_tencent_cloud_secret_id"
+>       TENCENT_SECRET_KEY="your_tencent_cloud_secret_key"
+>       TENCENT_TRANSLATE_REGION="ap-guangzhou"
+>       ```
+        >
+* `TENCENT_SECRET_ID`: 您的腾讯云 API SecretId。
+>       * `TENCENT_SECRET_KEY`: 您的腾讯云 API SecretKey。
+>       * `TENCENT_TRANSLATE_REGION`: 您选择的腾讯云文本翻译服务地域 (例如 `ap-guangzhou`, `ap-singapore`, `ap-beijing`
+          等)。
+>       * *要获取这些密钥，您需要拥有一个腾讯云账户，并开通“文本翻译 (TMT)
+          ”服务。更多信息及开通服务，请访问 [腾讯云文本翻译产品页](https://cloud.tencent.com/product/tmt)。*
 
->     JWT_SECRET必须是一个长且随机的安全字符串。您可以使用node -e "console.log(require('crypto').randomBytes(32).toString('hex'))" 生成。
->     *** 如果需要翻译功能，请填写腾讯翻译API的相关配置。
 ---
 
 ### 3. 🗄️ 应用数据库迁移
@@ -76,6 +102,7 @@ npx prisma migrate dev
 
 * 首次运行时，此命令可能会提示您输入一个迁移的名称（例如，您可以输入 `init`）。此命令会根据您的 schema 定义同步数据库结构，并通常会自动生成
   Prisma Client。
+
 ---
 
 ### 4. ✨ 生成 Prisma Client (通常自动完成)
@@ -86,7 +113,6 @@ Prisma Client 是一个类型安全的数据库查询构建器。虽然上一步
 ```bash
 npx prisma generate
 ```
-
 * *(此步骤确保您的应用代码可以正确地与数据库交互。)*
 
 ---
@@ -101,4 +127,5 @@ npm run dev
 
 * 此命令会执行 `package.json` 文件中 `scripts` 字段里定义的名为 `dev` 的脚本。通常，这个脚本会编译代码、启动一个本地服务器（例如在
   `http://localhost:3000`），并提供热更新功能，让您在修改代码后能立即在浏览器中看到效果。
+
 ---
