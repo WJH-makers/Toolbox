@@ -1,25 +1,25 @@
 <template>
   <ContentCard>
     <BackButton class="card-internal-back-button"/>
-    <TodoListComponent/>
+    <BMIComponent/>
   </ContentCard>
 </template>
 
-<script setup lang="ts">
-import TodoListComponent from '~/components/tools/daily/TodoListComponent.vue';
+<script setup>
+import BMIComponent from '~/components/tools/daily/BMIComponent.vue';
 import ContentCard from '~/components/global/ContentCard.vue';
-import BackButton from '~/components/global/BackButton.vue'; // 导入 BackButton
+import BackButton from '~/components/global/BackButton.vue';
 
 definePageMeta({
   middleware: ['auth'],
 });
 
 useHead({
-  title: '我的待办清单 - 万能工具箱',
+  title: 'BMI 指数计算器 - 万能工具箱',
   meta: [
     {
       name: 'description',
-      content: '使用万能工具箱中的待办清单工具，高效管理您的所有任务和计划。'
+      content: '使用万能工具箱中的BMI指数计算器，快速了解您的身体质量指数。'
     }
   ]
 });

@@ -51,7 +51,6 @@ const fetchAllToolData = async () => {
   isLoadingData.value = true;
   loadingError.value = null;
   try {
-    // 模拟API调用延迟
     await new Promise(resolve => setTimeout(resolve, 500)); // 减少延迟以便更快看到效果
     allDomains.value = [
       {
@@ -60,24 +59,26 @@ const fetchAllToolData = async () => {
           {
             id: 'todo',
             name: '待办清单',
-            usage: 250, // 可以调整使用频率使其更突出
-            description: '您的个人任务管理器，助您高效规划每一天！', // 修改描述
-            path: '/tools/daily/todo', // 确保这是你实际的TodoList页面路径
-            statusPreview: '查看今日任务' // 新增字段，用于新颖呈现，内容可以动态获取
+            usage: 250,
+            description: '您的个人任务管理器，助您高效规划每一天！',
+            path: '/tools/daily/todo',
+            statusPreview: '查看今日任务'
           },
           {
             id: 'recipe_finder',
             name: '食谱查找',
             usage: 190,
             description: '发现美味食谱，开启烹饪灵感。',
-            path: '/tools/daily/recipes'
+            path: '/tools/daily/recipes',
+            statusPreview: '寻找舌尖美食',
           },
           {
-            id: 'package_tracker',
-            name: '快递追踪',
+            id: 'BMI-calculator',
+            name: 'BMI计算器',
             usage: 170,
-            description: '实时追踪您的包裹位置与状态。',
-            path: '/tools/daily/tracker'
+            description: '计算您的身体质量指数，了解健康状况。',
+            path: '/tools/daily/bmi',
+            statusPreview: '你的健康助手',
           },
         ],
       },
@@ -171,14 +172,11 @@ const fetchAllToolData = async () => {
 onMounted(() => {
   fetchAllToolData();
 });
-
 const dailyLifeDomain = computed(() => allDomains.value.find(d => d.id === 'daily_life'));
 const financeDomain = computed(() => allDomains.value.find(d => d.id === 'finance'));
 const learningDomain = computed(() => allDomains.value.find(d => d.id === 'learning'));
 const programmingDomain = computed(() => allDomains.value.find(d => d.id === 'programming'));
-
 </script>
-
 <style scoped>
 .toolbox-page-quadrant-layout {
   display: flex;

@@ -1,3 +1,5 @@
+// prisma/schema.prisma
+
 generator client {
   provider = "prisma-client-js"
 }
@@ -9,14 +11,15 @@ datasource db {
 }
 
 model User {
-  id        String   @id @default(cuid())
-  email     String   @unique
-  username  String   @unique
-  password  String
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  Todo      Todo[]
-  Recipe    Recipe[] // Relation to Recipe model
+  id            String             @id @default(cuid())
+  email         String             @unique
+  username      String             @unique
+  password      String
+  createdAt     DateTime           @default(now())
+  updatedAt     DateTime           @updatedAt
+  Todo          Todo[]
+  Recipe        Recipe[]
+  healthMetrics UserHealthMetric[] // 新增：与用户健康指标记录的关联
 
   @@map("users")
 }
@@ -38,22 +41,52 @@ model Todo {
   @@index([userId, endDate])
 }
 
-// New model for Recipes
 model Recipe {
   id           String   @id @default(cuid())
   name         String
-  ingredients  String   @db.Text // Suitable for potentially long text
-  instructions String   @db.Text // Suitable for potentially long text
-  category     String? // Optional field for recipe category
-  prepTime     String? // Optional, e.g., "30 minutes"
-  cookTime     String? // Optional, e.g., "1 hour"
-  isFavorite   Boolean  @default(false) // To mark favorite recipes
+  ingredients  String  @db.Text
+  instructions String  @db.Text
+  category     String?
+  prepTime     String?
+  cookTime     String?
+  isFavorite   Boolean @default(false)
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
-  userId       String // Foreign key to link to the User model
+  userId       String
   user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  @@index([userId, createdAt]) // Index for common query: user's recipes sorted by creation
-  @@index([userId, isFavorite]) // Index for common query: user's favorite recipes
-  @@map("recipes") // Explicitly maps to the 'recipes' table in the database
+  @@index([userId, createdAt])
+  @@index([userId, isFavorite])
+  @@map("recipes")
+}
+
+model UserHealthMetric {
+  id         String   @id @default(cuid())
+  userId     String // 关联到用户ID
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade) // 与User模型建立关联
+  recordedAt DateTime @default(now())
+
+  heightCm       Float? // 身高 (厘米)
+  weightKg       Float? // 体重 (公斤)
+  ageAtRecording Int? // 记录时的年龄
+  gender         String? // 性别 (例如: "male", "female", "other" - 应用层面可以做成下拉选择)
+  activityLevel  String? // 日常活动水平 (例如: "sedentary", "lightly_active", "moderately_active", "very_active", "extra_active")
+
+  neckCm  Float? // 颈围 (厘米) - 用于某些体脂率计算
+  waistCm Float? // 腰围 (厘米) - 用于某些体脂率计算
+  hipCm   Float? // 臀围 (厘米) - 用于某些女性体脂率计算
+
+  bmi                Float? // 计算得出的BMI值
+  bmr                Float? // 计算得出的基础代谢率 (卡路里)
+  tdee               Float? // 计算得出的每日总能量消耗 (卡路里)
+  bodyFatPercent     Float? // 估算的体脂率 (%)
+  recommendedWaterMl Float? // (可选) 每日推荐饮水量 (毫升)
+
+  notes String? @db.Text // 用户可能想记录的一些备注信息
+
+  createdAt DateTime @default(now()) // Prisma记录创建时间
+  updatedAt DateTime @updatedAt // Prisma记录更新时间
+
+  @@index([userId, recordedAt]) // 常用查询：按用户和记录时间索引
+  @@map("user_health_metrics")
 }

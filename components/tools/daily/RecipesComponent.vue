@@ -11,7 +11,7 @@
             :disabled="isLoadingSearch"
             placeholder="例如: 鸡肉, 鱼面..."
             type="text"
-        />
+        >
       </div>
       <button :disabled="isLoadingSearch || !searchQuery.trim()" type="submit">
         {{ isLoadingSearch && currentPage === 1 ? '搜索中...' : '搜索' }}
@@ -35,9 +35,11 @@
     <div v-if="searchResults.length > 0" class="search-results-container">
       <h3>搜索结果 (找到 {{ totalMeals }} 条相关食谱)</h3>
       <ul class="recipe-items-list summary-list">
-        <li v-for="mealSummary in searchResults" :key="mealSummary.id" class="recipe-item summary-item"
+        <li
+            v-for="mealSummary in searchResults" :key="mealSummary.id" class="recipe-item summary-item"
             @click="showMealDetails(mealSummary.id)">
-          <img v-if="mealSummary.imageUrl" :alt="mealSummary.name" :src="mealSummary.imageUrl + '/preview'"
+          <img
+              v-if="mealSummary.imageUrl" :alt="mealSummary.name" :src="mealSummary.imageUrl + '/preview'"
                class="summary-image">
           <div class="recipe-item-content summary-content">
             <h4>{{ mealSummary.name }}</h4>
@@ -50,7 +52,8 @@
           {{ isLoadingSearch ? '加载中...' : '加载更多食谱' }}
         </button>
       </div>
-      <div v-if="!isLoadingSearch && searchResults.length > 0 && !hasMorePages && lastSearchAttempted"
+      <div
+          v-if="!isLoadingSearch && searchResults.length > 0 && !hasMorePages && lastSearchAttempted"
            class="empty-state">
         所有相关食谱已加载完毕。
       </div>
@@ -85,7 +88,8 @@
       </h3>
       <div class="recipe-item full-details">
         <div class="recipe-item-content">
-          <img v-if="selectedMealDetails.imageUrl" :alt="selectedMealDetails.name" :src="selectedMealDetails.imageUrl"
+          <img
+              v-if="selectedMealDetails.imageUrl" :alt="selectedMealDetails.name" :src="selectedMealDetails.imageUrl"
                class="detail-image">
 
           <div class="recipe-meta-tags">
@@ -597,11 +601,5 @@ h3 .icon {
   text-align: right; /* 与按钮对齐 */
 }
 
-.translation-failed-indicator {
-  color: #dc3545; /* 更显眼的红色 */
-  font-size: 0.8em;
-  font-style: italic;
-  margin-left: 5px;
-}
 
 </style>
