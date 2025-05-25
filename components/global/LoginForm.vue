@@ -34,10 +34,10 @@
   </div>
 </template>
 
-<script setup> // 如果你其他地方用的是 lang="ts"，这里也建议加上
+<script setup>
 import {ref} from 'vue';
-import {useRouter} from '#imports'; // 在Nuxt 3中，推荐使用 #imports
-import {useAuth} from '~/composables/useAuth.js'; // 导入全局的 useAuth
+import {useRouter} from '#imports';
+import {useAuth} from '~/composables/useAuth.js';
 
 const username = ref('');
 const password = ref('');

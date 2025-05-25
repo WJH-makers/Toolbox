@@ -1,31 +1,35 @@
-// server/middleware/auth.js
-import {defineEventHandler, createError, parseCookies} from 'h3'; // 引入 parseCookies
+import {defineEventHandler, createError, parseCookies} from 'h3';
 import jwt from 'jsonwebtoken';
 import prisma from '~/server/utils/prisma.js';
 
 const JWT_SECRET = process.env.JWT_SECRET;
 
+const PROTECTED_API_ROOT_PREFIX = '/api'; // 所有 /api/ 下的路径都先经过这里
+
+// 定义在 PROTECTED_API_ROOT_PREFIX 下，但应被视为公共访问的路径前缀
+// 例如，所有 /api/auth/ 开头的路径（如 /api/auth/login, /api/auth/register, /api/auth/logout）都将是公共的
+const PUBLIC_API_SUB_PREFIXES = [
+    '/api/auth/', // 注意末尾的斜杠，确保它匹配此目录下的所有内容
+];
+
 export default defineEventHandler(async (event) => {
-    const protectedPaths = [
-        '/api/user/profile/username',
-        '/api/user/profile/email',
-        '/api/user/profile/password',
-        '/api/user/me',
-        '/api/todos',
-    ];
-
     const path = event.path || event.node.req.url || '';
-    const isProtectedRoute = protectedPaths.some(p => path.startsWith(p));
 
-    if (isProtectedRoute) {
+    // 检查路径是否以受保护的API根前缀开头
+    if (path.startsWith(PROTECTED_API_ROOT_PREFIX)) {
+        // 检查该路径是否以任何一个“公共API子前缀”开头
+        const isPublicSubPath = PUBLIC_API_SUB_PREFIXES.some(publicPrefix => path.startsWith(publicPrefix));
+        if (isPublicSubPath) {
+            // 如果路径匹配一个公共API子前缀 (例如 /api/auth/login)，则不进行认证检查，直接允许访问
+            return;
+        }
         if (!JWT_SECRET) {
             console.error('Auth Middleware FATAL ERROR: JWT_SECRET is not defined.');
             throw createError({statusCode: 500, statusMessage: 'Server Configuration Error'});
         }
 
-        // 1. 从 Cookie 中解析名为 'auth_token' 的 token
         const cookies = parseCookies(event);
-        const token = cookies.auth_token; // 'auth_token' 是你在 login.post.js 中设置的 cookie 名称
+        const token = cookies.auth_token;
 
         if (!token) {
             console.log(`Auth Middleware: No 'auth_token' cookie found for protected route ${path}`);
@@ -49,16 +53,12 @@ export default defineEventHandler(async (event) => {
                 throw createError({statusCode: 403, statusMessage: 'Forbidden', message: '用户不存在或已被禁用。'});
             }
 
-            // 将必要的用户信息附加到事件上下文
             event.context.auth = {userId: userId};
-            // 避免将整个数据库对象（包含密码哈希）放入上下文，除非已筛选
             event.context.user = {
                 id: userFromDb.id,
                 username: userFromDb.username,
-                email: userFromDb.email
-                // 根据需要添加其他安全字段
+                email: userFromDb.email,
             };
-
             console.log(`Auth Middleware: User ${userId} authorized for route ${path}`);
 
         } catch (error) {
@@ -72,12 +72,11 @@ export default defineEventHandler(async (event) => {
             } else if (error.name === 'JsonWebTokenError') {
                 clientMessage = '认证令牌格式无效。';
                 statusMsg = 'Invalid Token';
-            } else if (error.statusCode) { // 如果是 H3Error
+            } else if (error.statusCode) {
                 statusCode = error.statusCode;
                 clientMessage = error.message || clientMessage;
                 statusMsg = error.statusMessage || statusMsg;
             }
-
             console.error(`Auth Middleware Error for ${path}:`, clientMessage, error);
             throw createError({statusCode, statusMessage: statusMsg, message: clientMessage});
         }

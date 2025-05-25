@@ -2,6 +2,7 @@
 import {ref, computed, readonly} from 'vue';
 import {useRouter} from '#imports'; // Nuxt 3 自动导入 useRouter
 import axios from 'axios';
+
 /**
  * @type {import('vue').Ref<import('~/types/auth').AuthenticatedUser | null>}
  */
@@ -55,12 +56,10 @@ export function useAuth() {
                 console.warn('[useAuth] fetchCurrentUser: API call to /api/user/me not logically successful or data missing. Keeping existing user state (if any). Response:', response.data);
             }
         } catch (error) { // error 类型为 any
-            // console.warn(`[useAuth] fetchCurrentUser ERROR: ${error?.message}`); // Debugging log
             let httpStatus = 0;
             if (axios.isAxiosError(error)) { // Axios 提供了类型守卫
                 httpStatus = error.response?.status || 0;
             }
-            // 关键：仅当错误是明确的认证失败时，才将用户登出
             if (httpStatus === 401 || httpStatus === 403) {
                 if (typeof localStorage !== 'undefined') {
                     localStorage.removeItem('user');
@@ -120,15 +119,12 @@ export function useAuth() {
         }
 
         try {
-            // console.log('[useAuth] Calling /api/auth/logout API.'); // Debugging log
             await axios.post('/api/auth/logout');
-            // console.log('[useAuth] Logout API call processed.'); // Debugging log
         } catch (error) { // error 类型为 any
             console.error("[useAuth] Logout API call failed:", error?.message, error); // 保留这个错误日志比较重要
         } finally {
             isLoadingAuth.value = false;
             authStatusResolved.value = true;
-            // console.log(`[useAuth] logout finished. isLoadingAuth: ${isLoadingAuth.value}, authStatusResolved: ${authStatusResolved.value}`); // Debugging log
             if (redirectToLogin) {
                 try {
                     // console.log('[useAuth] Redirecting to /login.'); // Debugging log

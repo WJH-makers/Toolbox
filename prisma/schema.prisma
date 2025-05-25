@@ -1,24 +1,24 @@
-// prisma/schema.prisma
 generator client {
   provider = "prisma-client-js"
 }
 
 datasource db {
-  provider          = "mysql" // 你在初始化时选择的数据库类型
-  url               = env("DATABASE_URL") // 从 .env 文件读取
-  shadowDatabaseUrl = env("SHADOW_DATABASE_URL") // 新增这行
+  provider          = "mysql"
+  url               = env("DATABASE_URL")
+  shadowDatabaseUrl = env("SHADOW_DATABASE_URL")
 }
 
 model User {
-  id        String   @id @default(cuid()) // 主键，使用 CUID 作为默认值
-  email     String   @unique // 邮箱，必须唯一
-  username  String   @unique // 用户名，必须唯一
+  id        String   @id @default(cuid())
+  email     String   @unique
+  username  String   @unique
   password  String
-  createdAt DateTime @default(now()) // 用户创建时间
-  updatedAt DateTime @updatedAt // 用户信息更新时间
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
   Todo      Todo[]
+  Recipe    Recipe[] // Relation to Recipe model
 
-  @@map("users") // 可选：指定数据库中的表名为 'users'
+  @@map("users")
 }
 
 model Todo {
@@ -26,14 +26,34 @@ model Todo {
   content   String
   completed Boolean   @default(false)
   important Boolean   @default(false)
-  startDate DateTime? // 新增：开始日期时间，可选
-  endDate   DateTime? // 新增：结束日期时间（原dueDate的概念），可选
+  startDate DateTime?
+  endDate   DateTime?
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
   userId    String
   user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId, createdAt])
-  @@index([userId, startDate]) // 为新日期字段添加索引
+  @@index([userId, startDate])
   @@index([userId, endDate])
+}
+
+// New model for Recipes
+model Recipe {
+  id           String   @id @default(cuid())
+  name         String
+  ingredients  String   @db.Text // Suitable for potentially long text
+  instructions String   @db.Text // Suitable for potentially long text
+  category     String? // Optional field for recipe category
+  prepTime     String? // Optional, e.g., "30 minutes"
+  cookTime     String? // Optional, e.g., "1 hour"
+  isFavorite   Boolean  @default(false) // To mark favorite recipes
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  userId       String // Foreign key to link to the User model
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt]) // Index for common query: user's recipes sorted by creation
+  @@index([userId, isFavorite]) // Index for common query: user's favorite recipes
+  @@map("recipes") // Explicitly maps to the 'recipes' table in the database
 }

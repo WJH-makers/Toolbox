@@ -98,9 +98,6 @@ export function useTodos() {
                                 bodyToSend[dateKey] = null;
                             }
                         }
-                        // If it's neither Date nor string, or an invalid string, it might be an issue or sent as is.
-                        // Current logic: if string, try parse, else might send invalid.
-                        // For simplicity, ensure it's either ISOString or null.
                     } else {
                         bodyToSend[dateKey] = null; // Ensure falsy values become null for API
                     }
@@ -120,9 +117,6 @@ export function useTodos() {
                     todos.value[index] = updatedItemFromServer; // Reactive update
                 } else {
                     console.warn(`[useTodos] updateTodo: Updated todo (id: ${id}) not found in local list.`);
-                    // Optionally, add it or call fetchTodos() if this case implies out-of-sync data.
-                    // For now, sticking to only updating if found to maintain "no full refresh" goal.
-                    // todos.value.unshift(updatedItemFromServer); // Or fetchTodos()
                 }
                 return updatedItemFromServer;
             } else {
@@ -167,7 +161,6 @@ export function useTodos() {
             console.error("useTodos - toggleComplete error: Invalid todo item provided.", todo);
             return null;
         }
-        // This will use the modified updateTodo which updates locally
         return await updateTodo(todo.id, {completed: !todo.completed});
     };
 
@@ -177,7 +170,6 @@ export function useTodos() {
             console.error("useTodos - toggleImportant error: Invalid todo item provided.", todo);
             return null;
         }
-        // This will use the modified updateTodo which updates locally
         return await updateTodo(todo.id, {important: !todo.important});
     };
 

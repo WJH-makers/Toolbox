@@ -2,8 +2,6 @@ import {defineEventHandler, setCookie} from 'h3';
 
 export default defineEventHandler(async (event) => {
     try {
-        // 清除名为 'auth_token' 的 cookie
-        // 通过将其 MaxAge 设置为 0 或一个过去的 Expires 日期来实现
         setCookie(event, 'auth_token', '', { // 值设为空
             httpOnly: true,
             secure: process.env.NODE_ENV === 'production',
