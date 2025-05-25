@@ -60,10 +60,8 @@ npm run setup
 > 2. **仔细阅读并编辑** `.env` 文件中的所有配置项，特别是 `DATABASE_URL`, `SHADOW_DATABASE_URL` 和 `JWT_SECRET`。
      >
 * `DATABASE_URL` 和 `SHADOW_DATABASE_URL` 需要您预先在MySQL中创建好对应的数据库和用户。`README.md` 中有SQL命令示例。
->     * `JWT_SECRET` **必须**是一个长且随机的安全字符串。您可以使用
-        `node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"` 生成。
+>     * `JWT_SECRET` **必须**是一个长且随机的安全字符串。您可以使用`node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"` 生成。
 >     * 如果需要翻译功能，请填写腾讯翻译API的相关配置。
-
 ---
 
 ### 3. 🗄️ 应用数据库迁移
@@ -77,7 +75,6 @@ npx prisma migrate dev
 
 * 首次运行时，此命令可能会提示您输入一个迁移的名称（例如，您可以输入 `init`）。此命令会根据您的 schema 定义同步数据库结构，并通常会自动生成
   Prisma Client。
-
 ---
 
 ### 4. ✨ 生成 Prisma Client (通常自动完成)
@@ -103,5 +100,4 @@ npm run dev
 
 * 此命令会执行 `package.json` 文件中 `scripts` 字段里定义的名为 `dev` 的脚本。通常，这个脚本会编译代码、启动一个本地服务器（例如在
   `http://localhost:3000`），并提供热更新功能，让您在修改代码后能立即在浏览器中看到效果。
-
 ---
