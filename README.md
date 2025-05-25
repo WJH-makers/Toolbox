@@ -60,34 +60,29 @@ npm run setup
 > 如果您不想使用 `npm run setup` 脚本，也可以手动配置：
 > 1. 复制项目根目录下的 `.env.example` 文件为 `.env` (`cp .env.example .env`)。
 > 2. **仔细阅读并编辑** `.env` 文件中的所有配置项，特别是 `DATABASE_URL`, `SHADOW_DATABASE_URL` 和 `JWT_SECRET`。
-     >
+
 * `DATABASE_URL` 和 `SHADOW_DATABASE_URL` 需要您预先在MySQL中创建好对应的数据库和用户。本 `README.md` 的数据库创建提示部分有SQL命令示例。
->     * `JWT_SECRET` **必须**是一个长且随机的安全字符串。您可以使用
-        `node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"` 生成。
+
+>     JWT_SECRET必须是一个长且随机的安全字符串。您可以使用node -e "console.log(require('crypto').randomBytes(32).toString('hex'))" 生成。
 > 3. **(可选) 配置 API 密钥**:
-     >
+
 * **DeepSeek AI 助手 API (`.env` 文件中)**:
-  >       ```env
 >       DEEPSEEK_API_KEY="your_deepseek_api_key_here"
->       ```
-  >
-* `DEEPSEEK_API_KEY`: 您的 DeepSeek API 密钥。
->       * *要获取此密钥，您需要拥有一个 DeepSeek 账户并创建 API
-          密钥。更多信息请访问 [DeepSeek Platform](https://platform.deepseek.com/)。*
 >
->     * **腾讯翻译 API (`.env` 文件中，如果项目使用此功能，例如菜谱翻译)**:
-        >       ```env
+* `DEEPSEEK_API_KEY`: 您的 DeepSeek API 密钥。
+
+>       要获取此密钥，您需要拥有一个 DeepSeek 账户并创建 API密钥。更多信息请访问 [DeepSeek Platform](https://platform.deepseek.com/)。
+
+>     腾讯翻译 API (.env 文件中，如果项目使用此功能，例如菜谱翻译):
 >       TENCENT_SECRET_ID="your_tencent_cloud_secret_id"
 >       TENCENT_SECRET_KEY="your_tencent_cloud_secret_key"
 >       TENCENT_TRANSLATE_REGION="ap-guangzhou"
->       ```
-        >
+>
+>
 * `TENCENT_SECRET_ID`: 您的腾讯云 API SecretId。
 >       * `TENCENT_SECRET_KEY`: 您的腾讯云 API SecretKey。
->       * `TENCENT_TRANSLATE_REGION`: 您选择的腾讯云文本翻译服务地域 (例如 `ap-guangzhou`, `ap-singapore`, `ap-beijing`
-          等)。
->       * *要获取这些密钥，您需要拥有一个腾讯云账户，并开通“文本翻译 (TMT)
-          ”服务。更多信息及开通服务，请访问 [腾讯云文本翻译产品页](https://cloud.tencent.com/product/tmt)。*
+>       * `TENCENT_TRANSLATE_REGION`: 您选择的腾讯云文本翻译服务地域 (例如 `ap-guangzhou`, `ap-singapore`, `ap-beijing`等)。
+>       * *要获取这些密钥，您需要拥有一个腾讯云账户，并开通“文本翻译 (TMT)”服务。更多信息及开通服务，请访问 [腾讯云文本翻译产品页](https://cloud.tencent.com/product/tmt)。*
 
 ---
 
