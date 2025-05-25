@@ -1,96 +1,105 @@
 // composables/useAuth.js
 import {ref, computed, readonly} from 'vue';
-import {useRouter} from '#imports'; // Nuxt 3 自动导入 useRouter
+import {useRouter} from '#imports';
 import axios from 'axios';
 
-/**
- * @type {import('vue').Ref<import('~/types/auth').AuthenticatedUser | null>}
- */
 const user = ref(null);
 const isLoadingAuth = ref(false);
 const authStatusResolved = ref(false);
 
-// --- 模块首次加载时执行的辅助函数 (仅客户端) ---
+const _clearUserSession = () => {
+    user.value = null;
+    if (typeof window !== 'undefined' && typeof localStorage !== 'undefined') {
+        localStorage.removeItem('user');
+    }
+};
+
+const _setUserSession = (userData) => {
+    if (userData && typeof userData.id === 'string' && userData.username && userData.email) {
+        user.value = userData;
+        if (typeof window !== 'undefined' && typeof localStorage !== 'undefined') {
+            localStorage.setItem('user', JSON.stringify(user.value));
+        }
+        return true;
+    } else {
+        console.error('[useAuth] _setUserSession: Attempted to set invalid user data structure.');
+        _clearUserSession(); // 如果数据无效，也清除会话
+        return false;
+    }
+};
+
 const _loadUserFromStorage = () => {
     if (typeof window !== 'undefined' && typeof localStorage !== 'undefined') {
         const storedUser = localStorage.getItem('user');
         if (storedUser) {
             try {
                 const parsedUser = JSON.parse(storedUser);
-                user.value = parsedUser;
+                // 仅加载，不改变 authStatusResolved，也不完全信任此数据为“已登录”
+                // 真实的登录状态由 fetchCurrentUser 确认
+                if (parsedUser && parsedUser.id) {
+                    user.value = parsedUser;
+                } else {
+                    localStorage.removeItem('user');
+                }
             } catch (e) {
                 console.error("[useAuth] _loadUserFromStorage: Failed to parse stored user data:", e);
-                localStorage.removeItem('user'); // 清理损坏的数据
+                localStorage.removeItem('user');
             }
         }
     }
 };
 
-// 确保这个初始化仅在客户端首次导入模块时执行
 if (typeof window !== 'undefined') {
     _loadUserFromStorage();
 }
 
 export function useAuth() {
     const router = useRouter();
+    const isLoggedIn = computed(() => !!user.value && !!user.value.id);
 
-    const isLoggedIn = computed(() => !!user.value);
-
-    const fetchCurrentUser = async (isInitialCheck = false) => { // 原为: Promise<void>
-        if (isInitialCheck && !isLoadingAuth.value) {
+    const fetchCurrentUser = async (isInitialCheck = false) => {
+        if (isInitialCheck) {
             isLoadingAuth.value = true;
         }
         try {
-            const response = await axios.get('/api/user/me'); // 类型由 AxiosResponse<ApiResponse<{ user: AuthenticatedUser }>> 变为 any 或由运行时推断
+            const response = await axios.get('/api/user/me');
             if (response.data?.success && response.data.data?.user) {
-                const userData = response.data.data.user;
-                if (userData && typeof userData.id === 'string') {
-                    user.value = userData;
-                    if (typeof localStorage !== 'undefined') {
-                        localStorage.setItem('user', JSON.stringify(user.value));
-                    }
-                } else {
-                    console.error('[useAuth] fetchCurrentUser: Received success but invalid user data structure from /api/user/me.');
+                if (!_setUserSession(response.data.data.user) && isInitialCheck) {
+                    // 如果设置用户数据失败（因为结构问题），并且是初始检查，确保状态是未登录
+                    _clearUserSession();
                 }
             } else {
-                console.warn('[useAuth] fetchCurrentUser: API call to /api/user/me not logically successful or data missing. Keeping existing user state (if any). Response:', response.data);
-            }
-        } catch (error) { // error 类型为 any
-            let httpStatus = 0;
-            if (axios.isAxiosError(error)) { // Axios 提供了类型守卫
-                httpStatus = error.response?.status || 0;
-            }
-            if (httpStatus === 401 || httpStatus === 403) {
-                if (typeof localStorage !== 'undefined') {
-                    localStorage.removeItem('user');
+                // API 调用逻辑上不成功或数据缺失
+                if (isInitialCheck) { // 如果是初始检查，则清除任何现有用户状态
+                    _clearUserSession();
                 }
-                user.value = null;
-            } else {
-                console.warn(`[useAuth] fetchCurrentUser: Non-authentication error (status ${httpStatus}) occurred. Existing user state (if any) preserved. Error: ${error?.message}`);
+                console.warn('[useAuth] fetchCurrentUser: API call to /api/user/me not successful or data missing. Response:', response.data);
             }
+        } catch (error) {
+            // 任何错误（包括401/403或其他网络错误）都应导致用户状态被清除
+            _clearUserSession();
+            console.warn(`[useAuth] fetchCurrentUser: Error occurred. User state cleared. Error:`, error.message);
         } finally {
             if (isInitialCheck) {
                 authStatusResolved.value = true;
                 isLoadingAuth.value = false;
+                console.log(`[useAuth] fetchCurrentUser (initial): authStatusResolved=${authStatusResolved.value}, isLoggedIn=${isLoggedIn.value}`);
             }
         }
     };
 
-    const login = async (loginIdentifier, passwordVal) => { // 原为: loginIdentifier: string, passwordVal: string): Promise<ApiResponse<{ user: AuthenticatedUser }>>
+    const login = async (loginIdentifier, passwordVal) => {
         isLoadingAuth.value = true;
-        let apiError = null; // 原为: string | null
+        authStatusResolved.value = false; // 开始登录时，可以认为状态暂时未解析完成
+        let apiError = null;
         try {
-            const response = await axios.post( // 类型由 AxiosResponse<ApiResponse<{ user: AuthenticatedUser }>> 变为 any
+            const response = await axios.post(
                 '/api/auth/login',
                 {loginIdentifier, password: passwordVal}
             );
 
             if (response.data?.success && response.data.data?.user) {
-                user.value = response.data.data.user;
-                if (typeof localStorage !== 'undefined') {
-                    localStorage.setItem('user', JSON.stringify(user.value));
-                }
-                authStatusResolved.value = true;
+                _setUserSession(response.data.data.user);
                 return {
                     success: true,
                     message: response.data.message || '登录成功！',
@@ -98,39 +107,37 @@ export function useAuth() {
                 };
             } else {
                 apiError = response.data?.message || '登录凭据无效或服务器响应不完整。';
-                // console.error('[useAuth] Login API call not successful or user data missing. Message:', apiError); // Debugging log
                 throw new Error(apiError);
             }
-        } catch (error) { // error 类型为 any
-            user.value = null;
-            if (typeof localStorage !== 'undefined') localStorage.removeItem('user');
+        } catch (error) {
+            _clearUserSession();
             const finalErrorMessage = apiError || (axios.isAxiosError(error) && error.response?.data?.message) || error.message || '登录失败，请重试。';
             return {success: false, error: finalErrorMessage};
         } finally {
             isLoadingAuth.value = false;
+            authStatusResolved.value = true; // 无论登录成功或失败，认证状态的“尝试”已完成
+            console.log(`[useAuth] login finished: authStatusResolved=${authStatusResolved.value}, isLoggedIn=${isLoggedIn.value}`);
         }
     };
 
-    const logout = async (redirectToLogin = true) => { // 原为: Promise<ApiResponse>
+    const logout = async (redirectToLogin = true) => {
         isLoadingAuth.value = true;
-        user.value = null;
-        if (typeof localStorage !== 'undefined') {
-            localStorage.removeItem('user');
-        }
+        const wasLoggedIn = isLoggedIn.value; // 记录登出前的状态
+        _clearUserSession();
 
         try {
             await axios.post('/api/auth/logout');
-        } catch (error) { // error 类型为 any
-            console.error("[useAuth] Logout API call failed:", error?.message, error); // 保留这个错误日志比较重要
+        } catch (error) {
+            console.error("[useAuth] Logout API call failed:", error?.message);
         } finally {
             isLoadingAuth.value = false;
-            authStatusResolved.value = true;
-            if (redirectToLogin) {
+            authStatusResolved.value = true; // 登出后，认证状态已确定
+            console.log(`[useAuth] logout finished: authStatusResolved=${authStatusResolved.value}, isLoggedIn=${isLoggedIn.value}`);
+            if (redirectToLogin && wasLoggedIn) { // 仅当之前确实是登录状态时才强制跳转
                 try {
-                    // console.log('[useAuth] Redirecting to /login.'); // Debugging log
                     await router.push('/login');
                 } catch (routerError) {
-                    console.error("[useAuth] Failed to redirect after logout:", routerError); // 保留这个错误日志
+                    console.error("[useAuth] Failed to redirect after logout:", routerError);
                     if (typeof window !== 'undefined') window.location.pathname = '/login';
                 }
             }
@@ -138,13 +145,16 @@ export function useAuth() {
         return {success: true, message: '已成功退出登录。'};
     };
 
-    const handleSuccessfulAccountDeletion = () => { // 原为: (): void
+    const handleSuccessfulAccountDeletion = () => {
         logout(true);
     };
 
-    const initializeAuthState = async () => { // 原为: Promise<void>
+    const initializeAuthState = async () => {
         if (typeof window !== 'undefined' && !authStatusResolved.value) {
+            console.log('[useAuth] initializeAuthState: Starting initial auth state check...');
             await fetchCurrentUser(true);
+        } else if (typeof window !== 'undefined' && authStatusResolved.value) {
+            console.log('[useAuth] initializeAuthState: Auth state was already resolved.');
         }
     };
 
@@ -155,7 +165,7 @@ export function useAuth() {
         authStatusResolved: readonly(authStatusResolved),
         login,
         logout,
-        fetchCurrentUser,
+        fetchCurrentUser, // 暴露出来以便在其他地方按需刷新用户信息
         initializeAuthState,
         handleSuccessfulAccountDeletion,
     };

@@ -8,7 +8,6 @@ const PROTECTED_API_ROOT_PREFIX = '/api';
 const PUBLIC_API_SUB_PREFIXES = [
     '/api/auth/',       // 例如：/api/auth/login, /api/auth/register
     '/api/_nuxt_icon/', // 新增：将 nuxt-icon 模块使用的API路径设为公开
-    // 如果将来还有其他模块或公共API，可以继续在这里添加其前缀
 ];
 
 export default defineEventHandler(async (event) => {
@@ -20,7 +19,6 @@ export default defineEventHandler(async (event) => {
         if (isPublicSubPath) {
             return; // 公开路径，跳过认证
         }
-        // --- 如果路径以 /api 开头，且不属于任何公共API子前缀，则执行认证逻辑 ---
         if (!JWT_SECRET) {
             console.error('Auth Middleware FATAL ERROR: JWT_SECRET is not defined.');
             throw createError({statusCode: 500, statusMessage: 'Server Configuration Error'});

@@ -60,8 +60,9 @@ npm run setup
 > 2. **仔细阅读并编辑** `.env` 文件中的所有配置项，特别是 `DATABASE_URL`, `SHADOW_DATABASE_URL` 和 `JWT_SECRET`。
      >
 * `DATABASE_URL` 和 `SHADOW_DATABASE_URL` 需要您预先在MySQL中创建好对应的数据库和用户。`README.md` 中有SQL命令示例。
->     * `JWT_SECRET` **必须**是一个长且随机的安全字符串。您可以使用`node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"` 生成。
->     * 如果需要翻译功能，请填写腾讯翻译API的相关配置。
+
+>     JWT_SECRET必须是一个长且随机的安全字符串。您可以使用node -e "console.log(require('crypto').randomBytes(32).toString('hex'))" 生成。
+>     *** 如果需要翻译功能，请填写腾讯翻译API的相关配置。
 ---
 
 ### 3. 🗄️ 应用数据库迁移

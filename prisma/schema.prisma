@@ -11,15 +11,17 @@ datasource db {
 }
 
 model User {
-  id            String             @id @default(cuid())
-  email         String             @unique
-  username      String             @unique
-  password      String
-  createdAt     DateTime           @default(now())
-  updatedAt     DateTime           @updatedAt
-  Todo          Todo[]
-  Recipe        Recipe[]
-  healthMetrics UserHealthMetric[] // 新增：与用户健康指标记录的关联
+  id             String             @id @default(cuid())
+  email          String             @unique
+  username       String             @unique
+  password       String
+  createdAt      DateTime           @default(now())
+  updatedAt      DateTime           @updatedAt
+  Todo           Todo[]
+  Recipe         Recipe[]
+  healthMetrics  UserHealthMetric[]
+  aiChatMessages AiChatMessage[]
+  aiChatSessions AiChatSession[] // 新增：用户可以有多个聊天会话
 
   @@map("users")
 }
@@ -61,32 +63,62 @@ model Recipe {
 }
 
 model UserHealthMetric {
-  id         String   @id @default(cuid())
-  userId     String // 关联到用户ID
-  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade) // 与User模型建立关联
-  recordedAt DateTime @default(now())
+  id                 String   @id @default(cuid())
+  userId             String
+  user               User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  recordedAt         DateTime @default(now())
+  heightCm           Float?
+  weightKg           Float?
+  ageAtRecording     Int?
+  gender             String?
+  activityLevel      String?
+  neckCm             Float?
+  waistCm            Float?
+  hipCm              Float?
+  bmi                Float?
+  bmr                Float?
+  tdee               Float?
+  bodyFatPercent     Float?
+  recommendedWaterMl Float?
+  notes              String?  @db.Text
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
 
-  heightCm       Float? // 身高 (厘米)
-  weightKg       Float? // 体重 (公斤)
-  ageAtRecording Int? // 记录时的年龄
-  gender         String? // 性别 (例如: "male", "female", "other" - 应用层面可以做成下拉选择)
-  activityLevel  String? // 日常活动水平 (例如: "sedentary", "lightly_active", "moderately_active", "very_active", "extra_active")
-
-  neckCm  Float? // 颈围 (厘米) - 用于某些体脂率计算
-  waistCm Float? // 腰围 (厘米) - 用于某些体脂率计算
-  hipCm   Float? // 臀围 (厘米) - 用于某些女性体脂率计算
-
-  bmi                Float? // 计算得出的BMI值
-  bmr                Float? // 计算得出的基础代谢率 (卡路里)
-  tdee               Float? // 计算得出的每日总能量消耗 (卡路里)
-  bodyFatPercent     Float? // 估算的体脂率 (%)
-  recommendedWaterMl Float? // (可选) 每日推荐饮水量 (毫升)
-
-  notes String? @db.Text // 用户可能想记录的一些备注信息
-
-  createdAt DateTime @default(now()) // Prisma记录创建时间
-  updatedAt DateTime @updatedAt // Prisma记录更新时间
-
-  @@index([userId, recordedAt]) // 常用查询：按用户和记录时间索引
+  @@index([userId, recordedAt])
   @@map("user_health_metrics")
+}
+
+// AI 聊天会话模型
+model AiChatSession {
+  id        String          @id @default(cuid())
+  userId    String // 所属用户ID
+  user      User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title     String? // 会话标题 (例如第一条用户消息的摘要，或用户自定义)
+  createdAt DateTime        @default(now())
+  updatedAt DateTime        @updatedAt // 每当有新消息时更新此时间戳，方便排序
+  messages  AiChatMessage[] // 此会话包含的消息
+
+  @@index([userId, updatedAt]) // 按用户和更新时间索引，方便获取最近的会话
+  @@map("ai_chat_sessions")
+}
+
+// AI聊天消息模型 (修改后)
+model AiChatMessage {
+  id String @id @default(cuid())
+  // userId    String   // 不再直接关联 User，通过 AiChatSession 关联
+  // user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  role    String // 消息发送者角色: "user" 或 "assistant"
+  content String @db.Text
+
+  createdAt DateTime @default(now())
+
+  sessionId String // 所属会话ID
+  session   AiChatSession @relation(fields: [sessionId], references: [id], onDelete: Cascade) // 与会话关联
+  User      User?         @relation(fields: [userId], references: [id])
+  userId    String?
+
+  // 移除 @@index([userId, createdAt]) 因为userId被移除了
+  @@index([sessionId, createdAt]) // 按会话ID和时间索引消息
+  @@map("ai_chat_messages")
 }
