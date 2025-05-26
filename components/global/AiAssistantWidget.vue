@@ -647,8 +647,8 @@ watch(isOpen, (newValue) => {
 }
 
 .chat-sidebar {
-  width: 240px;
-  min-width: 200px;
+  width: 300px;
+  min-width: 250px;
   background-color: #f8f9fa;
   border-right: 1px solid #e0e0e0;
   padding: 15px;
