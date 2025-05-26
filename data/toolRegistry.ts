@@ -46,7 +46,8 @@ export const allToolDomainsData: Domain[] = [
                 name: '贷款计算器',
                 usage: 210,
                 description: '精准计算各类贷款详情与还款计划。',
-                path: '/tools/finance/loan'
+                path: '/tools/finance/loan',
+                statusPreview: '贷款计算小帮手',
             },
             {
                 id: 'stock_screener',
