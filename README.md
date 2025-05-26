@@ -80,10 +80,10 @@ npm run setup
 >
 >
 * `TENCENT_SECRET_ID`: 您的腾讯云 API SecretId。
->       * `TENCENT_SECRET_KEY`: 您的腾讯云 API SecretKey。
->       * `TENCENT_TRANSLATE_REGION`: 您选择的腾讯云文本翻译服务地域 (例如 `ap-guangzhou`, `ap-singapore`, `ap-beijing`等)。
->       * *要获取这些密钥，您需要拥有一个腾讯云账户，并开通“文本翻译 (TMT)”服务。更多信息及开通服务，请访问 [腾讯云文本翻译产品页](https://cloud.tencent.com/product/tmt)。*
 
+>       TENCENT_SECRET_KEY:您的腾讯云 API SecretKey。
+>       TENCENT_TRANSLATE_REGION:您选择的腾讯云文本翻译服务地域 (例如ap-guangzhou, ap-singapore, ap-beijing等)。
+>       要获取这些密钥，您需要拥有一个腾讯云账户，并开通“文本翻译 (TMT)”服务。更多信息及开通服务，请访问 [腾讯云文本翻译产品页](https://cloud.tencent.com/product/tmt)
 ---
 
 ### 3. 🗄️ 应用数据库迁移

@@ -28,23 +28,21 @@
 <script setup lang="ts">
 import type {PropType} from 'vue';
 
-// 定义 Tool 接口，添加 statusPreview 字段
 interface Tool {
   id: string;
   name: string;
-  icon?: string; // 工具本身也可以有图标
+  icon?: string;
   usage: number;
   description?: string;
   path?: string;
-  statusPreview?: string; // <--- 新增的可选字段，用于新颖呈现
+  statusPreview?: string;
 }
 
-// Domain 接口现在使用上面更新的 Tool 接口
-export interface Domain { // 如果这个 Domain 接口也用在 toolbox.vue, 确保它也被更新或 Tool 类型被正确传递
+export interface Domain {
   id: string;
   name: string;
   description?: string;
-  icon?: string; // 这是领域的图标
+  icon?: string;
   tools: Tool[];
 }
 
