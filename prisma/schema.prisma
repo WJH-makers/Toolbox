@@ -1,5 +1,3 @@
-// prisma/schema.prisma
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -11,17 +9,17 @@ datasource db {
 }
 
 model User {
-  id             String             @id @default(cuid())
-  email          String             @unique
-  username       String             @unique
-  password       String
-  createdAt      DateTime           @default(now())
-  updatedAt      DateTime           @updatedAt
-  Todo           Todo[]
-  Recipe         Recipe[]
-  healthMetrics  UserHealthMetric[]
-  aiChatMessages AiChatMessage[]
-  aiChatSessions AiChatSession[] // 新增：用户可以有多个聊天会话
+  id              String              @id @default(cuid())
+  email           String              @unique
+  username        String              @unique
+  password        String
+  createdAt       DateTime            @default(now())
+  updatedAt       DateTime            @updatedAt
+  Todo            Todo[]
+  Recipe          Recipe[]
+  healthMetrics   UserHealthMetric[]
+  aiChatSessions  AiChatSession[]
+  exchangeQueries UserExchangeQuery[]
 
   @@map("users")
 }
@@ -46,12 +44,12 @@ model Todo {
 model Recipe {
   id           String   @id @default(cuid())
   name         String
-  ingredients  String  @db.Text
-  instructions String  @db.Text
+  ingredients  String   @db.Text
+  instructions String   @db.Text
   category     String?
   prepTime     String?
   cookTime     String?
-  isFavorite   Boolean @default(false)
+  isFavorite   Boolean  @default(false)
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
   userId       String
@@ -88,37 +86,57 @@ model UserHealthMetric {
   @@map("user_health_metrics")
 }
 
-// AI 聊天会话模型
 model AiChatSession {
   id        String          @id @default(cuid())
-  userId    String // 所属用户ID
+  userId    String
   user      User            @relation(fields: [userId], references: [id], onDelete: Cascade)
-  title     String? // 会话标题 (例如第一条用户消息的摘要，或用户自定义)
+  title     String?
   createdAt DateTime        @default(now())
-  updatedAt DateTime        @updatedAt // 每当有新消息时更新此时间戳，方便排序
-  messages  AiChatMessage[] // 此会话包含的消息
+  updatedAt DateTime        @updatedAt
+  messages  AiChatMessage[]
 
-  @@index([userId, updatedAt]) // 按用户和更新时间索引，方便获取最近的会话
+  @@index([userId, updatedAt])
   @@map("ai_chat_sessions")
 }
 
-// AI聊天消息模型 (修改后)
 model AiChatMessage {
-  id String @id @default(cuid())
-  // userId    String   // 不再直接关联 User，通过 AiChatSession 关联
-  // user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id        String        @id @default(cuid())
+  role      String
+  content   String        @db.Text
+  createdAt DateTime      @default(now())
+  sessionId String
+  session   AiChatSession @relation(fields: [sessionId], references: [id], onDelete: Cascade) // AiChatMessage 与 AiChatSession 的关系
 
-  role    String // 消息发送者角色: "user" 或 "assistant"
-  content String @db.Text
-
-  createdAt DateTime @default(now())
-
-  sessionId String // 所属会话ID
-  session   AiChatSession @relation(fields: [sessionId], references: [id], onDelete: Cascade) // 与会话关联
-  User      User?         @relation(fields: [userId], references: [id])
-  userId    String?
-
-  // 移除 @@index([userId, createdAt]) 因为userId被移除了
-  @@index([sessionId, createdAt]) // 按会话ID和时间索引消息
+  @@index([sessionId, createdAt])
   @@map("ai_chat_messages")
+}
+
+model ExchangeRate {
+  id             String   @id @default(cuid())
+  baseCurrency   String
+  targetCurrency String
+  rate           Float
+  name           String?
+  updatedAt      DateTime
+  source         String?
+
+  @@unique([baseCurrency, targetCurrency])
+  @@index([baseCurrency])
+  @@index([updatedAt])
+  @@map("exchange_rates")
+}
+
+model UserExchangeQuery {
+  id           String   @id @default(cuid())
+  userId       String
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  fromCurrency String
+  toCurrency   String
+  amount       Float
+  result       Float
+  rate         Float
+  queriedAt    DateTime @default(now())
+
+  @@index([userId, queriedAt])
+  @@map("user_exchange_queries")
 }

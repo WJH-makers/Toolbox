@@ -14,7 +14,8 @@
       </div>
       <div class="form-item">
         <label for="fundamental-freq">基波频率 (f₀): {{ fundamentalFrequency.toFixed(2) }} Hz</label>
-        <input id="fundamental-freq" v-model.number="fundamentalFrequency" class="slider" max="5" min="0.5" step="0.1"
+        <input
+            id="fundamental-freq" v-model.number="fundamentalFrequency" class="slider" max="5" min="0.5" step="0.1"
                type="range">
       </div>
       <div class="form-item">
@@ -24,7 +25,7 @@
     </div>
 
     <div class="simulation-area-wrapper">
-      <canvas ref="fourierCanvas" :height="canvasHeight" :width="canvasWidth"></canvas>
+      <canvas ref="fourierCanvas" :height="canvasHeight" :width="canvasWidth"/>
     </div>
     <div class="explanation-panel">
       <h4>方波的傅里叶级数 (奇次谐波):</h4>

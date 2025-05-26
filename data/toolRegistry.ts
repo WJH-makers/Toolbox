@@ -38,7 +38,8 @@ export const allToolDomainsData: Domain[] = [
                 name: '汇率转换',
                 usage: 280,
                 description: '全球货币实时汇率查询与计算。',
-                path: '/tools/finance/currency'
+                path: '/tools/finance/currency',
+                statusPreview: '金融小助手',
             },
             {
                 id: 'loan_calculator',

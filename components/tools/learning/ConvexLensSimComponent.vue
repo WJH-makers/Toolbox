@@ -5,12 +5,14 @@
     <div class="controls-panel">
       <div class="form-item">
         <label for="focal-length">透镜焦距 (f): {{ focalLength.toFixed(0) }} px</label>
-        <input id="focal-length" v-model.number="focalLength" :max="canvasWidth * 0.45" class="slider" min="30" step="5"
+        <input
+            id="focal-length" v-model.number="focalLength" :max="canvasWidth * 0.45" class="slider" min="30" step="5"
                type="range">
       </div>
       <div class="form-item">
         <label for="lens-curvature">透镜曲率半径 (R): {{ lensCurvatureRadius.toFixed(0) }} px</label>
-        <input id="lens-curvature" v-model.number="lensCurvatureRadius" :max="canvasWidth * 0.6" class="slider" min="30"
+        <input
+            id="lens-curvature" v-model.number="lensCurvatureRadius" :max="canvasWidth * 0.6" class="slider" min="30"
                step="5"
                type="range">
       </div>
@@ -20,12 +22,16 @@
       </div>
       <div class="form-item">
         <label for="lens-position-x">透镜位置 X: {{ lensPositionX.toFixed(0) }} px</label>
-        <input id="lens-position-x" v-model.number="lensPositionX" :max="canvasWidth * 0.8" :min="canvasWidth * 0.2"
+        <input
+            id="lens-position-x" v-model.number="lensPositionX" :max="canvasWidth * 0.8" :min="canvasWidth * 0.2"
                class="slider" step="10" type="range">
       </div>
       <div class="form-item">
         <label for="light-source-distance">光源距离画布左边缘: {{ lightSourceDistance.toFixed(0) }} px</label>
-        <input id="light-source-distance" v-model.number="lightSourceDistance" :max="lensPositionX - lensCurvatureRadius + (lensCurvatureRadius - Math.sqrt(lensCurvatureRadius**2 - LENS_SEMI_HEIGHT**2)) - 20" class="slider"
+        <input
+            id="light-source-distance" v-model.number="lightSourceDistance"
+            :max="lensPositionX - lensCurvatureRadius + (lensCurvatureRadius - Math.sqrt(lensCurvatureRadius**2 - LENS_SEMI_HEIGHT**2)) - 20"
+            class="slider"
                min="0"
                step="5" type="range">
       </div>
@@ -33,7 +39,7 @@
     </div>
 
     <div class="simulation-area-wrapper">
-      <canvas ref="opticsCanvas" :height="canvasHeight" :width="canvasWidth"></canvas>
+      <canvas ref="opticsCanvas" :height="canvasHeight" :width="canvasWidth"/>
     </div>
 
     <div class="explanation-panel">
@@ -47,7 +53,7 @@
     </div>
 
     <div class="proof-section markdown-body">
-      <div v-html="renderMarkdown(proofMarkdownText)"></div>
+      <div v-html="renderMarkdown(proofMarkdownText)"/>
     </div>
 
   </div>
