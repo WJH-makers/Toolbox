@@ -9,7 +9,9 @@
 
     <div v-if="isOpen" class="widget-chat-window">
       <aside class="chat-sidebar">
-        <button :disabled="isCreatingSession" class="new-session-button" @click="handleCreateNewSession">
+        <button
+            :disabled="isCreatingSession || isLoadingSessions" class="new-session-button"
+            @click="handleCreateNewSession">
           {{ isCreatingSession ? '创建中...' : '+ 新建对话' }}
         </button>
 
@@ -21,7 +23,35 @@
           </select>
         </div>
 
-        <div v-if="isLoadingSessions" class="sidebar-loading">加载会话列表...</div>
+        <div class="chat-history-search-container">
+          <label for="chat-history-search">搜索当前对话:</label>
+          <div class="search-input-group">
+            <input
+                id="chat-history-search"
+                v-model="chatSearchQuery"
+                :disabled="!currentSessionId || messages.length === 0"
+                placeholder="输入关键词..."
+                type="search"
+                @keyup.enter="executeChatSearch"
+            >
+            <button :disabled="!chatSearchQuery.trim() || !currentSessionId" @click="executeChatSearch">🔎</button>
+          </div>
+          <div v-if="chatSearchResults.length > 0" class="search-results-nav">
+            <span>找到 {{ chatSearchResults.length }} 个匹配</span>
+            <button :disabled="currentSearchResultIndex <= 0" @click="navigateToSearchResult('prev')">↑ 上一个</button>
+            <button
+                :disabled="currentSearchResultIndex >= chatSearchResults.length - 1"
+                @click="navigateToSearchResult('next')">↓ 下一个
+            </button>
+          </div>
+          <div
+              v-if="searchInProgress && chatSearchResults.length === 0 && chatSearchQuery.trim()"
+              class="sidebar-loading">未找到匹配项。
+          </div>
+        </div>
+
+
+        <div v-if="isLoadingSessions && sessionsList.length === 0" class="sidebar-loading">加载会话列表...</div>
         <ul v-if="sessionsList.length > 0" class="sessions-list">
           <li
               v-for="session in sessionsList"
@@ -55,36 +85,62 @@
           <span>{{ currentSessionTitle || 'AI 万能助手' }}</span>
           <button class="close-chat-button-header" title="关闭" @click="closeWidget">✕</button>
         </header>
-        <div v-if="isLoadingMessages && messages.length === 0" class="loading-spinner chat-messages-loading">
-          加载消息中...
-        </div>
-        <div v-else-if="!currentSessionId && !isLoadingSessions" class="empty-chat-area">
-          请选择一个会话或新建对话开始聊天。
-        </div>
-        <div v-else ref="chatMessagesContainer" class="chat-messages">
-          <div v-for="msg in messages" :key="msg.id" :class="`message-${msg.role}`" class="message">
-            <span class="message-role">{{ msg.role === 'user' ? '你' : '助手' }}: </span>
-            <div class="message-content" v-html="formatMessageContent(msg.content)"/>
+
+        <div class="chat-messages-wrapper">
+          <div v-if="isLoadingMessages && messages.length === 0" class="loading-spinner chat-messages-loading">
+            加载消息中...
           </div>
-          <div v-if="isLoadingReply" class="message message-assistant">
-            <span class="message-role">助手: </span>
-            <div class="message-content typing-indicator"><span/><span/><span/></div>
+          <div v-else-if="!currentSessionId && !isLoadingSessions" class="empty-chat-area">
+            请选择一个会话或新建对话开始聊天。
+          </div>
+          <div v-else ref="chatMessagesContainer" class="chat-messages" @scroll="handleScroll">
+            <div
+                v-for="(msg) in messages"
+                :id="`message-${msg.id}`"
+                :key="msg.id"
+                :class="[`message-${msg.role}`, { 'highlighted-search-result': isSearchResultHighlighted(msg.id) }]"
+                class="message"
+            >
+              <span class="message-role">{{ msg.role === 'user' ? '你' : '助手' }}: </span>
+              <div class="message-content" v-html="formatMessageContent(msg.content, chatSearchQuery)"/>
+            </div>
+            <div v-if="isLoadingReply" class="message message-assistant">
+              <span class="message-role">助手: </span>
+              <div class="message-content typing-indicator"><span/><span/><span/></div>
+            </div>
+          </div>
+          <div class="scroll-buttons">
+            <button v-if="showScrollTopButton" class="scroll-button" title="滚动到顶部" @click="scrollToTop">↑</button>
+            <button v-if="showScrollBottomButton" class="scroll-button" title="滚动到底部" @click="scrollToBottom">↓
+            </button>
           </div>
         </div>
+
         <form class="chat-input-form" @submit.prevent="sendMessage">
+          <label
+              class="file-upload-button" for="file-upload-input"
+              title="上传文件提供上下文 (仅支持 TXT, DOCX)">📎</label>
+          <input
+              id="file-upload-input"
+              accept=".txt,.doc,.docx"
+              style="display: none;"
+              type="file"
+              @change="handleFileUpload"
+          >
+
           <textarea
               ref="messageInput"
               v-model="newMessage"
-              :disabled="isLoadingReply || !currentSessionId || isLoadingMessages"
-              placeholder="问我任何事情..."
+              :disabled="isLoadingReply || !currentSessionId || isLoadingMessages || isUploadingFile"
               rows="2"
+              :placeholder="fileUploadStatus || '问我任何事情...' "
               @keydown.enter.exact.prevent="sendMessage"
               @keydown.enter.shift.exact.prevent="newMessage += '\n'"
           />
           <button
-              :disabled="isLoadingReply || !newMessage.trim() || !currentSessionId || isLoadingMessages"
+              :disabled="isLoadingReply || (!newMessage.trim() && !uploadedFileContext) || !currentSessionId || isLoadingMessages || isUploadingFile"
               type="submit">
-            {{ isLoadingReply ? '发送中...' : '发送' }}
+            {{ isLoadingReply ? '发送中...' : (isUploadingFile ? '处理文件中...' : '发送') }}
           </button>
         </form>
         <div v-if="chatError" class="chat-error">{{ chatError }}</div>
@@ -94,7 +150,12 @@
 </template>
 
 <script setup>
-import {ref, nextTick, watch, computed} from 'vue'; // onMounted removed as not used
+// The <script setup> part remains identical to the one in my previous response (2024-05-25 13:02:17 UTC).
+// No changes are needed in the script logic for simply removing XLSX and PDF support
+// as the file type validation is primarily handled by the backend based on ALLOWED_MIME_TYPES
+// and the frontend's `handleFileUpload` already defers to the backend for extraction.
+// The `accept` attribute in the template is the main frontend change for this.
+import {ref, nextTick, watch, computed} from 'vue';
 import {marked} from 'marked';
 import {debounce} from 'lodash-es';
 import {formatDistanceToNowStrict} from 'date-fns';
@@ -117,6 +178,19 @@ const sessionsError = ref('');
 const isDeletingSession = ref(null);
 
 const selectedModel = ref('deepseek-chat');
+const showScrollTopButton = ref(false);
+const showScrollBottomButton = ref(false);
+
+const chatSearchQuery = ref('');
+const chatSearchResults = ref([]);
+const currentSearchResultIndex = ref(-1);
+const searchInProgress = ref(false);
+
+const uploadedFileContext = ref('');
+const uploadedFileName = ref('');
+const isUploadingFile = ref(false);
+const fileUploadStatus = ref('');
+
 
 const debouncedUpdateAssistantMessageContent = debounce((messageObject, newContent) => {
   if (messageObject) messageObject.content = newContent;
@@ -138,9 +212,14 @@ function formatRelativeTime(dateString) {
   }
 }
 
-function formatMessageContent(content) {
+function formatMessageContent(content, query = '') {
   try {
-    return marked.parse(content || '', {breaks: true, gfm: true, async: false});
+    let htmlContent = marked.parse(content || '', {breaks: true, gfm: true, async: false});
+    if (query && query.trim() !== '') {
+      const regex = new RegExp(`(${query.trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi');
+      htmlContent = htmlContent.replace(regex, '<mark class="search-highlight">$1</mark>');
+    }
+    return htmlContent;
   } catch (e) {
     console.error("Markdown parsing error:", e);
     const esc = (str) => str?.replace(/&/g, "&amp;")?.replace(/</g, "&lt;")?.replace(/>/g, "&gt;") || '';
@@ -173,7 +252,7 @@ async function fetchSessionsAndSelectLatest(forceSelectLatest = false) {
 
 async function handleSelectSession(sessionId) {
   if (!sessionId || isLoadingMessages.value || (currentSessionId.value === sessionId && messages.value.length > 0 && !isLoadingMessages.value)) {
-    if (currentSessionId.value === sessionId && messages.value.length > 0) { // If already selected and messages loaded
+    if (currentSessionId.value === sessionId && messages.value.length > 0) {
       nextTick(() => messageInput.value?.focus());
       return;
     }
@@ -182,6 +261,10 @@ async function handleSelectSession(sessionId) {
   messages.value = [];
   isLoadingMessages.value = true;
   chatError.value = '';
+  chatSearchQuery.value = '';
+  chatSearchResults.value = [];
+  currentSearchResultIndex.value = -1;
+  searchInProgress.value = false;
   try {
     const response = await $fetch(`/api/ai/sessions/${sessionId}`);
     messages.value = (response.data || []).map(msg => ({
@@ -189,7 +272,7 @@ async function handleSelectSession(sessionId) {
       role: msg.role,
       content: msg.content
     }));
-    if (messages.value.length === 0 && sessionId && response.data !== null) { // response.data can be an empty array
+    if (messages.value.length === 0 && sessionId && response.data !== null) {
       messages.value.push({id: Date.now(), role: 'assistant', content: '你好！这是一个新的对话，有什么可以帮助你的吗？'});
     }
   } catch (error) {
@@ -213,8 +296,8 @@ async function createNewSessionInternal(focusInput = true) {
       body: {title: '新对话 ' + (sessionsList.value.length + 1)}
     });
     if (response.success && response.data) {
-      sessionsList.value.unshift(response.data); // Add to top
-      await handleSelectSession(response.data.id); // Select it
+      sessionsList.value.unshift(response.data);
+      await handleSelectSession(response.data.id);
     } else {
       throw new Error(response.message || "创建新会话失败");
     }
@@ -244,7 +327,7 @@ async function handleDeleteSession(sessionId) {
         currentSessionId.value = null;
         messages.value = [];
         if (sessionsList.value.length > 0) {
-          await handleSelectSession(sessionsList.value[0].id); // Select the new top one
+          await handleSelectSession(sessionsList.value[0].id);
         } else {
           await createNewSessionInternal(false);
         }
@@ -275,12 +358,28 @@ async function sendMessage() {
     chatError.value = "请先选择或创建一个对话。";
     return;
   }
-  if (!newMessage.value.trim() || isLoadingReply.value) return;
-  const userMessageContent = newMessage.value.trim();
-  messages.value.push({id: Date.now(), role: 'user', content: userMessageContent});
+  if ((!newMessage.value.trim() && !uploadedFileContext.value) || isLoadingReply.value || isUploadingFile.value) return;
 
-  let contextForAPI = messages.value
-      .map(msg => ({role: msg.role, content: msg.content}));
+  let userMessageContent = newMessage.value.trim();
+  let displayMessageContent = userMessageContent;
+
+  if (uploadedFileContext.value) {
+    const fileContextMarkerStart = `\n\n--- 参考文件 "${uploadedFileName.value}" 内容开始 ---\n`;
+    const fileContextMarkerEnd = `\n--- 文件内容结束 ---\n\n`;
+    const userQueryPart = userMessageContent || '请基于上述文件内容进行分析或回应。';
+
+    userMessageContent = `${fileContextMarkerStart}${uploadedFileContext.value}${fileContextMarkerEnd}${userQueryPart}`;
+    displayMessageContent = `${newMessage.value.trim()} (已附带文件: ${uploadedFileName.value})`;
+  }
+
+  messages.value.push({id: Date.now(), role: 'user', content: displayMessageContent});
+
+  let contextForAPI = messages.value.map(msg => {
+    if (msg.role === 'user' && msg.content === displayMessageContent && uploadedFileContext.value) {
+      return {role: 'user', content: userMessageContent};
+    }
+    return {role: msg.role, content: msg.content};
+  });
 
   if (selectedModel.value === 'deepseek-reasoner') {
     let firstActualMessageIndex = 0;
@@ -291,7 +390,7 @@ async function sendMessage() {
       } else {
         chatError.value = `模型 ${selectedModel.value} 需要用户提问来启动对话。`;
         isLoadingReply.value = false;
-        messages.value.pop(); // Remove the user message just added as it cannot be processed
+        messages.value.pop();
         return;
       }
     }
@@ -300,14 +399,25 @@ async function sendMessage() {
 
   const finalApiMessages = contextForAPI.slice(-10);
 
-  if (selectedModel.value === 'deepseek-reasoner' && (!finalApiMessages.length || finalApiMessages[0].role !== 'user')) {
-    chatError.value = `与模型 ${selectedModel.value} 对话时，上下文必须以用户提问开始。`;
-    isLoadingReply.value = false;
-    // messages.value.pop(); // No, user message is already on UI
-    return;
+  if (selectedModel.value === 'deepseek-reasoner') {
+    if (!finalApiMessages.length || finalApiMessages[0].role !== 'user') {
+      chatError.value = `与模型 ${selectedModel.value} 对话时，上下文必须以用户提问开始。`;
+      isLoadingReply.value = false;
+      return;
+    }
+    for (let i = 0; i < finalApiMessages.length - 1; i++) {
+      if (finalApiMessages[i].role === finalApiMessages[i + 1].role) {
+        chatError.value = `模型 ${selectedModel.value} 不支持连续的同角色消息。`;
+        isLoadingReply.value = false;
+        return;
+      }
+    }
   }
 
   newMessage.value = '';
+  uploadedFileContext.value = '';
+  uploadedFileName.value = '';
+  fileUploadStatus.value = '';
   isLoadingReply.value = true;
   chatError.value = '';
   const assistantMessageObject = {id: Date.now(), role: 'assistant', content: ''};
@@ -359,11 +469,105 @@ async function sendMessage() {
   }
 }
 
-function scrollToBottom() { /* ... (不变) ... */
+function scrollToBottom() {
+  nextTick(() => {
+    if (chatMessagesContainer.value) {
+      chatMessagesContainer.value.scrollTop = chatMessagesContainer.value.scrollHeight;
+    }
+  });
+}
+
+function handleScroll() {
+  if (!chatMessagesContainer.value) return;
+  const {scrollTop, scrollHeight, clientHeight} = chatMessagesContainer.value;
+  showScrollTopButton.value = scrollTop > 200;
+  showScrollBottomButton.value = scrollHeight - scrollTop - clientHeight > 200;
+}
+
+function scrollToTop() {
+  chatMessagesContainer.value?.scrollTo({top: 0, behavior: 'smooth'});
+}
+
+function executeChatSearch() {
+  if (!chatSearchQuery.value.trim() || !currentSessionId.value) {
+    chatSearchResults.value = [];
+    currentSearchResultIndex.value = -1;
+    searchInProgress.value = !!chatSearchQuery.value.trim();
+    return;
+  }
+  searchInProgress.value = true;
+  const query = chatSearchQuery.value.toLowerCase();
+  const results = [];
+  messages.value.forEach((msg) => {
+    if (msg.content && msg.content.toLowerCase().includes(query)) {
+      results.push({messageId: msg.id, domId: `message-${msg.id}`});
+    }
+  });
+  chatSearchResults.value = results;
+  currentSearchResultIndex.value = -1;
+  if (results.length > 0) navigateToSearchResult('next');
+}
+
+function navigateToSearchResult(direction) {
+  if (chatSearchResults.value.length === 0) return;
+  if (direction === 'next') currentSearchResultIndex.value = (currentSearchResultIndex.value + 1) % chatSearchResults.value.length;
+  else if (direction === 'prev') currentSearchResultIndex.value = (currentSearchResultIndex.value - 1 + chatSearchResults.value.length) % chatSearchResults.value.length;
+
+  const targetResult = chatSearchResults.value[currentSearchResultIndex.value];
+  if (targetResult) {
+    const element = document.getElementById(targetResult.domId);
+    element?.scrollIntoView({behavior: 'smooth', block: 'center'});
+  }
+}
+
+function isSearchResultHighlighted(messageId) {
+  if (chatSearchResults.value.length === 0 || currentSearchResultIndex.value === -1) return false;
+  const currentResult = chatSearchResults.value[currentSearchResultIndex.value];
+  return currentResult && currentResult.messageId === messageId;
+}
+
+async function handleFileUpload(event) {
+  const file = event.target.files?.[0];
+  if (!file) return;
+
+  const originalFileName = file.name;
+  uploadedFileName.value = originalFileName;
+  uploadedFileContext.value = '';
+  isUploadingFile.value = true;
+  fileUploadStatus.value = `正在上传并处理 ${originalFileName}...`;
+  chatError.value = '';
+
+  const formData = new FormData();
+  formData.append('file', file);
+
+  try {
+    const response = await $fetch('/api/ai/extract-text', {
+      method: 'POST',
+      body: formData,
+    });
+
+    if (response.success && typeof response.extractedText === 'string') {
+      uploadedFileContext.value = response.extractedText;
+      fileUploadStatus.value = `文件 "${response.fileName}" 内容已准备好。`;
+      console.log("文件内容已提取:", response.extractedText.substring(0, 300) + "...");
+      messageInput.value?.focus();
+    } else {
+      throw new Error(response.message || "提取文件内容失败或返回格式不正确。");
+    }
+  } catch (err) {
+    console.error("文件上传或处理失败:", err);
+    chatError.value = `处理文件 "${originalFileName}" 失败: ${err.data?.message || err.message || '未知错误'}`;
+    uploadedFileName.value = '';
+    fileUploadStatus.value = '';
+  } finally {
+    isUploadingFile.value = false;
+    if (event.target) event.target.value = '';
+  }
 }
 
 watch(messages, () => {
   scrollToBottom();
+  handleScroll();
 }, {deep: true});
 watch(isOpen, (newValue) => {
   if (newValue) {
@@ -618,6 +822,14 @@ watch(isOpen, (newValue) => {
   opacity: 1;
 }
 
+.chat-messages-wrapper {
+  flex-grow: 1;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
 .chat-messages-loading {
   display: flex;
   align-items: center;
@@ -640,6 +852,7 @@ watch(isOpen, (newValue) => {
 .chat-messages {
   flex-grow: 1;
   padding: 15px;
+  padding-bottom: 50px;
   overflow-y: auto;
   scrollbar-width: thin;
   scrollbar-color: #ccc #f0f0f0;
@@ -672,6 +885,18 @@ watch(isOpen, (newValue) => {
   font-size: 0.9rem;
   line-height: 1.6;
   clear: both;
+}
+
+.message.highlighted-search-result {
+  background-color: #fff3cd;
+  border: 1px solid #ffeeba;
+  border-radius: 8px;
+}
+
+.message-content :deep(mark.search-highlight) {
+  background-color: #fff8b0;
+  padding: 0.1em;
+  border-radius: 2px;
 }
 
 .message-role {
@@ -745,15 +970,37 @@ watch(isOpen, (newValue) => {
 
 .chat-input-form {
   display: flex;
-  padding: 15px;
+  padding: 10px 15px;
   border-top: 1px solid #e0e0e0;
   background-color: #f8f9fa;
+  align-items: flex-end;
+}
+
+.file-upload-button {
+  display: inline-flex;
   align-items: center;
+  justify-content: center;
+  width: 38px;
+  height: 38px;
+  border: 1px solid #d0d0d0;
+  background-color: #fff;
+  border-radius: 50%;
+  cursor: pointer;
+  margin-right: 8px;
+  font-size: 18px;
+  color: #555;
+  transition: background-color 0.2s, color 0.2s;
+  flex-shrink: 0;
+}
+
+.file-upload-button:hover {
+  background-color: #f0f0f0;
+  color: var(--color-primary, #007bff);
 }
 
 .chat-input-form textarea {
   flex-grow: 1;
-  padding: 10px 15px;
+  padding: 8px 12px;
   border: 1px solid #d0d0d0;
   border-radius: 8px;
   margin-right: 10px;
@@ -762,6 +1009,7 @@ watch(isOpen, (newValue) => {
   line-height: 1.5;
   max-height: 100px;
   overflow-y: auto;
+  min-height: 38px;
 }
 
 .chat-input-form textarea:focus {
@@ -774,13 +1022,14 @@ watch(isOpen, (newValue) => {
   background-color: var(--color-primary, #007bff);
   color: white;
   border: none;
-  padding: 10px 18px;
-  height: auto;
+  padding: 0 18px;
+  height: 38px;
   border-radius: 8px;
   cursor: pointer;
   font-weight: 500;
   font-size: 0.9rem;
   transition: background-color 0.2s ease-in-out;
+  flex-shrink: 0;
 }
 
 .chat-input-form button:hover {
@@ -832,4 +1081,106 @@ watch(isOpen, (newValue) => {
     transform: scale(1.0);
   }
 }
+
+.scroll-buttons {
+  position: absolute;
+  bottom: 10px;
+  right: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  z-index: 10;
+}
+
+.scroll-button {
+  background-color: rgba(108, 117, 125, 0.7);
+  color: white;
+  border: none;
+  border-radius: 50%;
+  width: 36px;
+  height: 36px;
+  font-size: 18px;
+  cursor: pointer;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color 0.2s;
+}
+
+.scroll-button:hover {
+  background-color: rgba(90, 98, 104, 0.9);
+}
+
+.chat-history-search-container {
+  padding: 10px 0;
+  margin-bottom: 10px;
+  border-top: 1px solid #e0e0e0;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+.chat-history-search-container label {
+  display: block;
+  font-size: 0.8rem;
+  color: #555;
+  margin-bottom: 5px;
+  font-weight: 500;
+}
+
+.search-input-group {
+  display: flex;
+  gap: 5px;
+  margin-bottom: 8px;
+}
+
+.search-input-group input[type="search"] {
+  flex-grow: 1;
+  padding: 6px 8px;
+  border: 1px solid #ced4da;
+  border-radius: 4px;
+  font-size: 0.85rem;
+}
+
+.search-input-group button {
+  padding: 6px 10px;
+  font-size: 0.85rem;
+  background-color: #6c757d;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.search-input-group button:hover:not(:disabled) {
+  background-color: #5a6268;
+}
+
+.search-input-group button:disabled {
+  background-color: #ccc;
+}
+
+.search-results-nav {
+  margin-top: 8px;
+  font-size: 0.8rem;
+  color: #555;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.search-results-nav button {
+  font-size: 0.75rem;
+  padding: 3px 6px;
+  margin-left: 5px;
+  background-color: #f0f0f0;
+  border: 1px solid #ddd;
+  border-radius: 3px;
+  cursor: pointer;
+}
+
+.search-results-nav button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
 </style>

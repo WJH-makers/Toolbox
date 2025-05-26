@@ -27,6 +27,7 @@
     "jsonwebtoken": "^9.0.2",
     "katex": "^0.16.22",
     "lodash-es": "^4.17.21",
+    "mammoth": "^1.9.0",
     "marked": "^15.0.12",
     "nuxt": "^3.17.3",
     "nuxt-particles": "^0.3.0",
