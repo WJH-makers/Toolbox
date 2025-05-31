@@ -28,9 +28,8 @@
     </div>
     <div v-if="!isAutoPlayingAi" class="ai-settings-panel">
       <label for="aiNumMoves">AI单次请求步数: </label>
-      <input id="aiNumMoves" v-model.number="aiNumMovesPerRequest" max="5" min="1" style="width: 50px; margin-left: 5px;"
-             type="number">
-      <span style="font-size: 0.8em; margin-left: 3px;">(1-5步)</span>
+      <input id="aiNumMoves" v-model.number="aiNumMovesPerRequest" max="5" min="1" type="number">
+      <span class="hint-text">(1-5步)</span>
     </div>
 
     <div v-if="hasWon && !isAutoPlayingAi" class="game-board-overlay win-overlay">
@@ -882,21 +881,52 @@ onBeforeUnmount(() => {
   display: flex;
   justify-content: center;
   align-items: center;
-  margin-bottom: 15px; /* Ensure spacing from game board */
+  gap: 8px; /* 使用 gap 来控制元素间距 */
+  margin-top: 5px; /* 与上方元素的间距 */
+  margin-bottom: 18px; /* 与下方元素的间距 */
+  padding: 10px 15px; /* 面板内部留白 */
+  background-color: #f0e9e0; /* 一个柔和的背景色，与游戏主题协调 */
+  border-radius: 4px; /* 圆角与游戏内其他元素统一 */
   font-size: 0.9em;
-  color: #776e65;
+  color: #776e65; /* 深色文字，同游戏标题颜色 */
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05); /* 可选：添加非常细微的阴影增加层次感 */
 }
 
 .ai-settings-panel label {
-  margin-right: 5px;
+  font-weight: 600; /* 标签文字稍加粗 */
+  white-space: nowrap; /* 防止标签文字换行 */
 }
 
 .ai-settings-panel input[type="number"] {
-  padding: 4px 6px;
-  border-radius: 3px;
-  border: 1px solid #bbada0;
-  width: 45px; /* Adjusted width */
-  text-align: center;
+  width: 60px; /* 调整输入框宽度 */
+  padding: 6px 8px; /* 输入框内边距 */
+  border: 1px solid #cdc1b4; /* 边框颜色，类似空格子或棋盘背景的柔和色调 */
+  border-radius: 3px; /* 输入框圆角 */
+  text-align: center; /* 数字居中 */
+  font-size: 1em; /* 字体大小相对于父元素 (0.9em of container) */
+  font-family: inherit; /* 继承父元素的字体 */
+  color: #776e65; /* 输入文字颜色 */
+  background-color: #fff; /* 输入框背景色 */
+  transition: border-color 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+  -moz-appearance: textfield; /* Firefox - 隐藏上下箭头 */
+}
+
+.ai-settings-panel input[type="number"]::-webkit-inner-spin-button,
+.ai-settings-panel input[type="number"]::-webkit-outer-spin-button {
+  -webkit-appearance: none; /* Chrome, Safari, Edge - 隐藏上下箭头 */
+  margin: 0;
+}
+
+.ai-settings-panel input[type="number"]:focus {
+  outline: none; /* 移除默认的蓝色 outline */
+  border-color: #f59563; /* 聚焦时边框颜色变为16方块的颜色，作为强调 */
+  box-shadow: 0 0 0 2px rgba(245, 149, 99, 0.25); /* 聚焦时光晕效果 */
+}
+
+.ai-settings-panel .hint-text {
+  font-size: 0.88em; /* 提示文字稍小一些 */
+  color: #8a7e76; /* 提示文字颜色，比标签文字略浅 */
+  white-space: nowrap;
 }
 
 
