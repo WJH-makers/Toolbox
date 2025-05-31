@@ -6,17 +6,20 @@
       <div class="form-grid">
         <div class="form-item">
           <label for="loan-amount">贷款总额 (元):</label>
-          <input id="loan-amount" v-model.number="loanAmount" min="1000" placeholder="例如: 100000" step="1000"
+          <input
+              id="loan-amount" v-model.number="loanAmount" min="1000" placeholder="例如: 100000" step="1000"
                  type="number">
         </div>
         <div class="form-item">
           <label for="loan-term">贷款期限 (年):</label>
-          <input id="loan-term" v-model.number="loanTermYears" max="30" min="1" placeholder="例如: 5" step="1"
+          <input
+              id="loan-term" v-model.number="loanTermYears" max="30" min="1" placeholder="例如: 5" step="1"
                  type="number">
         </div>
         <div class="form-item">
           <label for="interest-rate">年利率 (%):</label>
-          <input id="interest-rate" v-model.number="annualInterestRate" min="0.1" placeholder="例如: 4.75" step="0.01"
+          <input
+              id="interest-rate" v-model.number="annualInterestRate" min="0.1" placeholder="例如: 4.75" step="0.01"
                  type="number">
         </div>
         <div class="form-item">
@@ -48,7 +51,8 @@
         <p><strong>贷款总月数:</strong> {{ calculationResult.totalMonths }} 月</p>
       </div>
 
-      <div v-if="calculationResult.repaymentSchedule && calculationResult.repaymentSchedule.length > 0"
+      <div
+          v-if="calculationResult.repaymentSchedule && calculationResult.repaymentSchedule.length > 0"
            class="repayment-schedule">
         <h4>详细还款计划 (前12期 / 后12期):</h4>
         <table>

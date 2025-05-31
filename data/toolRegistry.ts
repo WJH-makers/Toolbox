@@ -54,7 +54,8 @@ export const allToolDomainsData: Domain[] = [
                 name: '股票筛选器',
                 usage: 150,
                 description: '根据多种指标筛选潜力股票。',
-                path: '/tools/finance/stocks'
+                path: '/tools/finance/stocks',
+                statusPreview: '助力股票筛选',
             },
         ],
     },

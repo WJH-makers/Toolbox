@@ -35,7 +35,8 @@
         </div>
 
         <div class="swap-button-container">
-          <button :disabled="!fromCurrency || !toCurrency" class="action-button swap-button" title="交换货币"
+          <button
+              :disabled="!fromCurrency || !toCurrency" class="action-button swap-button" title="交换货币"
                   @click="swapCurrencies">⇄
           </button>
         </div>
@@ -43,7 +44,9 @@
         <div class="form-grid">
           <div class="form-item">
             <label for="converted-amount">转换后金额:</label>
-            <input id="converted-amount" :value="convertedAmount !== null ? convertedAmount.toFixed(4) : ''" placeholder="结果"
+            <input
+                id="converted-amount" :value="convertedAmount !== null ? convertedAmount.toFixed(4) : ''"
+                placeholder="结果"
                    readonly type="text">
           </div>
           <div class="form-item">
@@ -56,7 +59,8 @@
             </select>
           </div>
         </div>
-        <button :disabled="isLoadingConversion || !amountToConvert || !fromCurrency || !toCurrency"
+        <button
+            :disabled="isLoadingConversion || !amountToConvert || !fromCurrency || !toCurrency"
                 class="action-button convert-button"
                 @click="fetchAndConvert">
           {{ isLoadingConversion ? '转换中...' : '获取汇率并转换' }}
@@ -78,13 +82,15 @@
       <h4>全球主要货币汇率参考 (基于 {{ displayedBaseCurrencyForTable }})</h4>
       <div class="form-item base-currency-selector">
         <label for="base-rate-currency">选择基础货币:</label>
-        <select id="base-rate-currency" v-model="selectedBaseForTableInUI" :disabled="Object.keys(currencies).length === 0"
+        <select
+            id="base-rate-currency" v-model="selectedBaseForTableInUI" :disabled="Object.keys(currencies).length === 0"
                 @change="handleBaseCurrencyChangeForTable">
           <option v-for="(name, code) in currenciesForBaseSelect" :key="code" :value="code">
             {{ code }} - {{ name }}
           </option>
         </select>
-        <button :disabled="isLoadingAllRates" class="action-button refresh-rates-button"
+        <button
+            :disabled="isLoadingAllRates" class="action-button refresh-rates-button"
                 @click="fetchAllRatesTable(true)">
           {{ isLoadingAllRates ? '刷新中...' : '刷新汇率表' }}
         </button>
@@ -314,7 +320,7 @@ const displayedRatesTable = computed(() => {
     return []; // 返回空数组而不是空对象
   }
 
-  let ratesArray = [];
+  const ratesArray = [];
   const usdBasedRates = allRatesData.value;
   const userSelectedBase = selectedBaseForTableInUI.value;
 

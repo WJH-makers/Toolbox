@@ -107,7 +107,7 @@
           <div class="todo-item-prefix">
             <input :checked="item.completed" type="checkbox" @change="() => handleToggleComplete(item)">
           </div>
-          <div class="todo-item-content"> {/* Removed @click here */}
+          <div class="todo-item-content">
             <span class="expired-text">{{ item.content }}</span>
             <div v-if="item.startDate || item.endDate" class="todo-item-description">
               <span v-if="item.startDate" class="todo-tag todo-tag-info">
