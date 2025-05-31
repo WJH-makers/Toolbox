@@ -3,7 +3,7 @@ import OpenAI from "openai";
 import prisma from '~/server/utils/prisma';
 
 const DEEPSEEK_API_KEY = process.env.DEEPSEEK_API_KEY;
-const DEEPSEEK_BASE_URL = 'https://api.deepseek.com/v1';
+const DEEPSEEK_BASE_URL = process.env.DEEPSEEK_BASE_URL;
 let openai;
 
 if (DEEPSEEK_API_KEY) {

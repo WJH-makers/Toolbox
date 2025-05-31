@@ -18,12 +18,19 @@
         <span class="icon">💡</span> AI提示
       </button>
       <button
-          :disabled="(isGameOver && !hasWon) || hasWon" :title="isAutoPlayingAi ? '停止AI自动进行游戏' : '让AI自动进行游戏'"
+          :disabled="(isGameOver && !hasWon) || hasWon"
+          :title="isAutoPlayingAi ? '停止AI自动进行游戏' : '让AI自动进行游戏'"
           class="action-button ai-toggle-button"
           @click="toggleAutoPlayAi">
         <span class="icon">{{ isAutoPlayingAi ? '❚❚' : '►' }}</span>
         {{ isAutoPlayingAi ? '停止AI' : 'AI自动玩' }}
       </button>
+    </div>
+    <div v-if="!isAutoPlayingAi" class="ai-settings-panel">
+      <label for="aiNumMoves">AI单次请求步数: </label>
+      <input id="aiNumMoves" v-model.number="aiNumMovesPerRequest" max="5" min="1" style="width: 50px; margin-left: 5px;"
+             type="number">
+      <span style="font-size: 0.8em; margin-left: 3px;">(1-5步)</span>
     </div>
 
     <div v-if="hasWon && !isAutoPlayingAi" class="game-board-overlay win-overlay">
@@ -40,10 +47,6 @@
         <button class="action-button" @click="resetGame">再玩一次</button>
       </div>
     </div>
-    <div v-if="isAiThinking" class="game-board-overlay thinking-overlay">
-      <div class="thinking-message">AI 思考中... 🤔</div>
-    </div>
-
     <div ref="gameBoardRef" class="game-board">
       <div v-for="i in (GRID_SIZE * GRID_SIZE)" :key="`bg-cell-${i}`"
            class="grid-cell">
@@ -61,15 +64,19 @@
       </div>
     </div>
 
-    <div v-if="aiSuggestionOutput.raw" class="ai-suggestion-display">
-      <strong>AI 输出:</strong>
-      <pre>{{ aiSuggestionOutput.raw }}</pre>
-      <template v-if="aiSuggestionOutput.moves && aiSuggestionOutput.moves.length > 0">
-        <strong>解析指令: {{ aiSuggestionOutput.moves.join(', ') }}</strong>
-        <span
-            v-if="aiSuggestionOutput.reason && !['AI判断游戏结束。', 'AI判断已获胜。', '仅解析出移动指令。', 'AI未提供有效指令或理由。'].includes(aiSuggestionOutput.reason)"> (原因: {{
-            aiSuggestionOutput.reason
-          }})</span>
+    <div
+        v-if="detailedAiSuggestion || (aiSuggestionOutput.raw && aiSuggestionOutput.raw !== 'AI正在分析最佳单步...' && aiSuggestionOutput.raw !== 'AI请求指令序列...')"
+        class="ai-suggestion-display">
+      <template v-if="detailedAiSuggestion">
+        <strong>AI 详细建议:</strong>
+        <p style="white-space: pre-wrap; margin-bottom: 10px;">{{ detailedAiSuggestion }}</p>
+      </template>
+      <template
+          v-if="aiSuggestionOutput.raw && aiSuggestionOutput.raw !== 'AI正在分析最佳单步...' && aiSuggestionOutput.raw !== 'AI请求指令序列...'">
+        <details style="margin-top:10px; font-size: 0.8em; color: #555;">
+          <summary>查看AI原始输出 (供调试)</summary>
+          <pre>{{ aiSuggestionOutput.raw }}</pre>
+        </details>
       </template>
     </div>
 
@@ -81,7 +88,7 @@
 </template>
 
 <script setup>
-import {ref, onMounted, onBeforeUnmount, nextTick, watch} from 'vue';
+import {ref, onMounted, onBeforeUnmount, nextTick, watch, computed} from 'vue';
 
 const GRID_SIZE = 4;
 const score = ref(0);
@@ -98,15 +105,15 @@ const aiSuggestionOutput = ref({raw: '', moves: [], reason: ''});
 const aiMoveQueue = ref([]);
 const aiPlayInterval = ref(undefined);
 const AI_MOVE_DELAY = 500;
-const AI_REQUEST_MOVES_COUNT = 3;
+const aiNumMovesPerRequest = ref(3); // 用户可定义的AI单次请求步数，默认为3
 
 const gameBoardRef = ref(null);
 const currentGameId = ref('');
 const initialBoardStateForCurrentGame = ref([]);
 const currentAiPlayedMovesHistory = ref([]);
 
-const CELL_GAP = 10; // px
-const TILE_SIZE = 85; // px, ((420 - 2*15) - (GRID_SIZE+1)*CELL_GAP) / GRID_SIZE roughly (390 - 50)/4 = 340/4 = 85
+const CELL_GAP = 10;
+const TILE_SIZE = 85;
 
 const baseTileStyles = {
   2: {background: '#eee4da', color: '#776e65', fontSize: '2.2em'},
@@ -125,10 +132,10 @@ const baseTileStyles = {
 };
 
 const getBaseTileStyle = (value) => {
-  const style = baseTileStyles[value] || baseTileStyles[8192]; // Default to 8192 style if value is higher
+  const style = baseTileStyles[value] || baseTileStyles[8192];
   const finalStyle = {...style};
   if (String(value).length >= 4 && value < 1024) finalStyle.fontSize = '1.2em';
-  else if (String(value).length >= 3 && value < 128 && value > 64) finalStyle.fontSize = '1.8em'; // Adjusted condition
+  else if (String(value).length >= 3 && value < 128 && value > 64) finalStyle.fontSize = '1.8em';
   return finalStyle;
 };
 
@@ -137,13 +144,109 @@ const calculateTileStyle = (tile) => {
   return {
     ...style,
     position: 'absolute',
-    top: `${tile.r * (TILE_SIZE + CELL_GAP)}px`,
-    left: `${tile.c * (TILE_SIZE + CELL_GAP)}px`,
+    top: `${CELL_GAP + tile.r * (TILE_SIZE + CELL_GAP)}px`,
+    left: `${CELL_GAP + tile.c * (TILE_SIZE + CELL_GAP)}px`,
     width: `${TILE_SIZE}px`,
     height: `${TILE_SIZE}px`,
     lineHeight: `${TILE_SIZE}px`,
   };
 };
+
+const detailedAiSuggestion = computed(() => {
+  const output = aiSuggestionOutput.value;
+  const moves = output.moves;
+  const reason = output.reason;
+  const rawOutput = output.raw;
+
+  if (!rawOutput && (!moves || moves.length === 0)) {
+    return '';
+  }
+
+  let suggestionText = '';
+
+  const directionMap = {
+    UP: '向上',
+    DOWN: '向下',
+    LEFT: '向左',
+    RIGHT: '向右',
+  };
+  const genericReasonsOrStatuses = [
+    'AI判断游戏结束。', 'AI判断已获胜。', '仅解析出移动指令。',
+    'AI未提供有效指令或理由。', 'AI未能提供有效指令。', 'AI提供了理由但内容为空。'
+  ];
+
+  if (moves && moves.length > 0) {
+    if (moves[0] === 'GAMEOVER') {
+      return "AI 判断游戏已经结束，棋盘已无有效操作空间，故无法提供更多移动建议。";
+    }
+    if (moves[0] === 'WIN') {
+      return "AI 判断已成功达到 2048 (或更高目标)！恭喜您获得游戏胜利！";
+    }
+
+    const translatedMoves = moves.map(move => directionMap[move] || move);
+    if (translatedMoves.length === 1) {
+      suggestionText = `AI分析后，建议的关键操作是向${translatedMoves[0]}方向移动。`;
+    } else {
+      suggestionText = `AI分析后，建议的操作序列为：首先向${translatedMoves.join('，接着向')}方向移动。`;
+    }
+
+    if (reason && !genericReasonsOrStatuses.includes(reason)) {
+      suggestionText += ` AI给出的具体理由是：“${reason}”`;
+    } else {
+      if (moves.length === 1) {
+        suggestionText += ` AI认为这一步的目的是为了优化当前棋盘的整体结构，并为后续合并创造机会。`;
+      } else {
+        suggestionText += ` AI评估这一系列操作能够有效地整合现有数字，清理盘面，并为接下来获取更高分数或达成目标奠定良好基础。`;
+      }
+    }
+  } else if (reason && !genericReasonsOrStatuses.includes(reason)) {
+    suggestionText = `AI对当前局面的分析结论为：“${reason}” (但未给出具体移动步骤)。`;
+  } else if (rawOutput) {
+    if (rawOutput.toUpperCase().includes("ERROR")) {
+      suggestionText = "AI在分析过程中似乎遇到了一个内部问题，暂时无法给出有效建议。请稍后重试。";
+    } else if (rawOutput.length > 10 && rawOutput.length < 150 && rawOutput !== 'AI正在分析最佳单步...' && rawOutput !== 'AI请求指令序列...') {
+      suggestionText = "AI未能给出明确的移动指令，其提供的原始分析信息相对简略，建议结合棋盘状态自行判断。";
+    } else if (rawOutput !== 'AI正在分析最佳单步...' && rawOutput !== 'AI请求指令序列...') {
+      suggestionText = "AI目前未能提供有效的移动指令或具体分析原因。建议您仔细观察棋盘，寻找最佳操作。";
+    } else {
+      return ''; // Don't show placeholder as a detailed suggestion
+    }
+  } else {
+    return "AI当前没有可供显示的建议或分析结果。";
+  }
+
+  const wordCount = suggestionText.split(/\s+/).filter(Boolean).length;
+  const targetWordCount = 18;
+
+  if (wordCount < targetWordCount && suggestionText.length > 10) {
+    if (moves && moves.length > 0) {
+      if (!suggestionText.endsWith('。') && !suggestionText.endsWith('”') && !suggestionText.endsWith('！')) {
+        suggestionText += '。';
+      }
+      suggestionText += " 该决策综合考虑了当前盘面数字分布、可合并项以及潜在的空格产生。";
+      if (reason && genericReasonsOrStatuses.includes(reason)) {
+        suggestionText += " 您可以尝试执行这些操作，并观察它们如何影响游戏局势的走向。";
+      }
+    } else if (reason && !genericReasonsOrStatuses.includes(reason)) {
+      if (!suggestionText.endsWith('。') && !suggestionText.endsWith('”') && !suggestionText.endsWith('！')) {
+        suggestionText += '。';
+      }
+      suggestionText += " 此分析基于对当前棋盘结构的深度评估以及未来可能性的预测。";
+    } else {
+      suggestionText += " 保持棋盘的灵活性和创造大数字的机会是游戏的关键策略。";
+    }
+  }
+
+  const finalWordCount = suggestionText.split(/\s+/).filter(Boolean).length;
+  if (finalWordCount > 5 && finalWordCount < targetWordCount + 7 && suggestionText.length > 10) {
+    if (!suggestionText.endsWith('。') && !suggestionText.endsWith('”') && !suggestionText.endsWith('！')) {
+      suggestionText += '。';
+    }
+    suggestionText += " 请谨慎参考AI建议并结合自身判断进行操作。";
+  }
+
+  return suggestionText.trim();
+});
 
 const generateNewGameId = () => `ai_game_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
 
@@ -199,12 +302,12 @@ const initializeGrid = () => {
   nextTick(() => {
     setTimeout(() => {
       tiles.value.forEach(t => t.isNew = false);
-    }, 10); // Very short delay, just to ensure initial render without "new" animation
+    }, 10);
   });
 
   const initialGridForSave = Array(GRID_SIZE).fill(null).map(() => Array(GRID_SIZE).fill(0));
   tiles.value.forEach(tile => {
-    if (tile && typeof tile.r !== 'undefined' && typeof tile.c !== 'undefined') { // Guard
+    if (tile && typeof tile.r !== 'undefined' && typeof tile.c !== 'undefined') {
       initialGridForSave[tile.r][tile.c] = tile.value;
     }
   });
@@ -224,7 +327,6 @@ const move = (direction) => {
   if (isGameOver.value && !hasWon.value) return false;
 
   tiles.value.forEach(t => {
-    // t.isNew = false; // isNew is set false after its animation separately
     t.justMerged = false;
     t.deleteMark = false;
   });
@@ -256,40 +358,34 @@ const move = (direction) => {
         let farthestC = currentC;
         let nextR, nextC;
 
-        // Phase 1: Find the farthest position or merge target
         while (true) {
           nextR = farthestR + dr;
           nextC = farthestC + dc;
 
-          if (nextR < 0 || nextR >= GRID_SIZE || nextC < 0 || nextC >= GRID_SIZE) break; // Out of bounds
+          if (nextR < 0 || nextR >= GRID_SIZE || nextC < 0 || nextC >= GRID_SIZE) break;
 
           const blockingTile = tiles.value.find(t => t.r === nextR && t.c === nextC && !t.deleteMark);
           if (blockingTile) {
-            if (!blockingTile.justMerged && blockingTile.value === currentTile.value) { // Can merge
-              farthestR = nextR; // Will merge into this position
+            if (!blockingTile.justMerged && blockingTile.value === currentTile.value) {
+              farthestR = nextR;
               farthestC = nextC;
             }
-            // Else, blocked by a different tile or already merged tile, stop before it
             break;
           }
-          // Empty cell, can move further
           farthestR = nextR;
           farthestC = nextC;
         }
 
-        // Phase 2: Perform move or merge
-        if (farthestR !== currentR || farthestC !== currentC) { // If tile needs to move
+        if (farthestR !== currentR || farthestC !== currentC) {
           const targetTileAtFarthest = tiles.value.find(t => t.r === farthestR && t.c === farthestC && !t.deleteMark);
 
           if (targetTileAtFarthest && targetTileAtFarthest.value === currentTile.value && !targetTileAtFarthest.justMerged) {
-            // Merge
             targetTileAtFarthest.value *= 2;
             targetTileAtFarthest.justMerged = true;
             iterationScore += targetTileAtFarthest.value;
             currentTile.deleteMark = true;
             boardChanged = true;
           } else {
-            // Just move
             currentTile.r = farthestR;
             currentTile.c = farthestC;
             boardChanged = true;
@@ -310,10 +406,9 @@ const move = (direction) => {
   nextTick(() => {
     setTimeout(() => {
       tiles.value.forEach(t => {
-        t.isNew = false; // New tile animation flag reset
-        // justMerged is already reset at the start of next move
+        t.isNew = false;
       });
-    }, 180); // Duration of new-tile-pop animation
+    }, 180);
   });
 
   checkGameStatus();
@@ -419,7 +514,7 @@ async function fetchAiSuggestionFromBackend(numMoves) {
   });
 
   try {
-    const responseText = await $fetch('/api/ai/2048-assistant', {
+    const responseText = await $fetch('/api/ai/2048/2048-assistant', {
       method: 'POST',
       body: {board: boardForAI, score: score.value, numMoves: numMoves,},
     });
@@ -449,15 +544,21 @@ const parseAiResponse = (responseText) => {
   movesString = movesString.replace(/^MOVE:\s*/i, '').trim();
   if (movesString === "GAMEOVER" || movesString === "WIN") {
     parsed.moves = [movesString];
-    parsed.reason = movesString === "GAMEOVER" ? "AI判断游戏结束。" : "AI判断已获胜。";
-    return parsed;
-  }
-  const potentialMoves = movesString.split(',').map(s => s.trim().toUpperCase()).filter(m => ['UP', 'DOWN', 'LEFT', 'RIGHT'].includes(m));
-  if (potentialMoves.length > 0) {
-    parsed.moves = potentialMoves;
-    if (!reasonMatch && potentialMoves.length > 0) parsed.reason = "仅解析出移动指令。";
+    if (!(reasonMatch && reasonMatch[0])) {
+      parsed.reason = movesString === "GAMEOVER" ? "AI判断游戏结束。" : "AI判断已获胜。";
+    }
   } else {
-    if (!reasonMatch) parsed.reason = "AI未能提供有效指令。";
+    const potentialMoves = movesString.split(',').map(s => s.trim().toUpperCase()).filter(m => ['UP', 'DOWN', 'LEFT', 'RIGHT'].includes(m));
+    if (potentialMoves.length > 0) {
+      parsed.moves = potentialMoves;
+      if (!reasonMatch || !reasonMatch[0]) {
+        parsed.reason = "仅解析出移动指令。";
+      }
+    } else {
+      if (!reasonMatch || !reasonMatch[0]) {
+        parsed.reason = "AI未能提供有效指令。";
+      }
+    }
   }
   return parsed;
 };
@@ -467,13 +568,13 @@ const seekAiHelp = async () => {
   isAiThinking.value = true;
   aiSuggestionOutput.value = {raw: 'AI正在分析最佳单步...', moves: [], reason: ''};
   try {
-    const responseText = await fetchAiSuggestionFromBackend(1);
+    const responseText = await fetchAiSuggestionFromBackend(1); // For single hint, always fetch 1 move
     if (responseText.startsWith("ERROR_FETCHING_AI_SUGGESTION:")) {
       throw new Error(responseText.substring("ERROR_FETCHING_AI_SUGGESTION:".length).trim());
     }
     const parsed = parseAiResponse(responseText);
     aiSuggestionOutput.value = parsed;
-    if (parsed.moves && parsed.moves.length > 0) console.log("AI 提示移动:", parsed.moves[0]);
+    if (parsed.moves && parsed.moves.length > 0) console.log("AI 提示移动:", parsed.moves.join(', '));
     else console.warn("AI未能给出单步建议:", parsed);
   } catch (error) {
     console.error("请求AI帮助失败:", error);
@@ -499,19 +600,21 @@ const stopAutoPlayAi = () => {
   isAutoPlayingAi.value = false;
   if (aiPlayInterval.value) clearTimeout(aiPlayInterval.value);
   aiPlayInterval.value = undefined;
-  isAiThinking.value = false; // Ensure thinking state is reset
+  isAiThinking.value = false;
 };
 
 const requestAndProcessAiMovesLoop = async () => {
   if (!isAutoPlayingAi.value || ((isGameOver.value && !hasWon.value) && aiMoveQueue.value.length === 0) || (hasWon.value && aiMoveQueue.value.length === 0)) {
-    isAiThinking.value = false; // Ensure thinking state is reset if loop terminates early
+    isAiThinking.value = false;
     stopAutoPlayAi();
     return;
   }
-  isAiThinking.value = true;
+
+  isAiThinking.value = true; // Indicate fetching/thinking for a new batch
   aiSuggestionOutput.value = {raw: 'AI请求指令序列...', moves: [], reason: ''};
+
   try {
-    const responseText = await fetchAiSuggestionFromBackend(AI_REQUEST_MOVES_COUNT);
+    const responseText = await fetchAiSuggestionFromBackend(aiNumMovesPerRequest.value);
     if (responseText.startsWith("ERROR_FETCHING_AI_SUGGESTION:")) {
       throw new Error(responseText.substring("ERROR_FETCHING_AI_SUGGESTION:".length).trim());
     }
@@ -520,77 +623,79 @@ const requestAndProcessAiMovesLoop = async () => {
 
     if (parsed.moves && parsed.moves.length > 0) {
       if (parsed.moves[0] === 'GAMEOVER') {
-        // AI claims game over. Let's verify with our own logic.
-        checkGameStatus(); // This will set isGameOver.value if true
-        if (isGameOver.value) { // If our logic agrees
-          stopAutoPlayAi();
+        checkGameStatus();
+        if (isGameOver.value) {
+          stopAutoPlayAi(); // This will set isAiThinking = false
           saveCurrentAiGameExperience("GAMEOVER_AI_REPORTED_VERIFIED");
-        } else { // Our logic disagrees, AI might be mistaken or game state changed
+        } else {
           console.warn("AI reported GAMEOVER, but local check disagrees. Continuing if possible.");
-          // Potentially try to continue or stop if AI is stuck
-          if (isAutoPlayingAi.value) scheduleNextAiRequestLoop(); else isAiThinking.value = false;
+          isAiThinking.value = false; // No moves to execute from this batch
+          if (isAutoPlayingAi.value) scheduleNextAiRequestLoop();
         }
         return;
       }
       if (parsed.moves[0] === 'WIN') {
-        hasWon.value = true; // AI claims win
-        checkGameStatus(); // Update game status
-        stopAutoPlayAi();
+        hasWon.value = true;
+        checkGameStatus();
+        stopAutoPlayAi(); // This will set isAiThinking = false
         saveCurrentAiGameExperience("WIN_AI_REPORTED");
         return;
       }
       aiMoveQueue.value = [...parsed.moves];
+      isAiThinking.value = false; // Batch fetched, before starting execution from queue
       executeNextAiMoveInLoop();
     } else {
       console.warn("AI未能给出移动序列或解析失败:", parsed);
-      if (isAutoPlayingAi.value) scheduleNextAiRequestLoop(); else isAiThinking.value = false;
+      isAiThinking.value = false; // Fetching failed for this batch
+      if (isAutoPlayingAi.value) scheduleNextAiRequestLoop();
     }
   } catch (error) {
     console.error("AI自动玩循环出错:", error);
     aiSuggestionOutput.value = {raw: `AI错误: ${error.message || '未知错误'}`, moves: [], reason: ''};
-    if (isAutoPlayingAi.value) scheduleNextAiRequestLoop(); else isAiThinking.value = false;
+    isAiThinking.value = false; // Error during fetch
+    if (isAutoPlayingAi.value) scheduleNextAiRequestLoop();
   }
 };
 
 const executeNextAiMoveInLoop = async () => {
   if (!isAutoPlayingAi.value || (isGameOver.value && !hasWon.value) || hasWon.value) {
-    isAiThinking.value = false;
+    isAiThinking.value = false; // Ensure thinking is off if auto-play stops for any reason
     stopAutoPlayAi();
     return;
   }
   if (aiMoveQueue.value.length === 0) {
-    isAiThinking.value = false; // No more moves in current queue
-    if (isAutoPlayingAi.value) requestAndProcessAiMovesLoop(); // Request new sequence
+    // isAiThinking.value = false; // Already false from requestAndProcessAiMovesLoop or previous executeNextAiMoveInLoop
+    if (isAutoPlayingAi.value) requestAndProcessAiMovesLoop(); // Request new sequence (will set isAiThinking = true)
     return;
   }
 
   const nextMove = aiMoveQueue.value.shift();
   if (nextMove) {
     await nextTick();
-    move(nextMove);
+    move(nextMove); // This calls checkGameStatus, which might call stopAutoPlayAi
   }
 
-  // move() calls checkGameStatus() which might stop AI if game ends/wins
-  if (!isAutoPlayingAi.value || (isGameOver.value && !hasWon.value) || hasWon.value) {
-    isAiThinking.value = false; // Ensure reset
+  // If stopAutoPlayAi was called (e.g. game over/win after move), isAutoPlayingAi will be false
+  if (!isAutoPlayingAi.value) {
+    isAiThinking.value = false; // Ensure isAiThinking is false if AI was stopped during move execution.
     return;
   }
 
   if (aiMoveQueue.value.length > 0) {
     aiPlayInterval.value = window.setTimeout(executeNextAiMoveInLoop, AI_MOVE_DELAY);
   } else { // Queue empty, but still in auto-play mode
-    isAiThinking.value = false; // Thinking for this batch is done
-    if (isAutoPlayingAi.value) { // Request next batch
-      scheduleNextAiRequestLoop();
+    // isAiThinking.value = false; // Already false
+    if (isAutoPlayingAi.value) {
+      scheduleNextAiRequestLoop(); // This will call requestAndProcessAiMovesLoop (which sets isAiThinking = true)
     }
   }
 };
 
 const scheduleNextAiRequestLoop = () => {
   if (isAutoPlayingAi.value && !isGameOver.value && !hasWon.value) {
-    aiPlayInterval.value = window.setTimeout(requestAndProcessAiMovesLoop, AI_MOVE_DELAY + 200); // slightly longer delay between batches
+    aiPlayInterval.value = window.setTimeout(requestAndProcessAiMovesLoop, AI_MOVE_DELAY + 200);
   } else {
-    isAiThinking.value = false; // Ensure reset if not scheduling
+    isAiThinking.value = false;
     stopAutoPlayAi();
   }
 };
@@ -599,7 +704,7 @@ async function saveCurrentAiGameExperience(notes = '') {
   const finalGridForSave = Array(GRID_SIZE).fill(null).map(() => Array(GRID_SIZE).fill(0));
   let highestTileValue = 0;
   tiles.value.forEach(t => {
-    if (t && typeof t.r !== 'undefined' && typeof t.c !== 'undefined') { // Guard
+    if (t && typeof t.r !== 'undefined' && typeof t.c !== 'undefined') {
       finalGridForSave[t.r][t.c] = t.value;
       if (t.value > highestTileValue) highestTileValue = t.value;
     }
@@ -607,7 +712,7 @@ async function saveCurrentAiGameExperience(notes = '') {
 
   console.log(`准备保存AI游戏经验: GameID=${currentGameId.value}, Moves=${currentAiPlayedMovesHistory.value.length}, Score=${score.value}, MaxTile=${highestTileValue}, Notes=${notes}`);
   try {
-    const response = await $fetch('/api/ai/2048-save-experience', {
+    const response = await $fetch('/api/ai/2048/2048-save-experience', {
       method: 'POST',
       body: {
         gameId: currentGameId.value,
@@ -638,7 +743,6 @@ onMounted(() => {
     boardEl.addEventListener('touchend', handleTouchEnd, {passive: true});
   }
 });
-
 onBeforeUnmount(() => {
   window.removeEventListener('keydown', handleKeyDown);
   const boardEl = gameBoardRef.value;
@@ -646,9 +750,8 @@ onBeforeUnmount(() => {
     boardEl.removeEventListener('touchstart', handleTouchStart);
     boardEl.removeEventListener('touchend', handleTouchEnd);
   }
-  stopAutoPlayAi(); // Clear any running intervals
+  stopAutoPlayAi();
 });
-
 </script>
 
 <style scoped>
@@ -658,7 +761,7 @@ onBeforeUnmount(() => {
   padding: 15px;
   background-color: #faf8ef;
   border-radius: 6px;
-  font-family: "Roboto Local", Arial, sans-serif; /* Fallback to Arial */
+  font-family: "Roboto Local", Arial, sans-serif;
   position: relative;
   user-select: none;
 }
@@ -674,7 +777,7 @@ onBeforeUnmount(() => {
   font-size: 2.5em;
   color: #776e65;
   margin: 0;
-  font-weight: 700; /* Roboto Bold */
+  font-weight: 700;
 }
 
 .score-container {
@@ -689,7 +792,7 @@ onBeforeUnmount(() => {
 }
 
 .score {
-  font-weight: 700; /* Bold */
+  font-weight: 700;
   display: inline-block;
 }
 
@@ -722,6 +825,7 @@ onBeforeUnmount(() => {
   transition: background-color 0.2s;
   margin-left: 5px;
 }
+
 .controls .action-button:hover {
   background-color: #776e65;
 }
@@ -730,9 +834,10 @@ onBeforeUnmount(() => {
   display: flex;
   justify-content: center;
   gap: 10px;
-  margin-bottom: 15px;
+  margin-bottom: 10px; /* Adjusted margin */
   flex-wrap: wrap;
 }
+
 .game-controls-panel .action-button {
   padding: 8px 15px;
   font-size: 0.9em;
@@ -745,11 +850,13 @@ onBeforeUnmount(() => {
   flex-grow: 1;
   min-width: 100px;
 }
+
 @media (min-width: 400px) {
   .game-controls-panel .action-button {
     flex-grow: 0;
   }
 }
+
 .game-controls-panel .action-button:disabled {
   opacity: 0.6;
   cursor: not-allowed;
@@ -771,6 +878,28 @@ onBeforeUnmount(() => {
   background-color: #4a8bdb;
 }
 
+.ai-settings-panel {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin-bottom: 15px; /* Ensure spacing from game board */
+  font-size: 0.9em;
+  color: #776e65;
+}
+
+.ai-settings-panel label {
+  margin-right: 5px;
+}
+
+.ai-settings-panel input[type="number"] {
+  padding: 4px 6px;
+  border-radius: 3px;
+  border: 1px solid #bbada0;
+  width: 45px; /* Adjusted width */
+  text-align: center;
+}
+
+
 .game-board-overlay {
   position: absolute;
   top: 0;
@@ -788,6 +917,7 @@ onBeforeUnmount(() => {
   animation: fadeInOverlay 0.3s ease-out;
   backdrop-filter: blur(2px);
 }
+
 @keyframes fadeInOverlay {
   from {
     opacity: 0;
@@ -798,6 +928,7 @@ onBeforeUnmount(() => {
     transform: translateY(0);
   }
 }
+
 .game-over-message, .win-message {
   color: #776e65;
   background-color: rgba(255, 255, 255, 0.98);
@@ -805,6 +936,7 @@ onBeforeUnmount(() => {
   border-radius: 8px;
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
 }
+
 .game-over-message p, .win-message p {
   font-size: 1.8em;
   margin-bottom: 10px;
@@ -814,6 +946,7 @@ onBeforeUnmount(() => {
 .win-message {
   border: 3px solid #f3b04a;
 }
+
 .confetti {
   display: inline-block;
   font-size: 2.2em;
@@ -824,6 +957,7 @@ onBeforeUnmount(() => {
 .confetti:nth-child(2) {
   animation-delay: 0.2s;
 }
+
 @keyframes confetti-animation {
   0% {
     transform: translateY(20px) rotate(0deg) scale(0.5);
@@ -841,6 +975,7 @@ onBeforeUnmount(() => {
     opacity: 0;
   }
 }
+
 .game-over-message .action-button, .win-message .action-button {
   margin-top: 20px;
   background-color: #8f7a66;
@@ -853,14 +988,17 @@ onBeforeUnmount(() => {
   font-weight: 700;
   transition: background-color 0.2s, transform 0.1s;
 }
+
 .game-over-message .action-button:hover, .win-message .action-button:hover {
   background-color: #776e65;
   transform: scale(1.05);
 }
+
 .thinking-overlay {
   background-color: rgba(250, 248, 239, 0.9);
   z-index: 15;
 }
+
 .thinking-message {
   font-size: 1.6em;
   color: #776e65;
@@ -872,57 +1010,43 @@ onBeforeUnmount(() => {
 }
 
 .game-board {
-  background-color: #bbada0; /* 网格线条的颜色 (通过gap显示出来) */
+  background-color: #bbada0;
   border-radius: 6px;
-
-  /* 使用 v-bind 动态绑定来自 JS 的 CELL_GAP */
   padding: v-bind(CELL_GAP+ 'px');
-
   display: grid;
-  /* 使用 v-bind 动态绑定 GRID_SIZE 和 TILE_SIZE */
   grid-template-rows: repeat(v-bind(GRID_SIZE), v-bind(TILE_SIZE+ 'px'));
   grid-template-columns: repeat(v-bind(GRID_SIZE), v-bind(TILE_SIZE+ 'px'));
-  gap: v-bind(CELL_GAP+ 'px'); /* 格子之间的间隙，形成网格线 */
-
-  position: relative; /* 为了绝对定位的 .tile */
-  box-sizing: border-box; /* 关键：确保 padding 和 border 包含在 width/height 内 */
-
-  /* 总宽度/高度计算 (当 box-sizing: border-box):
-    = (格子数量 * 格子尺寸) + ((格子数量 - 1) * 内部间隙尺寸) + (2 * 容器内边距)
-  */
+  gap: v-bind(CELL_GAP+ 'px');
+  position: relative;
+  box-sizing: border-box;
   width: calc(v-bind(GRID_SIZE) * v-bind(TILE_SIZE+ 'px') +
   (v-bind(GRID_SIZE) - 1) * v-bind(CELL_GAP+ 'px') +
   2 * v-bind(CELL_GAP+ 'px'));
   height: calc(v-bind(GRID_SIZE) * v-bind(TILE_SIZE+ 'px') +
   (v-bind(GRID_SIZE) - 1) * v-bind(CELL_GAP+ 'px') +
   2 * v-bind(CELL_GAP+ 'px'));
-
   touch-action: none;
-  /* content-box 已被 border-box 替代 */
 }
 
 .grid-cell {
-  background-color: rgba(238, 228, 218, 0.35); /* Empty cell color */
+  background-color: rgba(238, 228, 218, 0.35);
   border-radius: 4px;
-  /* Size is determined by the parent .game-board grid layout */
 }
 
 .tile {
-  /* position: absolute is set via :style binding from calculateTileStyle */
   display: flex;
   justify-content: center;
   align-items: center;
-  font-weight: 700; /* Bold */
+  font-weight: 700;
   border-radius: 4px;
-  transition: top 0.1s ease-out, left 0.1s ease-out, /* Sliding animation */ transform 0.1s ease-out, /* Pop animation */ background-color 0.05s linear, color 0.05s linear, /* Fast color change */ box-shadow 0.2s ease-in-out;
+  transition: top 0.1s ease-out, left 0.1s ease-out, transform 0.1s ease-out, background-color 0.05s linear, color 0.05s linear, box-shadow 0.2s ease-in-out;
   z-index: 2;
-  text-align: center; /* Ensure number is centered if not perfectly sized by line-height */
-  overflow: hidden; /* Prevent number from spilling if font size is large */
+  text-align: center;
+  overflow: hidden;
 }
 
 .tile-number {
   display: block;
-  /* line-height: 1; is handled by calculateTileStyle and tile height */
 }
 
 .new-tile-pop {
@@ -941,7 +1065,7 @@ onBeforeUnmount(() => {
 }
 
 .merged-tile-pop {
-  animation: tile-merge-pop 0.18s ease-out; /* Delay handled by when class is applied */
+  animation: tile-merge-pop 0.18s ease-out;
 }
 
 @keyframes tile-merge-pop {
@@ -978,16 +1102,20 @@ onBeforeUnmount(() => {
   word-wrap: break-word;
   color: #333a40;
 }
+
 .ai-suggestion-display strong {
   color: #0056b3;
   display: block;
   margin-bottom: 4px;
 }
+
 .ai-suggestion-display pre {
   background-color: #dfe3e6;
   padding: 5px;
   border-radius: 3px;
   display: inline-block;
   margin-top: 3px;
+  white-space: pre-wrap;
+  word-break: break-all;
 }
 </style>
