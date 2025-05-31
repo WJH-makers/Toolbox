@@ -1,3 +1,5 @@
+// prisma/schema.prisma
+
 generator client {
   provider = "prisma-client-js"
 }
@@ -5,7 +7,7 @@ generator client {
 datasource db {
   provider          = "mysql"
   url               = env("DATABASE_URL")
-  shadowDatabaseUrl = env("SHADOW_DATABASE_URL")
+  shadowDatabaseUrl = env("SHADOW_DATABASE_URL") // 根据你的设置
 }
 
 model User {
@@ -105,7 +107,7 @@ model AiChatMessage {
   content   String        @db.Text
   createdAt DateTime      @default(now())
   sessionId String
-  session   AiChatSession @relation(fields: [sessionId], references: [id], onDelete: Cascade) // AiChatMessage 与 AiChatSession 的关系
+  session   AiChatSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
 
   @@index([sessionId, createdAt])
   @@map("ai_chat_messages")
@@ -139,4 +141,23 @@ model UserExchangeQuery {
 
   @@index([userId, queriedAt])
   @@map("user_exchange_queries")
+}
+
+model Ai2048Experience {
+  id     String @id @default(cuid())
+  gameId String @default(cuid()) // 标识一次AI独立完成的游戏过程
+
+  initialBoardStateJson String @db.Text // 新增：该经验片段/游戏开始时的棋盘状态 (JSON字符串)
+  finalBoardStateJson   String @db.Text // 重命名：游戏结束或片段结束时的棋盘状态 (JSON字符串)
+  moveSequenceJson      String @db.Text // AI采取的导致从初始状态到最终状态的完整移动序列 (JSON字符串数组)
+  scoreAchieved         Int
+  highestTile           Int
+  numberOfMoves         Int
+
+  createdAt DateTime @default(now())
+  notes     String?
+
+  @@index([scoreAchieved, highestTile, createdAt(sort: Desc)])
+  @@index([gameId])
+  @@map("ai_global_2048_experiences")
 }

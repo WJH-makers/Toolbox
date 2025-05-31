@@ -3,30 +3,16 @@
     <h2 style="text-align: center;">正则表达式测试工具 🧪</h2>
 
     <div class="regex-input-section">
-      <div class="form-item regex-pattern-item">
-        <label for="regex-pattern">正则表达式:</label>
-        <div class="pattern-input-group">
-          <span class="regex-delimiter">/</span>
-          <input
-              id="regex-pattern"
-              v-model="regexPattern"
-              class="regex-pattern-input"
-              placeholder="输入正则表达式..."
-              type="text"
-              @input="clearResults"
-          >
-          <span class="regex-delimiter">/</span>
-          <div class="flags-container">
-            <label v-for="flag in availableFlags" :key="flag.value" :title="flag.title" class="flag-label">
-              <input
-                  v-model="selectedFlags"
-                  :value="flag.value"
-                  type="checkbox"
-                  @change="performTest"
-              > {{ flag.value }}
-            </label>
-          </div>
-        </div>
+      <div class="form-item">
+        <label for="full-regex-literal">正则表达式 (格式: /pattern/flags):</label>
+        <input
+            id="full-regex-literal"
+            v-model="fullRegexLiteral"
+            class="full-regex-input"
+            placeholder="例如: /(?<year>\d{4})-(?<month>0[1-9]|1[0-2])-(?<day>0[1-9]|[12]\d|3[01])/gi"
+            type="text"
+            @input="performTestDebounced"
+        >
       </div>
 
       <div class="form-item">
@@ -71,7 +57,7 @@
                 <ul class="group-list">
                   <li v-for="(group, groupIndex) in match.groups" :key="groupIndex">
                     组 {{ groupIndex + 1 }}:
-                    <pre class="group-value">{{ group }}</pre>
+                    <pre class="group-value">{{ group === undefined ? 'undefined' : group }}</pre>
                   </li>
                 </ul>
               </div>
@@ -80,7 +66,7 @@
                 <ul class="group-list">
                   <li v-for="(value, name) in match.namedGroups" :key="name">
                     {{ name }}:
-                    <pre class="group-value">{{ value }}</pre>
+                    <pre class="group-value">{{ value === undefined ? 'undefined' : value }}</pre>
                   </li>
                 </ul>
               </div>
@@ -102,30 +88,24 @@
 </template>
 
 <script lang="ts" setup>
-import {ref, watch} from 'vue';
+import {ref, watch, onMounted} from 'vue'; // onMounted import edildi
 
 interface MatchResult {
   fullMatch: string;
   index: number;
   groups: (string | undefined)[];
-  namedGroups?: { [key: string]: string };
+  namedGroups?: { [key: string]: string | undefined }; // Allow undefined for named groups
 }
 
-const regexPattern = ref<string>('hello');
-const testString = ref<string>('hello world, hello there!');
-const selectedFlags = ref<string[]>(['g', 'i']); // Default flags
+// 用户提供的日期匹配正则表达式作为默认值
+// JavaScript字符串中反斜杠需要转义
+const defaultRegexLiteral = '/(?<year>\\d{4})-(?<month>0[1-9]|1[0-2])-(?<day>0[1-9]|[12]\\d|3[01])/g';
+
+const fullRegexLiteral = ref<string>(defaultRegexLiteral);
+const testString = ref<string>('会议日期: 2024-07-29, 另一个日期: 2025-01-15.');
 const matchResults = ref<MatchResult[]>([]);
 const regexError = ref<string | null>(null);
 const lastTestPerformed = ref<boolean>(false);
-
-const availableFlags = [
-  {value: 'g', title: '全局搜索 (Global)'},
-  {value: 'i', title: '忽略大小写 (Ignore case)'},
-  {value: 'm', title: '多行模式 (Multiline)'},
-  {value: 's', title: '点号匹配换行符 (Dot all)'},
-  {value: 'u', title: 'Unicode模式 (Unicode)'},
-  {value: 'y', title: '粘性搜索 (Sticky)'},
-];
 
 let debounceTimer: number | undefined;
 
@@ -133,74 +113,97 @@ const performTestDebounced = () => {
   clearTimeout(debounceTimer);
   debounceTimer = window.setTimeout(() => {
     performTest();
-  }, 300); // Debounce time in ms
+  }, 300);
 };
 
 const performTest = () => {
   lastTestPerformed.value = true;
-  if (!regexPattern.value) {
+  const literal = fullRegexLiteral.value.trim();
+
+  if (!literal) {
     regexError.value = '正则表达式不能为空。';
     matchResults.value = [];
     return;
   }
 
-  try {
-    const flagsString = selectedFlags.value.join('');
-    const regex = new RegExp(regexPattern.value, flagsString);
-    regexError.value = null;
-    const currentMatches: MatchResult[] = [];
-
-    if (flagsString.includes('g')) {
-      let match;
-      // Create a new RegExp for each matchAll iteration if it's stateful (e.g. with 'g' flag for lastIndex)
-      const globalRegex = new RegExp(regexPattern.value, flagsString);
-      while ((match = globalRegex.exec(testString.value)) !== null) {
-        currentMatches.push({
-          fullMatch: match[0],
-          index: match.index,
-          groups: match.slice(1),
-          namedGroups: match.groups,
-        });
-        // Prevent infinite loops with zero-width matches with global flag
-        if (match.index === globalRegex.lastIndex && globalRegex.lastIndex !== 0) {
-          globalRegex.lastIndex++;
-        }
-      }
-    } else {
-      const match = testString.value.match(regex);
-      if (match) {
-        currentMatches.push({
-          fullMatch: match[0],
-          index: match.index!,
-          groups: match.slice(1),
-          namedGroups: match.groups,
-        });
-      }
+  const regexParts = literal.match(/^\/(.*)\/([gimyus]*)$/s);
+  if (!regexParts) {
+    try {
+      const regex = new RegExp(literal);
+      regexError.value = null; // 清除之前的错误（如果有的话）
+      applyRegex(regex);
+    } catch (e: any) {
+      regexError.value = `无效的正则表达式字面量格式或模式错误: ${e.message}。请使用 /pattern/flags 格式。`;
+      matchResults.value = [];
+      return;
     }
-    matchResults.value = currentMatches;
+    return;
+  }
+
+  const pattern = regexParts[1];
+  const flags = regexParts[2];
+
+  try {
+    const regex = new RegExp(pattern, flags);
+    regexError.value = null;
+    applyRegex(regex); // 将匹配逻辑提取到单独函数
 
   } catch (e: any) {
-    regexError.value = e.message;
+    regexError.value = `正则表达式编译错误: ${e.message}`;
     matchResults.value = [];
   }
 };
+
+const applyRegex = (regex: RegExp) => {
+  const currentMatches: MatchResult[] = [];
+  const flagsString = regex.flags;
+
+  if (flagsString.includes('g')) {
+    let match;
+    if (typeof regex.lastIndex === 'number') { // 确保 lastIndex 属性存在
+      regex.lastIndex = 0; // 重置 lastIndex 以便从头开始搜索
+    }
+
+    while ((match = regex.exec(testString.value)) !== null) {
+      currentMatches.push({
+        fullMatch: match[0],
+        index: match.index,
+        groups: match.slice(1), // 捕获组从索引1开始
+        namedGroups: match.groups,
+      });
+      if (match.index === regex.lastIndex && regex.lastIndex !== 0) {
+        regex.lastIndex++;
+      }
+    }
+  } else {
+    const match = testString.value.match(regex);
+    if (match) {
+      currentMatches.push({
+        fullMatch: match[0],
+        index: match.index!,
+        groups: match.slice(1),
+        namedGroups: match.groups,
+      });
+    }
+  }
+  matchResults.value = currentMatches;
+};
+
 
 const clearResults = () => {
   matchResults.value = [];
   regexError.value = null;
   lastTestPerformed.value = false;
 };
-
 const clearAll = () => {
-  regexPattern.value = '';
-  testString.value = '';
-  selectedFlags.value = ['g', 'i'];
+  fullRegexLiteral.value = defaultRegexLiteral;
+  testString.value = '会议日期: 2024-07-29, 另一个日期: 2025-01-15.';
   clearResults();
+  performTest();
 };
 
-// Perform initial test on mount or when relevant refs change
 onMounted(performTest);
-watch([regexPattern, testString, selectedFlags], performTestDebounced, {deep: true});
+watch([fullRegexLiteral, testString], performTestDebounced, {deep: true});
 
 </script>
 
@@ -232,57 +235,21 @@ watch([regexPattern, testString, selectedFlags], performTestDebounced, {deep: tr
   color: #333;
 }
 
-.pattern-input-group {
-  display: flex;
-  align-items: center;
+.full-regex-input { /* 样式化新的单行正则输入框 */
+  width: 100%;
+  padding: 10px 12px;
   border: 1px solid #ccc;
   border-radius: 6px;
-  padding-left: 0.5em;
-}
-
-.regex-delimiter {
-  font-size: 1.2em;
-  color: #888;
-  padding: 0 0.2em;
-}
-
-.regex-pattern-input {
-  flex-grow: 1;
-  padding: 10px 8px;
-  border: none;
-  outline: none;
-  font-family: 'Menlo', 'Consolas', monospace;
+  box-sizing: border-box;
+  font-family: 'Menlo', 'Consolas', 'Courier New', monospace;
   font-size: 0.95rem;
-  background-color: transparent;
+  background-color: #fdfdfd;
 }
 
-.flags-container {
-  display: flex;
-  align-items: center;
-  padding: 0 10px;
-  background-color: #f7f7f9;
-  border-top-right-radius: 5px;
-  border-bottom-right-radius: 5px;
-  border-left: 1px solid #ccc;
-}
-
-.flag-label {
-  margin-left: 10px;
-  font-size: 0.9em;
-  color: #333;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  font-weight: normal !important; /* Override higher specificity if any */
-}
-
-.flag-label:first-child {
-  margin-left: 0;
-}
-
-.flag-label input[type="checkbox"] {
-  margin-right: 4px;
-  cursor: pointer;
+.full-regex-input:focus {
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
+  outline: none;
 }
 
 
@@ -292,16 +259,23 @@ textarea {
   border: 1px solid #ccc;
   border-radius: 6px;
   box-sizing: border-box;
-  font-family: 'Menlo', 'Consolas', monospace;
+  font-family: 'Menlo', 'Consolas', 'Courier New', monospace;
   font-size: 0.95rem;
   resize: vertical;
   min-height: 120px;
+  background-color: #fdfdfd;
+}
+
+textarea:focus {
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
+  outline: none;
 }
 
 .actions-toolbar {
   display: flex;
   gap: 10px;
-  margin-top: 15px; /* Added margin-top */
+  margin-top: 15px;
   flex-wrap: wrap;
 }
 
@@ -340,10 +314,11 @@ textarea {
 }
 
 .action-button:disabled {
-  background-color: #ccc !important;
-  color: #666 !important;
+  background-color: #e5e7eb !important;
+  color: #9ca3af !important;
+  border-color: #e5e7eb !important;
   cursor: not-allowed;
-  opacity: 0.7;
+  opacity: 0.8;
 }
 
 .test-button {
@@ -366,11 +341,11 @@ textarea {
 
 
 .error-alert {
-  background-color: #f8d7da;
-  color: #721c24;
+  background-color: #fee2e2;
+  color: #b91c1c;
   padding: 10px 15px;
-  border: 1px solid #f5c6cb;
-  border-radius: 4px;
+  border: 1px solid #fca5a5;
+  border-radius: 6px;
   margin-top: 15px;
   font-size: 0.9em;
 }
@@ -425,11 +400,11 @@ pre.match-value, pre.group-value {
   background-color: #eef2f7;
   padding: 2px 4px;
   border-radius: 3px;
-  font-family: 'Menlo', 'Consolas', monospace;
+  font-family: 'Menlo', 'Consolas', 'Courier New', monospace;
   font-size: 0.95em;
   color: #2c3e50;
-  white-space: pre-wrap; /* Allow long matches to wrap */
-  word-break: break-all; /* Break long words/matches */
+  white-space: pre-wrap;
+  word-break: break-all;
 }
 
 .match-groups {
@@ -444,10 +419,13 @@ pre.match-value, pre.group-value {
   margin-top: 3px;
 }
 
+.group-list li {
+  word-break: break-all; /* Ensure long group values also wrap */
+}
+
 .match-details {
   margin-top: 5px;
   font-size: 0.85em;
   color: #777;
 }
-
 </style>

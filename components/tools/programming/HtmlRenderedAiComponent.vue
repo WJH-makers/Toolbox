@@ -4,12 +4,12 @@
     <div class="tool-grid">
       <div class="panel input-panel">
         <label for="html-input">输入HTML代码:</label>
-        <textarea id="html-input" v-model="htmlInput" placeholder="在此粘贴HTML..." rows="15"></textarea>
+        <textarea id="html-input" v-model="htmlInput" placeholder="在此粘贴HTML..." rows="15"/>
         <button class="action-button" @click="renderHtml">渲染/分析</button>
       </div>
       <div class="panel output-panel">
         <label>渲染结果:</label>
-        <iframe ref="renderFrame" class="render-iframe" sandbox="allow-scripts"></iframe>
+        <iframe ref="renderFrame" class="render-iframe" sandbox="allow-scripts"/>
         <div v-if="aiAnalysis" class="ai-analysis-output">
           <strong>AI 分析建议:</strong>
           <p>{{ aiAnalysis }}</p>

@@ -13,7 +13,7 @@
             class="url-input"
             placeholder="输入请求 URL (例如: https://api.example.com/data)"
             type="text"
-        />
+        >
         <button :disabled="isLoading || !requestUrl.trim()" class="action-button send-button" @click="sendRequest">
           <span class="icon">▶️</span>
           <span class="text">{{ isLoading ? '发送中...' : '发送请求' }}</span>
@@ -34,8 +34,8 @@
         <div v-show="activeTab === 'params'" class="params-tab">
           <h4>查询参数 (Query Parameters)</h4>
           <div v-for="(param, index) in queryParams" :key="param.id" class="key-value-pair">
-            <input v-model="param.key" :disabled="isLoading" placeholder="参数名" type="text"/>
-            <input v-model="param.value" :disabled="isLoading" placeholder="参数值" type="text"/>
+            <input v-model="param.key" :disabled="isLoading" placeholder="参数名" type="text">
+            <input v-model="param.value" :disabled="isLoading" placeholder="参数值" type="text">
             <button :disabled="isLoading" class="remove-button" @click="removeQueryParam(index)">移除</button>
           </div>
           <button :disabled="isLoading" class="add-button" @click="addQueryParam">+ 添加参数</button>
@@ -44,8 +44,8 @@
         <div v-show="activeTab === 'headers'" class="headers-tab">
           <h4>请求头 (Headers)</h4>
           <div v-for="(header, index) in requestHeaders" :key="header.id" class="key-value-pair">
-            <input v-model="header.key" :disabled="isLoading" placeholder="Header 名称" type="text"/>
-            <input v-model="header.value" :disabled="isLoading" placeholder="Header 值" type="text"/>
+            <input v-model="header.key" :disabled="isLoading" placeholder="Header 名称" type="text">
+            <input v-model="header.value" :disabled="isLoading" placeholder="Header 值" type="text">
             <button :disabled="isLoading" class="remove-button" @click="removeRequestHeader(index)">移除</button>
           </div>
           <button :disabled="isLoading" class="add-button" @click="addRequestHeader">+ 添加请求头</button>
@@ -68,9 +68,10 @@
           />
           <div v-if="requestBodyType === 'form-urlencoded'" class="form-data-pairs">
             <div v-for="(item, index) in formUrlencodedBody" :key="item.id" class="key-value-pair">
-              <input v-model="item.key" :disabled="isLoading || !isBodyAllowed" placeholder="键" type="text"/>
-              <input v-model="item.value" :disabled="isLoading || !isBodyAllowed" placeholder="值" type="text"/>
-              <button :disabled="isLoading || !isBodyAllowed" class="remove-button"
+              <input v-model="item.key" :disabled="isLoading || !isBodyAllowed" placeholder="键" type="text">
+              <input v-model="item.value" :disabled="isLoading || !isBodyAllowed" placeholder="值" type="text">
+              <button
+                  :disabled="isLoading || !isBodyAllowed" class="remove-button"
                       @click="removeFormUrlencodedItem(index)">移除
               </button>
             </div>
