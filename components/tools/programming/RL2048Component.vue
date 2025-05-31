@@ -3,7 +3,7 @@
     <div class="game-header">
       <h2 class="game-title">2048</h2>
       <div class="score-container">
-        得分: <span class="score">{{ score }}</span>
+        得分: <span :class="{'score-updated': scoreUpdated}" class="score">{{ score }}</span>
       </div>
       <div class="controls">
         <button class="action-button reset-button" @click="resetGame">新游戏</button>
@@ -45,19 +45,22 @@
     </div>
 
     <div ref="gameBoardRef" class="game-board">
-      <div v-for="(row, rowIndex) in grid" :key="`row-${rowIndex}`" class="grid-row">
-        <div
-            v-for="(cell, colIndex) in row"
-            :key="`cell-${rowIndex}-${colIndex}`"
-            :style="getTileStyle(cell)"
-            class="grid-cell"
-        >
-          <div v-if="cell !== 0" class="tile">
-            <span class="tile-number">{{ cell }}</span>
-          </div>
-        </div>
+      <div v-for="i in (GRID_SIZE * GRID_SIZE)" :key="`bg-cell-${i}`"
+           class="grid-cell">
+      </div>
+
+      <div v-for="tile in tiles"
+           :key="tile.id"
+           :class="[
+             { 'new-tile-pop': tile.isNew, 'merged-tile-pop': tile.justMerged }
+           ]"
+           :style="calculateTileStyle(tile)"
+           class="tile"
+      >
+        <span class="tile-number">{{ tile.value }}</span>
       </div>
     </div>
+
     <div v-if="aiSuggestionOutput.raw" class="ai-suggestion-display">
       <strong>AI 输出:</strong>
       <pre>{{ aiSuggestionOutput.raw }}</pre>
@@ -78,13 +81,16 @@
 </template>
 
 <script setup>
-import {ref, onMounted, onBeforeUnmount, nextTick} from 'vue';
+import {ref, onMounted, onBeforeUnmount, nextTick, watch} from 'vue';
 
 const GRID_SIZE = 4;
-const grid = ref([]);
 const score = ref(0);
+const scoreUpdated = ref(false);
 const isGameOver = ref(false);
 const hasWon = ref(false);
+
+const tiles = ref([]);
+let tileIdCounter = 0;
 
 const isAutoPlayingAi = ref(false);
 const isAiThinking = ref(false);
@@ -93,16 +99,16 @@ const aiMoveQueue = ref([]);
 const aiPlayInterval = ref(undefined);
 const AI_MOVE_DELAY = 500;
 const AI_REQUEST_MOVES_COUNT = 3;
-// const aiExperienceCounter = ref(0); // 如果改为只在游戏结束时保存整局经验，这个可能不再需要
-// const MOVES_PER_EXPERIENCE_SAVE = 20;
 
 const gameBoardRef = ref(null);
 const currentGameId = ref('');
-const initialBoardStateForCurrentGame = ref([]); // 新增：存储当前游戏开始时的棋盘状态
+const initialBoardStateForCurrentGame = ref([]);
 const currentAiPlayedMovesHistory = ref([]);
 
-const tileStyles = {
-  0: {background: 'rgba(238, 228, 218, 0.35)', color: '#776e65', fontSize: '2.2em'},
+const CELL_GAP = 10; // px
+const TILE_SIZE = 85; // px, ((420 - 2*15) - (GRID_SIZE+1)*CELL_GAP) / GRID_SIZE roughly (390 - 50)/4 = 340/4 = 85
+
+const baseTileStyles = {
   2: {background: '#eee4da', color: '#776e65', fontSize: '2.2em'},
   4: {background: '#ede0c8', color: '#776e65', fontSize: '2.2em'},
   8: {background: '#f2b179', color: '#f9f6f2', fontSize: '2.2em'},
@@ -117,203 +123,288 @@ const tileStyles = {
   4096: {background: '#3c3a32', color: '#f9f6f2', fontSize: '1.5em'},
   8192: {background: '#3c3a32', color: '#f9f6f2', fontSize: '1.5em'},
 };
-const getTileStyle = (value) => {
-  const style = tileStyles[value] || tileStyles[8192];
+
+const getBaseTileStyle = (value) => {
+  const style = baseTileStyles[value] || baseTileStyles[8192]; // Default to 8192 style if value is higher
   const finalStyle = {...style};
   if (String(value).length >= 4 && value < 1024) finalStyle.fontSize = '1.2em';
-  else if (String(value).length >= 3 && value < 128) finalStyle.fontSize = '1.8em';
+  else if (String(value).length >= 3 && value < 128 && value > 64) finalStyle.fontSize = '1.8em'; // Adjusted condition
   return finalStyle;
 };
+
+const calculateTileStyle = (tile) => {
+  const style = getBaseTileStyle(tile.value);
+  return {
+    ...style,
+    position: 'absolute',
+    top: `${tile.r * (TILE_SIZE + CELL_GAP)}px`,
+    left: `${tile.c * (TILE_SIZE + CELL_GAP)}px`,
+    width: `${TILE_SIZE}px`,
+    height: `${TILE_SIZE}px`,
+    lineHeight: `${TILE_SIZE}px`,
+  };
+};
+
 const generateNewGameId = () => `ai_game_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
 
+const createTile = (r, c, value) => {
+  return {
+    id: tileIdCounter++,
+    value,
+    r,
+    c,
+    isNew: true,
+    justMerged: false,
+    deleteMark: false,
+  };
+};
+
+const addRandomTile = () => {
+  const emptyCells = [];
+  const currentGrid = Array(GRID_SIZE).fill(null).map(() => Array(GRID_SIZE).fill(0));
+  tiles.value.forEach(t => {
+    if (!t.deleteMark) currentGrid[t.r][t.c] = t.value;
+  });
+
+  for (let r = 0; r < GRID_SIZE; r++) {
+    for (let c = 0; c < GRID_SIZE; c++) {
+      if (currentGrid[r][c] === 0) emptyCells.push({r, c});
+    }
+  }
+
+  if (emptyCells.length > 0) {
+    const {r, c} = emptyCells[Math.floor(Math.random() * emptyCells.length)];
+    const value = Math.random() < 0.9 ? 2 : 4;
+    tiles.value.push(createTile(r, c, value));
+    return true;
+  }
+  return false;
+};
+
 const initializeGrid = () => {
-  const newGrid = Array(GRID_SIZE).fill(null).map(() => Array(GRID_SIZE).fill(0));
+  tiles.value = [];
+  tileIdCounter = 0;
   score.value = 0;
   isGameOver.value = false;
   hasWon.value = false;
   isAiThinking.value = false;
   aiSuggestionOutput.value = {raw: '', moves: [], reason: ''};
   aiMoveQueue.value = [];
-  // aiExperienceCounter.value = 0; // 移除或调整用途
   currentAiPlayedMovesHistory.value = [];
   currentGameId.value = generateNewGameId();
 
-  // 随机添加两个初始块
-  const placeInitialTile = () => {
-    const emptyCells = [];
-    for (let r = 0; r < GRID_SIZE; r++) {
-      for (let c = 0; c < GRID_SIZE; c++) {
-        if (newGrid[r][c] === 0) emptyCells.push({r, c});
-      }
-    }
-    if (emptyCells.length > 0) {
-      const {r, c} = emptyCells[Math.floor(Math.random() * emptyCells.length)];
-      newGrid[r][c] = Math.random() < 0.9 ? 2 : 4;
-    }
-  };
-  placeInitialTile();
-  placeInitialTile();
+  addRandomTile();
+  addRandomTile();
 
-  grid.value = newGrid;
-  initialBoardStateForCurrentGame.value = JSON.parse(JSON.stringify(newGrid)); // 保存初始棋盘状态
+  nextTick(() => {
+    setTimeout(() => {
+      tiles.value.forEach(t => t.isNew = false);
+    }, 10); // Very short delay, just to ensure initial render without "new" animation
+  });
+
+  const initialGridForSave = Array(GRID_SIZE).fill(null).map(() => Array(GRID_SIZE).fill(0));
+  tiles.value.forEach(tile => {
+    if (tile && typeof tile.r !== 'undefined' && typeof tile.c !== 'undefined') { // Guard
+      initialGridForSave[tile.r][tile.c] = tile.value;
+    }
+  });
+  initialBoardStateForCurrentGame.value = JSON.parse(JSON.stringify(initialGridForSave));
 };
 
-const addRandomTile = () => { /* ... (与上一版本完全一致) ... */
-  const emptyCells = [];
-  for (let r = 0; r < GRID_SIZE; r++) {
-    for (let c = 0; c < GRID_SIZE; c++) {
-      if (grid.value[r][c] === 0) emptyCells.push({r, c});
-    }
+watch(score, (newScore, oldScore) => {
+  if (newScore !== oldScore && document.visibilityState === 'visible') {
+    scoreUpdated.value = true;
+    setTimeout(() => {
+      scoreUpdated.value = false;
+    }, 300);
   }
-  if (emptyCells.length > 0) {
-    const {r, c} = emptyCells[Math.floor(Math.random() * emptyCells.length)];
-    grid.value[r][c] = Math.random() < 0.9 ? 2 : 4;
-    return true;
-  }
-  return false;
-};
-const checkForWin = (currentBoard) => { /* ... (与上一版本完全一致) ... */
-  if (hasWon.value) return true;
-  for (let r = 0; r < GRID_SIZE; r++) {
-    for (let c = 0; c < GRID_SIZE; c++) {
-      if (currentBoard[r][c] === 2048) return true;
-    }
-  }
-  return false;
-};
-const processLine = (line, moveToEnd) => { /* ... (与上一版本完全一致) ... */
-  let lineMovedOrMerged = false;
-  let pointsAdded = 0;
-  const originalSnapshot = JSON.stringify(line);
-  if (moveToEnd) line.reverse();
-  let filtered = line.filter(val => val !== 0);
-  for (let i = 0; i < filtered.length - 1; i++) {
-    if (filtered[i] === filtered[i + 1]) {
-      filtered[i] *= 2;
-      pointsAdded += filtered[i];
-      filtered[i + 1] = 0;
-    }
-  }
-  filtered = filtered.filter(val => val !== 0);
-  const newLine = Array(GRID_SIZE).fill(0);
-  for (let i = 0; i < filtered.length; i++) newLine[i] = filtered[i];
-  if (moveToEnd) newLine.reverse();
-  if (JSON.stringify(newLine) !== originalSnapshot) lineMovedOrMerged = true;
-  return {newLine, pointsAdded, lineMovedOrMerged};
-};
-
-const checkGameOverCondition = () => {
-  if (hasWon.value) {
-    isGameOver.value = true;
-    return;
-  }
-  for (let r = 0; r < GRID_SIZE; r++) {
-    for (let c = 0; c < GRID_SIZE; c++) {
-      if (grid.value[r][c] === 0) {
-        isGameOver.value = false;
-        return;
-      }
-      if (c < GRID_SIZE - 1 && grid.value[r][c] === grid.value[r][c + 1]) {
-        isGameOver.value = false;
-        return;
-      }
-      if (r < GRID_SIZE - 1 && grid.value[r][c] === grid.value[r + 1][c]) {
-        isGameOver.value = false;
-        return;
-      }
-    }
-  }
-  isGameOver.value = true;
-  if (isAutoPlayingAi.value) {
-    stopAutoPlayAi();
-    console.log("AI Game Over. Final Score:", score.value);
-    saveCurrentAiGameExperience("GAMEOVER_AI_AUTO"); // 确保传递 notes
-  }
-};
+});
 
 const move = (direction) => {
   if (isGameOver.value && !hasWon.value) return false;
 
-  let boardChanged = false;
-  const tempGrid = JSON.parse(JSON.stringify(grid.value));
-  // initialBoardStateForCurrentGame 已经在 initializeGrid 中设置，代表整局开始的状态
-  let iterationScore = 0;
-
-  const lines = [];
-  if (direction === 'LEFT' || direction === 'RIGHT') {
-    for (let r = 0; r < GRID_SIZE; r++) lines.push([...tempGrid[r]]);
-  } else {
-    for (let c = 0; c < GRID_SIZE; c++) lines.push(tempGrid.map(row => row[c]));
-  }
-
-  lines.forEach((line, index) => {
-    const {newLine, pointsAdded, lineMovedOrMerged} = processLine(line, direction === 'RIGHT' || direction === 'DOWN');
-    iterationScore += pointsAdded;
-    if (lineMovedOrMerged) boardChanged = true;
-    if (direction === 'LEFT' || direction === 'RIGHT') tempGrid[index] = newLine;
-    else for (let r = 0; r < GRID_SIZE; r++) tempGrid[r][index] = newLine[r];
+  tiles.value.forEach(t => {
+    // t.isNew = false; // isNew is set false after its animation separately
+    t.justMerged = false;
+    t.deleteMark = false;
   });
 
+  let boardChanged = false;
+  let iterationScore = 0;
+
+  const R_VECTORS = {UP: -1, DOWN: 1, LEFT: 0, RIGHT: 0};
+  const C_VECTORS = {UP: 0, DOWN: 0, LEFT: -1, RIGHT: 1};
+  const dr = R_VECTORS[direction];
+  const dc = C_VECTORS[direction];
+
+  const traversalsR = [];
+  const traversalsC = [];
+  for (let i = 0; i < GRID_SIZE; i++) {
+    traversalsR.push(i);
+    traversalsC.push(i);
+  }
+  if (direction === 'RIGHT') traversalsC.reverse();
+  if (direction === 'DOWN') traversalsR.reverse();
+
+  for (const rStart of traversalsR) {
+    for (const cStart of traversalsC) {
+      const currentTile = tiles.value.find(t => t.r === rStart && t.c === cStart && !t.deleteMark);
+      if (currentTile) {
+        let currentR = rStart;
+        let currentC = cStart;
+        let farthestR = currentR;
+        let farthestC = currentC;
+        let nextR, nextC;
+
+        // Phase 1: Find the farthest position or merge target
+        while (true) {
+          nextR = farthestR + dr;
+          nextC = farthestC + dc;
+
+          if (nextR < 0 || nextR >= GRID_SIZE || nextC < 0 || nextC >= GRID_SIZE) break; // Out of bounds
+
+          const blockingTile = tiles.value.find(t => t.r === nextR && t.c === nextC && !t.deleteMark);
+          if (blockingTile) {
+            if (!blockingTile.justMerged && blockingTile.value === currentTile.value) { // Can merge
+              farthestR = nextR; // Will merge into this position
+              farthestC = nextC;
+            }
+            // Else, blocked by a different tile or already merged tile, stop before it
+            break;
+          }
+          // Empty cell, can move further
+          farthestR = nextR;
+          farthestC = nextC;
+        }
+
+        // Phase 2: Perform move or merge
+        if (farthestR !== currentR || farthestC !== currentC) { // If tile needs to move
+          const targetTileAtFarthest = tiles.value.find(t => t.r === farthestR && t.c === farthestC && !t.deleteMark);
+
+          if (targetTileAtFarthest && targetTileAtFarthest.value === currentTile.value && !targetTileAtFarthest.justMerged) {
+            // Merge
+            targetTileAtFarthest.value *= 2;
+            targetTileAtFarthest.justMerged = true;
+            iterationScore += targetTileAtFarthest.value;
+            currentTile.deleteMark = true;
+            boardChanged = true;
+          } else {
+            // Just move
+            currentTile.r = farthestR;
+            currentTile.c = farthestC;
+            boardChanged = true;
+          }
+        }
+      }
+    }
+  }
+
+  tiles.value = tiles.value.filter(t => !t.deleteMark);
   score.value += iterationScore;
 
   if (boardChanged) {
-    grid.value = tempGrid;
-    if (isAutoPlayingAi.value) { // 仅在AI模式下记录每一步
-      currentAiPlayedMovesHistory.value.push(direction);
-    }
-
-    if (!hasWon.value && checkForWin(grid.value)) {
-      hasWon.value = true;
-      isGameOver.value = true;
-      if (isAutoPlayingAi.value) {
-        stopAutoPlayAi();
-        saveCurrentAiGameExperience("WIN_AI_2048");
-      }
-    }
-    if (!isGameOver.value) addRandomTile();
-    checkGameOverCondition(); // 检查游戏是否因此结束
-    return true;
+    if (isAutoPlayingAi.value) currentAiPlayedMovesHistory.value.push(direction);
+    addRandomTile();
   }
-  checkGameOverCondition();
-  return false;
+
+  nextTick(() => {
+    setTimeout(() => {
+      tiles.value.forEach(t => {
+        t.isNew = false; // New tile animation flag reset
+        // justMerged is already reset at the start of next move
+      });
+    }, 180); // Duration of new-tile-pop animation
+  });
+
+  checkGameStatus();
+  return boardChanged;
 };
 
+const checkGameStatus = () => {
+  if (!hasWon.value) {
+    for (const tile of tiles.value) {
+      if (tile.value === 2048) {
+        hasWon.value = true;
+        if (isAutoPlayingAi.value) {
+          stopAutoPlayAi();
+          saveCurrentAiGameExperience("WIN_AI_2048");
+        }
+        break;
+      }
+    }
+  }
 
-const resetGame = () => { /* ... (与上一版本完全一致) ... */
+  if (tiles.value.length < GRID_SIZE * GRID_SIZE) {
+    isGameOver.value = false;
+    return;
+  }
+
+  const currentLogicalGrid = Array(GRID_SIZE).fill(null).map(() => Array(GRID_SIZE).fill(0));
+  tiles.value.forEach(t => {
+    currentLogicalGrid[t.r][t.c] = t.value;
+  });
+
+  for (let r = 0; r < GRID_SIZE; r++) {
+    for (let c = 0; c < GRID_SIZE; c++) {
+      const val = currentLogicalGrid[r][c];
+      if (c < GRID_SIZE - 1 && val === currentLogicalGrid[r][c + 1]) {
+        isGameOver.value = false;
+        return;
+      }
+      if (r < GRID_SIZE - 1 && val === currentLogicalGrid[r + 1][c]) {
+        isGameOver.value = false;
+        return;
+      }
+    }
+  }
+
+  isGameOver.value = true;
+  if (isAutoPlayingAi.value && !hasWon.value) {
+    stopAutoPlayAi();
+    console.log("AI Game Over. Final Score:", score.value);
+    saveCurrentAiGameExperience("GAMEOVER_AI_AUTO");
+  }
+};
+
+const resetGame = () => {
   stopAutoPlayAi();
   initializeGrid();
 };
-const handleKeyDown = (event) => { /* ... (与上一版本完全一致) ... */
-  if (isAutoPlayingAi.value || (isGameOver.value && !hasWon.value) || hasWon.value) return;
+
+const handleKeyDown = (event) => {
+  if (isAutoPlayingAi.value || (isGameOver.value && !hasWon.value) || (hasWon.value && !isAutoPlayingAi.value)) return;
   const keyToMove = {
-    ArrowUp: 'UP',
-    ArrowDown: 'DOWN',
-    ArrowLeft: 'LEFT',
-    ArrowRight: 'RIGHT',
-    w: 'UP',
-    s: 'DOWN',
-    a: 'LEFT',
-    d: 'RIGHT'
+    ArrowUp: 'UP', ArrowDown: 'DOWN', ArrowLeft: 'LEFT', ArrowRight: 'RIGHT',
+    w: 'UP', s: 'DOWN', a: 'LEFT', d: 'RIGHT'
   };
   if (keyToMove[event.key]) {
-    if (move(keyToMove[event.key])) event.preventDefault();
+    event.preventDefault();
+    move(keyToMove[event.key]);
   }
 };
+
 const touchStartX = ref(0);
 const touchStartY = ref(0);
 const MIN_SWIPE_DISTANCE = 30;
-const handleTouchStart = (event) => { /* ... (与上一版本完全一致) ... */
-  if (isAutoPlayingAi.value || (isGameOver.value && !hasWon.value) || hasWon.value) return;
-  touchStartX.value = event.changedTouches[0].screenX;
-  touchStartY.value = event.changedTouches[0].screenY;
+
+const handleTouchStart = (event) => {
+  if (isAutoPlayingAi.value || (isGameOver.value && !hasWon.value) || (hasWon.value && !isAutoPlayingAi.value)) return;
+  if (event.changedTouches.length > 0) {
+    touchStartX.value = event.changedTouches[0].screenX;
+    touchStartY.value = event.changedTouches[0].screenY;
+  }
 };
-const handleTouchEnd = (event) => { /* ... (与上一版本完全一致) ... */
-  if (isAutoPlayingAi.value || (isGameOver.value && !hasWon.value) || hasWon.value) return;
-  const touchEndX = event.changedTouches[0].screenX;
-  const touchEndY = event.changedTouches[0].screenY;
-  handleSwipe(touchEndX, touchEndY);
+
+const handleTouchEnd = (event) => {
+  if (isAutoPlayingAi.value || (isGameOver.value && !hasWon.value) || (hasWon.value && !isAutoPlayingAi.value)) return;
+  if (event.changedTouches.length > 0) {
+    const touchEndX = event.changedTouches[0].screenX;
+    const touchEndY = event.changedTouches[0].screenY;
+    handleSwipe(touchEndX, touchEndY);
+  }
 };
-const handleSwipe = (endX, endY) => { /* ... (与上一版本完全一致) ... */
+
+const handleSwipe = (endX, endY) => {
   const deltaX = endX - touchStartX.value;
   const deltaY = endY - touchStartY.value;
   if (Math.abs(deltaX) < MIN_SWIPE_DISTANCE && Math.abs(deltaY) < MIN_SWIPE_DISTANCE) return;
@@ -321,11 +412,16 @@ const handleSwipe = (endX, endY) => { /* ... (与上一版本完全一致) ... *
   else move(deltaY > 0 ? 'DOWN' : 'UP');
 };
 
-async function fetchAiSuggestionFromBackend(numMoves) { /* ... (与上一版本完全一致) ... */
+async function fetchAiSuggestionFromBackend(numMoves) {
+  const boardForAI = Array(GRID_SIZE).fill(null).map(() => Array(GRID_SIZE).fill(0));
+  tiles.value.forEach(t => {
+    if (t && typeof t.r !== 'undefined' && typeof t.c !== 'undefined') boardForAI[t.r][t.c] = t.value;
+  });
+
   try {
     const responseText = await $fetch('/api/ai/2048-assistant', {
       method: 'POST',
-      body: {board: grid.value, score: score.value, numMoves: numMoves,},
+      body: {board: boardForAI, score: score.value, numMoves: numMoves,},
     });
     return String(responseText).trim();
   } catch (error) {
@@ -337,7 +433,7 @@ async function fetchAiSuggestionFromBackend(numMoves) { /* ... (与上一版本�
   }
 }
 
-const parseAiResponse = (responseText) => { /* ... (与上一版本完全一致) ... */
+const parseAiResponse = (responseText) => {
   const parsed = {moves: [], reason: '', raw: responseText};
   if (!responseText || typeof responseText !== 'string') {
     parsed.reason = 'AI响应为空或格式不正确。';
@@ -366,8 +462,7 @@ const parseAiResponse = (responseText) => { /* ... (与上一版本完全一致)
   return parsed;
 };
 
-// AI 模式逻辑
-const seekAiHelp = async () => { /* ... (与上一版本完全一致) ... */
+const seekAiHelp = async () => {
   if (isAiThinking.value || isGameOver.value || hasWon.value) return;
   isAiThinking.value = true;
   aiSuggestionOutput.value = {raw: 'AI正在分析最佳单步...', moves: [], reason: ''};
@@ -387,26 +482,29 @@ const seekAiHelp = async () => { /* ... (与上一版本完全一致) ... */
     isAiThinking.value = false;
   }
 };
+
 const toggleAutoPlayAi = () => (isAutoPlayingAi.value ? stopAutoPlayAi() : startAutoPlayAi());
-const startAutoPlayAi = () => { /* ... (与上一版本完全一致，但内部调用 saveCurrentAiGameExperience) ... */
+
+const startAutoPlayAi = () => {
   if ((isGameOver.value && !hasWon.value) || hasWon.value) {
     console.log("游戏已结束或已胜利，AI无法启动。");
     return;
   }
   isAutoPlayingAi.value = true;
-  isGameOver.value = false;
   currentAiPlayedMovesHistory.value = [];
-  // aiExperienceCounter.value = 0; // 不再需要按步数分段保存
   requestAndProcessAiMovesLoop();
 };
-const stopAutoPlayAi = () => { /* ... (与上一版本完全一致) ... */
+
+const stopAutoPlayAi = () => {
   isAutoPlayingAi.value = false;
   if (aiPlayInterval.value) clearTimeout(aiPlayInterval.value);
   aiPlayInterval.value = undefined;
-  isAiThinking.value = false;
+  isAiThinking.value = false; // Ensure thinking state is reset
 };
-const requestAndProcessAiMovesLoop = async () => { /* ... (与上一版本完全一致，但内部调用 saveCurrentAiGameExperience) ... */
-  if (!isAutoPlayingAi.value || (isGameOver.value && !hasWon.value) || hasWon.value) {
+
+const requestAndProcessAiMovesLoop = async () => {
+  if (!isAutoPlayingAi.value || ((isGameOver.value && !hasWon.value) && aiMoveQueue.value.length === 0) || (hasWon.value && aiMoveQueue.value.length === 0)) {
+    isAiThinking.value = false; // Ensure thinking state is reset if loop terminates early
     stopAutoPlayAi();
     return;
   }
@@ -419,16 +517,24 @@ const requestAndProcessAiMovesLoop = async () => { /* ... (与上一版本完全
     }
     const parsed = parseAiResponse(responseText);
     aiSuggestionOutput.value = parsed;
+
     if (parsed.moves && parsed.moves.length > 0) {
       if (parsed.moves[0] === 'GAMEOVER') {
-        isGameOver.value = true;
-        stopAutoPlayAi();
-        saveCurrentAiGameExperience("GAMEOVER_AI_REPORTED");
+        // AI claims game over. Let's verify with our own logic.
+        checkGameStatus(); // This will set isGameOver.value if true
+        if (isGameOver.value) { // If our logic agrees
+          stopAutoPlayAi();
+          saveCurrentAiGameExperience("GAMEOVER_AI_REPORTED_VERIFIED");
+        } else { // Our logic disagrees, AI might be mistaken or game state changed
+          console.warn("AI reported GAMEOVER, but local check disagrees. Continuing if possible.");
+          // Potentially try to continue or stop if AI is stuck
+          if (isAutoPlayingAi.value) scheduleNextAiRequestLoop(); else isAiThinking.value = false;
+        }
         return;
       }
       if (parsed.moves[0] === 'WIN') {
-        hasWon.value = true;
-        isGameOver.value = true;
+        hasWon.value = true; // AI claims win
+        checkGameStatus(); // Update game status
         stopAutoPlayAi();
         saveCurrentAiGameExperience("WIN_AI_REPORTED");
         return;
@@ -437,74 +543,84 @@ const requestAndProcessAiMovesLoop = async () => { /* ... (与上一版本完全
       executeNextAiMoveInLoop();
     } else {
       console.warn("AI未能给出移动序列或解析失败:", parsed);
-      if (isAutoPlayingAi.value) scheduleNextAiRequestLoop();
+      if (isAutoPlayingAi.value) scheduleNextAiRequestLoop(); else isAiThinking.value = false;
     }
   } catch (error) {
     console.error("AI自动玩循环出错:", error);
     aiSuggestionOutput.value = {raw: `AI错误: ${error.message || '未知错误'}`, moves: [], reason: ''};
-    if (isAutoPlayingAi.value) scheduleNextAiRequestLoop();
+    if (isAutoPlayingAi.value) scheduleNextAiRequestLoop(); else isAiThinking.value = false;
   }
 };
-const executeNextAiMoveInLoop = async () => { /* ... (与上一版本完全一致，但内部调用 saveCurrentAiGameExperience) ... */
+
+const executeNextAiMoveInLoop = async () => {
   if (!isAutoPlayingAi.value || (isGameOver.value && !hasWon.value) || hasWon.value) {
     isAiThinking.value = false;
     stopAutoPlayAi();
     return;
   }
   if (aiMoveQueue.value.length === 0) {
-    isAiThinking.value = false;
-    if (isAutoPlayingAi.value) requestAndProcessAiMovesLoop();
+    isAiThinking.value = false; // No more moves in current queue
+    if (isAutoPlayingAi.value) requestAndProcessAiMovesLoop(); // Request new sequence
     return;
   }
-  isAiThinking.value = true;
+
   const nextMove = aiMoveQueue.value.shift();
   if (nextMove) {
     await nextTick();
-    move(nextMove); // move 函数会记录 currentAiPlayedMovesHistory
+    move(nextMove);
   }
-  // 游戏结束或胜利的经验保存由 move -> checkGameOverCondition/checkForWin 触发
-  if (isGameOver.value || !isAutoPlayingAi.value || hasWon.value) {
-    isAiThinking.value = false;
-    stopAutoPlayAi();
+
+  // move() calls checkGameStatus() which might stop AI if game ends/wins
+  if (!isAutoPlayingAi.value || (isGameOver.value && !hasWon.value) || hasWon.value) {
+    isAiThinking.value = false; // Ensure reset
     return;
   }
-  if (aiMoveQueue.value.length > 0) aiPlayInterval.value = window.setTimeout(executeNextAiMoveInLoop, AI_MOVE_DELAY);
-  else {
-    isAiThinking.value = false;
-    if (isAutoPlayingAi.value) scheduleNextAiRequestLoop();
+
+  if (aiMoveQueue.value.length > 0) {
+    aiPlayInterval.value = window.setTimeout(executeNextAiMoveInLoop, AI_MOVE_DELAY);
+  } else { // Queue empty, but still in auto-play mode
+    isAiThinking.value = false; // Thinking for this batch is done
+    if (isAutoPlayingAi.value) { // Request next batch
+      scheduleNextAiRequestLoop();
+    }
   }
 };
-const scheduleNextAiRequestLoop = () => { /* ... (与上一版本完全一致) ... */
+
+const scheduleNextAiRequestLoop = () => {
   if (isAutoPlayingAi.value && !isGameOver.value && !hasWon.value) {
-    aiPlayInterval.value = window.setTimeout(requestAndProcessAiMovesLoop, AI_MOVE_DELAY + 300);
+    aiPlayInterval.value = window.setTimeout(requestAndProcessAiMovesLoop, AI_MOVE_DELAY + 200); // slightly longer delay between batches
+  } else {
+    isAiThinking.value = false; // Ensure reset if not scheduling
+    stopAutoPlayAi();
   }
 };
 
-/**
- * 保存当前AI游戏的经验。现在保存的是整局游戏的经验。
- * @param {string} notes - 关于此游戏结果的备注 (例如 "GAMEOVER_AI", "WIN_AI_2048")。
- */
 async function saveCurrentAiGameExperience(notes = '') {
-  const finalBoardState = grid.value; // 游戏结束时的棋盘
-  const highestTile = Math.max(0, ...finalBoardState.flat()); // 获取棋盘上的最大方块
+  const finalGridForSave = Array(GRID_SIZE).fill(null).map(() => Array(GRID_SIZE).fill(0));
+  let highestTileValue = 0;
+  tiles.value.forEach(t => {
+    if (t && typeof t.r !== 'undefined' && typeof t.c !== 'undefined') { // Guard
+      finalGridForSave[t.r][t.c] = t.value;
+      if (t.value > highestTileValue) highestTileValue = t.value;
+    }
+  });
 
-  console.log(`准备保存AI游戏经验: GameID=${currentGameId.value}, Moves=${currentAiPlayedMovesHistory.value.length}, Score=${score.value}, MaxTile=${highestTile}, Notes=${notes}`);
+  console.log(`准备保存AI游戏经验: GameID=${currentGameId.value}, Moves=${currentAiPlayedMovesHistory.value.length}, Score=${score.value}, MaxTile=${highestTileValue}, Notes=${notes}`);
   try {
-    const response = await $fetch('/api/ai/2048-save-experience', { // 使用 Nuxt 3 的 $fetch
+    const response = await $fetch('/api/ai/2048-save-experience', {
       method: 'POST',
       body: {
-        // userId: currentUserId.value, // 如果你的API需要userId并且你已配置好获取
         gameId: currentGameId.value,
-        initialBoardStateJson: JSON.stringify(initialBoardStateForCurrentGame.value), // 发送本局开始时的棋盘
-        finalBoardStateJson: JSON.stringify(finalBoardState),
-        moveSequenceJson: JSON.stringify(currentAiPlayedMovesHistory.value), // 发送本局AI的完整移动序列
+        initialBoardStateJson: JSON.stringify(initialBoardStateForCurrentGame.value),
+        finalBoardStateJson: JSON.stringify(finalGridForSave),
+        moveSequenceJson: JSON.stringify(currentAiPlayedMovesHistory.value),
         scoreAchieved: score.value,
-        highestTile: highestTile,
+        highestTile: highestTileValue,
         numberOfMoves: currentAiPlayedMovesHistory.value.length,
         notes: notes
       }
     });
-    console.log("AI经验保存调用完成:", response.msg);
+    console.log("AI经验保存调用完成:", response.msg || '成功');
   } catch (error) {
     let message = '未知错误';
     if (error.data && error.data.message) message = error.data.message;
@@ -512,7 +628,6 @@ async function saveCurrentAiGameExperience(notes = '') {
     console.error("保存AI经验失败:", message);
   }
 }
-
 
 onMounted(() => {
   initializeGrid();
@@ -531,7 +646,7 @@ onBeforeUnmount(() => {
     boardEl.removeEventListener('touchstart', handleTouchStart);
     boardEl.removeEventListener('touchend', handleTouchEnd);
   }
-  stopAutoPlayAi();
+  stopAutoPlayAi(); // Clear any running intervals
 });
 
 </script>
@@ -543,7 +658,7 @@ onBeforeUnmount(() => {
   padding: 15px;
   background-color: #faf8ef;
   border-radius: 6px;
-  font-family: "Roboto Bold Local";
+  font-family: "Roboto Local", Arial, sans-serif; /* Fallback to Arial */
   position: relative;
   user-select: none;
 }
@@ -559,7 +674,7 @@ onBeforeUnmount(() => {
   font-size: 2.5em;
   color: #776e65;
   margin: 0;
-  font-weight: bold;
+  font-weight: 700; /* Roboto Bold */
 }
 
 .score-container {
@@ -570,10 +685,29 @@ onBeforeUnmount(() => {
   color: white;
   text-align: center;
   min-width: 80px;
+  position: relative;
 }
 
 .score {
-  font-weight: bold;
+  font-weight: 700; /* Bold */
+  display: inline-block;
+}
+
+.score-updated {
+  animation: score-pop 0.3s ease-out;
+}
+
+@keyframes score-pop {
+  0% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.3);
+    color: #f7c300;
+  }
+  100% {
+    transform: scale(1);
+  }
 }
 
 .controls .action-button {
@@ -584,11 +718,10 @@ onBeforeUnmount(() => {
   border-radius: 3px;
   font-size: 0.9em;
   cursor: pointer;
-  font-weight: bold;
+  font-weight: 700;
   transition: background-color 0.2s;
   margin-left: 5px;
 }
-
 .controls .action-button:hover {
   background-color: #776e65;
 }
@@ -600,11 +733,10 @@ onBeforeUnmount(() => {
   margin-bottom: 15px;
   flex-wrap: wrap;
 }
-
 .game-controls-panel .action-button {
   padding: 8px 15px;
   font-size: 0.9em;
-  font-weight: bold;
+  font-weight: 700;
   border-radius: 3px;
   cursor: pointer;
   transition: background-color 0.2s, opacity 0.2s;
@@ -613,13 +745,11 @@ onBeforeUnmount(() => {
   flex-grow: 1;
   min-width: 100px;
 }
-
 @media (min-width: 400px) {
   .game-controls-panel .action-button {
     flex-grow: 0;
   }
 }
-
 .game-controls-panel .action-button:disabled {
   opacity: 0.6;
   cursor: not-allowed;
@@ -641,7 +771,6 @@ onBeforeUnmount(() => {
   background-color: #4a8bdb;
 }
 
-
 .game-board-overlay {
   position: absolute;
   top: 0;
@@ -659,7 +788,6 @@ onBeforeUnmount(() => {
   animation: fadeInOverlay 0.3s ease-out;
   backdrop-filter: blur(2px);
 }
-
 @keyframes fadeInOverlay {
   from {
     opacity: 0;
@@ -670,7 +798,6 @@ onBeforeUnmount(() => {
     transform: translateY(0);
   }
 }
-
 .game-over-message, .win-message {
   color: #776e65;
   background-color: rgba(255, 255, 255, 0.98);
@@ -678,17 +805,15 @@ onBeforeUnmount(() => {
   border-radius: 8px;
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
 }
-
 .game-over-message p, .win-message p {
   font-size: 1.8em;
   margin-bottom: 10px;
-  font-weight: bold;
+  font-weight: 700;
 }
 
 .win-message {
   border: 3px solid #f3b04a;
 }
-
 .confetti {
   display: inline-block;
   font-size: 2.2em;
@@ -699,7 +824,6 @@ onBeforeUnmount(() => {
 .confetti:nth-child(2) {
   animation-delay: 0.2s;
 }
-
 @keyframes confetti-animation {
   0% {
     transform: translateY(20px) rotate(0deg) scale(0.5);
@@ -717,8 +841,6 @@ onBeforeUnmount(() => {
     opacity: 0;
   }
 }
-
-
 .game-over-message .action-button, .win-message .action-button {
   margin-top: 20px;
   background-color: #8f7a66;
@@ -728,25 +850,21 @@ onBeforeUnmount(() => {
   border-radius: 4px;
   font-size: 1.1em;
   cursor: pointer;
-  font-weight: bold;
+  font-weight: 700;
   transition: background-color 0.2s, transform 0.1s;
 }
-
 .game-over-message .action-button:hover, .win-message .action-button:hover {
   background-color: #776e65;
   transform: scale(1.05);
 }
-
-
 .thinking-overlay {
   background-color: rgba(250, 248, 239, 0.9);
   z-index: 15;
 }
-
 .thinking-message {
   font-size: 1.6em;
   color: #776e65;
-  font-weight: bold;
+  font-weight: 700;
   padding: 25px;
   background-color: #ffffff;
   border-radius: 6px;
@@ -754,64 +872,67 @@ onBeforeUnmount(() => {
 }
 
 .game-board {
-  background-color: #bbada0;
+  background-color: #bbada0; /* 网格线条的颜色 (通过gap显示出来) */
   border-radius: 6px;
-  padding: 10px;
-  display: grid;
-  grid-template-rows: repeat(4, 1fr);
-  gap: 10px;
-  touch-action: none;
-  position: relative;
-}
 
-.grid-row {
+  /* 使用 v-bind 动态绑定来自 JS 的 CELL_GAP */
+  padding: v-bind(CELL_GAP+ 'px');
+
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 10px;
+  /* 使用 v-bind 动态绑定 GRID_SIZE 和 TILE_SIZE */
+  grid-template-rows: repeat(v-bind(GRID_SIZE), v-bind(TILE_SIZE+ 'px'));
+  grid-template-columns: repeat(v-bind(GRID_SIZE), v-bind(TILE_SIZE+ 'px'));
+  gap: v-bind(CELL_GAP+ 'px'); /* 格子之间的间隙，形成网格线 */
+
+  position: relative; /* 为了绝对定位的 .tile */
+  box-sizing: border-box; /* 关键：确保 padding 和 border 包含在 width/height 内 */
+
+  /* 总宽度/高度计算 (当 box-sizing: border-box):
+    = (格子数量 * 格子尺寸) + ((格子数量 - 1) * 内部间隙尺寸) + (2 * 容器内边距)
+  */
+  width: calc(v-bind(GRID_SIZE) * v-bind(TILE_SIZE+ 'px') +
+  (v-bind(GRID_SIZE) - 1) * v-bind(CELL_GAP+ 'px') +
+  2 * v-bind(CELL_GAP+ 'px'));
+  height: calc(v-bind(GRID_SIZE) * v-bind(TILE_SIZE+ 'px') +
+  (v-bind(GRID_SIZE) - 1) * v-bind(CELL_GAP+ 'px') +
+  2 * v-bind(CELL_GAP+ 'px'));
+
+  touch-action: none;
+  /* content-box 已被 border-box 替代 */
 }
 
 .grid-cell {
-  aspect-ratio: 1 / 1;
-  background-color: rgba(238, 228, 218, 0.35);
+  background-color: rgba(238, 228, 218, 0.35); /* Empty cell color */
   border-radius: 4px;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  position: relative;
+  /* Size is determined by the parent .game-board grid layout */
 }
 
 .tile {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
+  /* position: absolute is set via :style binding from calculateTileStyle */
   display: flex;
   justify-content: center;
   align-items: center;
-  font-weight: bold;
+  font-weight: 700; /* Bold */
   border-radius: 4px;
-  transition: transform 0.1s ease-in-out, background-color 0.1s ease-in-out, color 0.1s ease-in-out, box-shadow 0.2s ease-in-out;
-  animation: tile-appear 0.15s cubic-bezier(0.22, 1, 0.36, 1);
+  transition: top 0.1s ease-out, left 0.1s ease-out, /* Sliding animation */ transform 0.1s ease-out, /* Pop animation */ background-color 0.05s linear, color 0.05s linear, /* Fast color change */ box-shadow 0.2s ease-in-out;
+  z-index: 2;
+  text-align: center; /* Ensure number is centered if not perfectly sized by line-height */
+  overflow: hidden; /* Prevent number from spilling if font size is large */
 }
 
 .tile-number {
   display: block;
-  line-height: 1;
+  /* line-height: 1; is handled by calculateTileStyle and tile height */
 }
 
-
-.tile[style*="rgb(237, 194, 46)"] {
-  animation: tile-appear 0.15s ease-out,
-  tile-pop-win 0.3s 0.1s cubic-bezier(0.18, 0.89, 0.32, 1.28),
-  tile-glow 1.2s infinite alternate ease-in-out !important;
+.new-tile-pop {
+  animation: tile-appear-pop 0.18s ease-out;
 }
 
-
-@keyframes tile-appear {
+@keyframes tile-appear-pop {
   from {
     opacity: 0;
-    transform: scale(0.6);
+    transform: scale(0.7);
   }
   to {
     opacity: 1;
@@ -819,7 +940,11 @@ onBeforeUnmount(() => {
   }
 }
 
-@keyframes tile-pop-win {
+.merged-tile-pop {
+  animation: tile-merge-pop 0.18s ease-out; /* Delay handled by when class is applied */
+}
+
+@keyframes tile-merge-pop {
   0% {
     transform: scale(1);
   }
@@ -828,15 +953,6 @@ onBeforeUnmount(() => {
   }
   100% {
     transform: scale(1);
-  }
-}
-
-@keyframes tile-glow {
-  from {
-    box-shadow: 0 0 12px 4px rgba(237, 194, 46, 0.4);
-  }
-  to {
-    box-shadow: 0 0 20px 8px rgba(237, 194, 46, 0.7);
   }
 }
 
@@ -862,13 +978,11 @@ onBeforeUnmount(() => {
   word-wrap: break-word;
   color: #333a40;
 }
-
 .ai-suggestion-display strong {
   color: #0056b3;
   display: block;
   margin-bottom: 4px;
 }
-
 .ai-suggestion-display pre {
   background-color: #dfe3e6;
   padding: 5px;
