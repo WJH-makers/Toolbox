@@ -1,30 +1,32 @@
 <template>
   <ContentCard>
     <BackButton class="card-internal-back-button"/>
-    <RegexTesterComponent/>
+    <HtmlRendererAiComponent/>
   </ContentCard>
 </template>
 
 <script lang="ts" setup>
-import RegexTesterComponent from '~/components/tools/programming/regexComponent.vue';
+import HtmlRendererAiComponent from '~/components/tools/programming/HtmlRenderedAiComponent.vue';
 import ContentCard from '~/components/global/ContentCard.vue';
 import BackButton from '~/components/global/BackButton.vue';
 
 definePageMeta({
   middleware: ['auth'],
 });
+
 useHead({
-  title: '正则表达式测试工具 - 万能工具箱',
+  title: 'HTML渲染 (AI辅助版) - 万能工具箱',
   meta: [
     {
       name: 'description',
-      content: '使用万能工具箱中的正则表达式测试工具，在线测试和验证您的正则表达式模式。'
+      content: '输入HTML代码，通过AI辅助进行渲染预览和智能分析。'
     }
   ]
 });
 </script>
+
 <style scoped>
 .card-internal-back-button {
-  margin-bottom: 1.5rem; /* Consistent with your todos.vue page */
+  margin-bottom: 1.5rem;
 }
 </style>

@@ -2,7 +2,10 @@ import type {Domain} from '~/components/global/QuadrantCard.vue'; // 确保此�
 
 export const allToolDomainsData: Domain[] = [
     {
-        id: 'daily_life', name: '日常领域', description: '提升生活品质与效率', icon: 'ph:house-line-bold',
+        id: 'daily_life',
+        name: '日常领域',
+        description: '提升生活品质与效率',
+        icon: 'ph:house-line-bold',
         tools: [
             {
                 id: 'todo',
@@ -10,7 +13,7 @@ export const allToolDomainsData: Domain[] = [
                 usage: 250,
                 description: '您的个人任务管理器，助您高效规划每一天！',
                 path: '/tools/daily/todo',
-                statusPreview: '查看今日任务'
+                statusPreview: '查看今日任务',
             },
             {
                 id: 'recipe_finder',
@@ -21,7 +24,7 @@ export const allToolDomainsData: Domain[] = [
                 statusPreview: '寻找舌尖美食',
             },
             {
-                id: 'BMI-calculator',
+                id: 'BMI_calculator',
                 name: 'BMI计算器',
                 usage: 170,
                 description: '计算您的身体质量指数，了解健康状况。',
@@ -31,7 +34,10 @@ export const allToolDomainsData: Domain[] = [
         ],
     },
     {
-        id: 'finance', name: '金融领域', description: '理财规划与金融计算', icon: 'ph:bank-bold',
+        id: 'finance',
+        name: '金融领域',
+        description: '理财规划与金融计算',
+        icon: 'ph:bank-bold',
         tools: [
             {
                 id: 'currency_converter',
@@ -60,7 +66,10 @@ export const allToolDomainsData: Domain[] = [
         ],
     },
     {
-        id: 'learning', name: '学习领域', description: '助力知识获取与技能提升', icon: 'ph:student-bold',
+        id: 'learning',
+        name: '学习领域',
+        description: '助力知识获取与技能提升',
+        icon: 'ph:student-bold',
         tools: [
             {
                 id: 'unit_converter',
@@ -116,34 +125,63 @@ export const allToolDomainsData: Domain[] = [
                 usage: 160,
                 description: '穿梭时空，探索世界历史与中国历史长河中的重大事件、时期和人物。',
                 path: '/tools/learning/timeline',
-                statusPreview: '挑战逻辑思维',
+                statusPreview: '穿梭历史长河',
             },
-
         ],
     },
     {
-        id: 'programming', name: '编程领域', description: '开发者实用工具集', icon: 'ph:code-bold',
+        id: 'programming',
+        name: '编程领域',
+        description: '开发者实用工具集',
+        icon: 'ph:code-bold',
         tools: [
             {
                 id: 'json_formatter',
                 name: 'JSON格式化',
                 usage: 300,
                 description: '美化、校验与转换JSON数据。',
-                path: '/tools/programming/json'
+                path: '/tools/programming/json',
+                statusPreview: 'JSON格式美化助手',
             },
             {
                 id: 'regex_tester',
                 name: '正则测试器',
                 usage: 270,
                 description: '在线调试与验证正则表达式。',
-                path: '/tools/programming/regex'
+                path: '/tools/programming/regex',
+                statusPreview: '正则表达式调试助手',
             },
             {
                 id: 'api_client',
                 name: 'API客户端',
                 usage: 220,
                 description: '简单易用的HTTP API接口测试工具。',
-                path: '/tools/programming/api-client'
+                path: '/tools/programming/api-client',
+                statusPreview: 'API接口测试助手',
+            },
+            {
+                id: 'rl_2048',
+                name: '2048强化学习版本',
+                usage: 180,
+                description: '通过强化学习算法优化2048游戏策略。',
+                path: '/tools/programming/rl-2048',
+                statusPreview: '挑战2048游戏',
+            },
+            {
+                id: 'html_renderer_ai',
+                name: 'HTML渲染(ai辅助版)',
+                usage: 220,
+                description: '基于AI的HTML渲染与优化工具。',
+                path: '/tools/programming/html-renderer-ai',
+                statusPreview: 'AI驱动的HTML渲染',
+            },
+            {
+                id: 'vision_parser',
+                name: '机器视觉解析',
+                usage: 220,
+                description: '解析与分析机器视觉数据的工具。',
+                path: '/tools/programming/vision-parser',
+                statusPreview: '机器视觉数据解析',
             },
         ],
     },

@@ -1,30 +1,32 @@
 <template>
   <ContentCard>
     <BackButton class="card-internal-back-button"/>
-    <RegexTesterComponent/>
+    <MachineVisionAnalyzerComponent/>
   </ContentCard>
 </template>
 
 <script lang="ts" setup>
-import RegexTesterComponent from '~/components/tools/programming/regexComponent.vue';
+import MachineVisionAnalyzerComponent from '~/components/tools/programming/MachineVisionAnalyzerComponent.vue';
 import ContentCard from '~/components/global/ContentCard.vue';
 import BackButton from '~/components/global/BackButton.vue';
 
 definePageMeta({
   middleware: ['auth'],
 });
+
 useHead({
-  title: '正则表达式测试工具 - 万能工具箱',
+  title: '机器视觉解析 - 万能工具箱',
   meta: [
     {
       name: 'description',
-      content: '使用万能工具箱中的正则表达式测试工具，在线测试和验证您的正则表达式模式。'
+      content: '上传图片或视频，进行机器视觉分析，如对象识别、场景理解等。'
     }
   ]
 });
 </script>
+
 <style scoped>
 .card-internal-back-button {
-  margin-bottom: 1.5rem; /* Consistent with your todos.vue page */
+  margin-bottom: 1.5rem;
 }
 </style>
