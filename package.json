@@ -61,6 +61,7 @@
     "@tailwindcss/postcss": "^4.1.7",
     "@types/htmlhint": "^1.1.5",
     "daisyui": "^5.0.35",
+    "mysql2": "^3.14.1",
     "nodemon": "^3.1.10",
     "prisma": "^6.8.2",
     "vfonts": "^0.0.3"

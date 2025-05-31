@@ -1,7 +1,14 @@
-const fs = require('fs');
-const path = require('path');
-const crypto = require('crypto');
-const readline = require('readline');
+import fs from 'fs';
+import path from 'path';
+import crypto from 'crypto';
+import readline from 'readline';
+import {fileURLToPath} from 'url';
+import os from 'os';
+import mysql from 'mysql2/promise'; // 导入 mysql2 客户端
+
+// 替代 __dirname
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const envPath = path.resolve(__dirname, '../.env');
 const exampleEnvPath = path.resolve(__dirname, '../.env.example');
@@ -10,7 +17,11 @@ const SCRIPT_MASTER_PASSWORD_FILE = path.resolve(__dirname, '.setup_master_passw
 const ALGORITHM = 'aes-256-gcm';
 const SCRIPT_INTERNAL_SALT = 'WJH-makers';
 
-const PRESET_DB_USER = "user"
+// ==================================================================================
+// == 用户需要预先加密自己的密钥，并替换以下占位符。                            ==
+// == 使用 encrypt_util.js (之前提供) 和您选择的“脚本主密码”进行加密。       ==
+// ==================================================================================
+const PRESET_DB_USER = "user";
 const PRESET_DB_NAME = "toolbox";
 const PRESET_DB_PASSWORD = "password";
 const PRESET_DB_HOST = "localhost";
@@ -25,7 +36,10 @@ const PRESET_DEEPSEEK_BASE_URL = "https://api.deepseek.com/v1";
 const EMBEDDED_MAIRUI_API_LICENCE = "5d121190a55c2b3d31dee68f:e90b360085f960e4086f266760cef755:ca2129a114725caf093ebf019ecd5bd908e164578aa25193bf3c19820af751e25a383c7c";
 const PRESET_MAIRUI_BASE_URL = "https://api.mairui.club";
 
-function deriveKey(password, salt) { // 用于脚本内部解密
+// ==================================================================================
+
+
+function deriveKey(password, salt) {
     return crypto.scryptSync(password, salt, 32);
 }
 
@@ -55,7 +69,11 @@ function generateKeyHex(byteLength = 32) {
     return crypto.randomBytes(byteLength).toString('hex');
 }
 
-function encryptForEnv(text, masterKeyHex) { // 用于最终.env文件加密
+function generateRandomString(length = 12) {
+    return crypto.randomBytes(Math.ceil(length / 2)).toString('hex').slice(0, length);
+}
+
+function encryptForEnv(text, masterKeyHex) {
     if (!text) return "";
     try {
         const key = Buffer.from(masterKeyHex, 'hex');
@@ -64,7 +82,7 @@ function encryptForEnv(text, masterKeyHex) { // 用于最终.env文件加密
         let encrypted = cipher.update(text, 'utf8', 'hex');
         encrypted += cipher.final('hex');
         const authTag = cipher.getAuthTag().toString('hex');
-        return `${iv.toString('hex')}:${authTag}:${encrypted}`;
+        return `${iv.toString('hex')}:${authTag.toString('hex')}:${encrypted}`;
     } catch (error) {
         console.error('\n.env 值加密失败:', error.message);
         return "ENCRYPTION_ERROR_FOR_ENV";
@@ -75,40 +93,49 @@ const rl = readline.createInterface({input: process.stdin, output: process.stdou
 
 function askQuestion(query, defaultValue = null, isPassword = false) {
     const promptText = defaultValue !== null ? `${query} (默认为: ${isPassword && defaultValue ? '********' : defaultValue}): ` : `${query}: `;
-    // 简单的密码隐藏（非完美，但比没有好）
     if (isPassword && process.stdout.isTTY) {
         const question = (q, cb) => {
-            const EOL = require('os').EOL;
+            const EOL = os.EOL;
             process.stdout.write(q);
             let buffer = "";
-            process.stdin.setRawMode(true); // 捕获每个字符
-            process.stdin.resume();
+            const originalRawMode = process.stdin.isRaw;
+            if (!originalRawMode) { // 仅在非原始模式时设置，避免嵌套调用出问题
+                process.stdin.setRawMode(true);
+            }
+            process.stdin.resume(); // 确保 stdin 在监听前是 resumed 状态
+
             const listener = (charBuffer) => {
                 const char = charBuffer.toString('utf8');
                 switch (char) {
                     case "\n":
                     case "\r":
                     case "\u0004": // Enter, CTRL+D
-                        process.stdin.setRawMode(false);
-                        process.stdin.pause();
-                        process.stdin.removeListener('data', listener);
-                        process.stdout.write(EOL); // 换行
+                        process.stdin.removeListener('data', listener); // 先移除监听器
+                        if (!originalRawMode) { // 仅在之前设置了原始模式时恢复
+                            process.stdin.setRawMode(false);
+                        }
+                        // process.stdin.pause(); // 让 readline 全局实例管理 pause/resume
+                        process.stdout.write(EOL);
                         cb(buffer);
                         break;
                     case "\u0003": // CTRL+C
+                        if (!originalRawMode) process.stdin.setRawMode(false);
                         process.exit();
                         break;
-                    case "\u007f": // Backspace on some terminals
-                    case "\b":     // Backspace
+                    case "\u007f": // Backspace
+                    case "\b":
                         if (buffer.length > 0) {
                             buffer = buffer.slice(0, -1);
-                            process.stdout.clearLine(0); // 清除当前行
-                            process.stdout.cursorTo(0);  // 光标到行首
-                            process.stdout.write(q + '*'.repeat(buffer.length)); // 重新打印提示和星号
+                            // process.stdout.clearLine(0); // readline.Interface 不导出此方法
+                            // process.stdout.cursorTo(0);
+                            // process.stdout.write(q + '*'.repeat(buffer.length));
+                            // 更兼容的退格处理方式
+                            process.stdout.write('\b \b');
                         }
                         break;
                     default:
-                        if (char.length === 1) { // 忽略特殊控制字符
+                        // eslint-disable-next-line no-control-regex
+                        if (char.length === 1 && !/[\x00-\x1F\x7F]/.test(char)) {
                             buffer += char;
                             process.stdout.write('*');
                         }
@@ -152,10 +179,8 @@ async function setupEnv() {
         console.log("\x1b[32mINFO:\x1b[0m 脚本主密码已获取。");
     }
 
-    const configMode = await askQuestion("请选择配置模式: [1] 默认配置 (使用脚本内嵌的预设值) [2] 自定义配置 (逐项提问)", "2");
+    const configMode = await askQuestion("请选择配置模式: [1] 默认配置 (使用脚本内嵌的预设值) [2] 自定义配置 (逐项提问)", "1");
 
-    // --- .env 文件加密密钥 (APP_MASTER_KEY) ---
-    // 无论哪种模式，这个密钥都是新生成的，用于最终 .env 文件的加密（如果选择加密）
     console.log('\n\n============================= .env 文件加密密钥 =============================');
     const appMasterKey = generateKeyHex();
     console.log('已为您生成一个应用程序主加密密钥 (APP_MASTER_KEY)。');
@@ -166,136 +191,203 @@ async function setupEnv() {
     console.log('===========================================================================\n');
     await askQuestion('我已安全保存了上述 APP_MASTER_KEY。按 Enter键 继续配置...');
 
-
-    if (!fs.existsSync(exampleEnvPath)) { /* ... .env.example 检查 ... */
+    if (!fs.existsSync(exampleEnvPath)) {
+        console.error('\n\x1b[31m错误:\x1b[0m .env.example 文件未找到。');
+        rl.close();
+        process.exit(1);
     }
-    if (fs.existsSync(envPath)) { /* ... .env 文件覆盖确认 ... */
+    if (fs.existsSync(envPath)) {
+        const overwriteAnswer = await askQuestion('\n.env 文件已存在。是否要覆盖它并重新配置? (Y/N)', 'Y');
+        if (overwriteAnswer.toLowerCase() !== 'y') {
+            console.log('操作取消。保留现有的 .env 文件。');
+            rl.close();
+            return;
+        }
     }
     let envContent = fs.readFileSync(exampleEnvPath, 'utf8');
 
-    // --- 定义将要收集的配置变量 ---
-    let dbUser, dbPassword, dbName, dbHost, dbPort, shadowDbName;
+    let appDbUser, appDbPassword, appDbName, appDbHost, appDbPort, appShadowDbName;
     let jwtSecretPlain;
     let deepseekApiKeyPlain, deepseekBaseUrl;
     let tencentSecretIdPlain, tencentSecretKeyPlain, tencentRegion;
     let mairuiApiLicencePlain, mairuiBaseUrl;
 
-    if (configMode === '1') { // 默认配置模式
-        console.log('\n--- 正在加载默认配置... ---');
-        dbUser = PRESET_DB_USER;
-        dbPassword = PRESET_DB_PASSWORD;
-        dbName = PRESET_DB_NAME;
-        dbHost = PRESET_DB_HOST;
-        dbPort = PRESET_DB_PORT;
-        shadowDbName = `${dbName}_shadow`; // 简单规则生成
+    console.log('\n--- 1. 应用程序数据库信息配置 ---');
+    if (configMode === '1') {
+        console.log('将使用脚本内嵌的预设值配置应用程序数据库信息。');
+        appDbUser = PRESET_DB_USER;
+        appDbPassword = PRESET_DB_PASSWORD;
+        appDbName = PRESET_DB_NAME;
+        appDbHost = PRESET_DB_HOST;
+        appDbPort = PRESET_DB_PORT;
+        appShadowDbName = `${appDbName}_shadow`;
+        if (appDbPassword === PRESET_DB_PASSWORD) {
+            console.warn("\x1b[33m警告:\x1b[0m 数据库密码未能从脚本内嵌的加密值中解密，已使用固定预设明文值。请确认此密码是否正确，或检查脚本主密码及内嵌加密值。");
+        }
+    } else {
+        console.log('请输入您希望应用程序使用的数据库信息:');
+        appDbName = await askQuestion('应用主数据库名称', PRESET_DB_NAME);
+        appDbUser = await askQuestion('应用数据库用户名', PRESET_DB_USER);
+        const defaultAppDbPassword = decryptForScriptDefaults(EMBEDDED_PRESET_DB_PASSWORD, scriptPassword) || PRESET_DB_PASSWORD;
+        appDbPassword = await askQuestion('应用数据库密码', defaultAppDbPassword, true);
+        appDbHost = await askQuestion('应用连接MySQL的主机名', PRESET_DB_HOST);
+        appDbPort = await askQuestion('应用连接MySQL的端口号', PRESET_DB_PORT);
+        appShadowDbName = await askQuestion('应用影子数据库名称', `${appDbName}_shadow`);
+    }
 
+    const attemptDbCreation = await askQuestion(`\n脚本是否尝试使用MySQL管理员权限为您创建数据库 '${appDbName}', '${appShadowDbName}' 和用户 '${appDbUser}'@'${appDbHost}' (如果它们不存在) 并授予权限? (Y/N)`, 'Y');
+
+    if (attemptDbCreation.toLowerCase() === 'y') {
+        console.log('\n\x1b[33m警告: 接下来将要求您提供MySQL的管理员凭据 (例如root用户)。\x1b[0m');
+        console.log('这些管理员凭据仅用于执行建库、建用户和授权操作，不会以任何形式存储。');
+        const adminDbHost = await askQuestion('请输入您的MySQL服务器主机名 (用于管理员连接)', appDbHost);
+        const adminDbPortInput = await askQuestion('请输入您的MySQL服务器端口号 (用于管理员连接)', appDbPort);
+        const adminDbPortValidated = parseInt(adminDbPortInput, 10);
+        const adminUser = await askQuestion('请输入您的MySQL管理员用户名 (例如 root)');
+        const adminPassword = await askQuestion('请输入您的MySQL管理员密码', null, true);
+
+        let adminConn;
+        try {
+            adminConn = await mysql.createConnection({
+                host: adminDbHost, port: adminDbPortValidated, user: adminUser, password: adminPassword,
+            });
+            console.log('\x1b[32m成功连接到MySQL (作为管理员)。\x1b[0m');
+
+            console.log(`  正在尝试创建数据库 \`${appDbName}\` (如果不存在)...`);
+            await adminConn.execute(`CREATE DATABASE IF NOT EXISTS \`${appDbName}\` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;`);
+            console.log(`  数据库 \`${appDbName}\` 已确保存在。`);
+
+            console.log(`  正在尝试创建影子数据库 \`${appShadowDbName}\` (如果不存在)...`);
+            await adminConn.execute(`CREATE DATABASE IF NOT EXISTS \`${appShadowDbName}\` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;`);
+            console.log(`  影子数据库 \`${appShadowDbName}\` 已确保存在。`);
+
+            console.log(`  正在尝试创建/更新用户 '${appDbUser}'@'${appDbHost}' 并设置密码...`);
+            // @ts-ignore
+            try {
+                await adminConn.execute(`CREATE USER '${appDbUser}'@'${appDbHost}' IDENTIFIED BY '${appDbPassword}';`);
+                console.log(`  用户 '${appDbUser}'@'${appDbHost}' 已成功创建。`);
+            } catch (createUserError) {
+                if (createUserError.code === 'ER_CANNOT_USER' || createUserError.message.includes('already exists') || createUserError.code === 'ER_USER_ALREADY_EXISTS') {
+                    console.log(`  用户 '${appDbUser}'@'${appDbHost}' 可能已存在，尝试更新密码...`);
+                    await adminConn.execute(`ALTER USER '${appDbUser}'@'${appDbHost}' IDENTIFIED BY '${appDbPassword}';`);
+                    console.log(`  用户 '${appDbUser}'@'${appDbHost}' 密码已更新。`);
+                } else {
+                    throw createUserError;
+                }
+            }
+
+            console.log(`  正在为用户 '${appDbUser}'@'${appDbHost}' 授予对 \`${appDbName}\` 的所有权限...`);
+            await adminConn.execute(`GRANT ALL PRIVILEGES ON \`${appDbName}\`.* TO '${appDbUser}'@'${appDbHost}';`);
+            console.log('  主数据库权限已授予。');
+
+            console.log(`  正在为用户 '${appDbUser}'@'${appDbHost}' 授予对 \`${appShadowDbName}\` 的所有权限...`);
+            await adminConn.execute(`GRANT ALL PRIVILEGES ON \`${appShadowDbName}\`.* TO '${appDbUser}'@'${appDbHost}';`);
+            console.log('  影子数据库权限已授予。');
+
+            await adminConn.execute('FLUSH PRIVILEGES;');
+            console.log('\x1b[32m数据库、用户创建和授权操作已成功执行。\x1b[0m');
+
+        } catch (err) {
+            console.error('\n\x1b[31m错误：在尝试自动创建数据库/用户时发生错误。\x1b[0m');
+            console.error(`  错误信息: ${err.message}`);
+            console.log('  请检查您提供的MySQL管理员凭据、MySQL服务器状态及网络访问，以及管理员权限。');
+            console.log('  您可能需要参照脚本之前提供的SQL示例，手动执行数据库创建和用户授权操作。');
+            await askQuestion('按 Enter键 继续配置.env文件 (数据库连接可能仍然失败)...');
+        } finally {
+            if (adminConn) {
+                await adminConn.end();
+                console.log('与MySQL的管理员连接已关闭。');
+            }
+        }
+    } else {
+        console.log('\n脚本将不会尝试自动创建数据库或用户。');
+        console.log(`请确保您已手动创建数据库 '${appDbName}', '${appShadowDbName}' 及用户 '${appDbUser}'@'${appDbHost}' 并授予了相应权限。`);
+    }
+
+    if (configMode === '1' && !scriptPassword && (EMBEDDED_PRESET_DB_PASSWORD && !EMBEDDED_PRESET_DB_PASSWORD.includes("在此处粘贴"))) {
+        console.warn("\x1b[33m警告:\x1b[0m 由于未提供脚本主密码，默认模式下部分敏感预设值（如数据库密码、API密钥等）可能为空或使用了固定明文，除非它们有非加密的固定预设。");
+    }
+
+    // --- 后续的 JWT, API密钥等配置 ---
+    if (configMode === '1') {
         jwtSecretPlain = decryptForScriptDefaults(EMBEDDED_JWT_SECRET, scriptPassword) || generateKeyHex(32);
-
         deepseekApiKeyPlain = decryptForScriptDefaults(EMBEDDED_DEEPSEEK_API_KEY, scriptPassword);
         deepseekBaseUrl = PRESET_DEEPSEEK_BASE_URL;
-
         tencentSecretIdPlain = decryptForScriptDefaults(EMBEDDED_TENCENT_SECRET_ID, scriptPassword);
         tencentSecretKeyPlain = decryptForScriptDefaults(EMBEDDED_TENCENT_SECRET_KEY, scriptPassword);
         tencentRegion = PRESET_TENCENT_TRANSLATE_REGION;
-
         mairuiApiLicencePlain = decryptForScriptDefaults(EMBEDDED_MAIRUI_API_LICENCE, scriptPassword);
         mairuiBaseUrl = PRESET_MAIRUI_BASE_URL;
+        if (!jwtSecretPlain || (jwtSecretPlain.length < 64 && jwtSecretPlain !== (decryptForScriptDefaults(EMBEDDED_JWT_SECRET, scriptPassword)))) {
+            console.warn("\x1b[33m警告:\x1b[0m JWT Secret未能从预设中成功解密或长度不足，已使用新生成的。");
+        }
 
-        console.log('默认配置加载完毕 (敏感信息已从脚本内部解密或使用固定预设)。');
-        // 可以在这里打印一些非敏感的默认值以供确认，例如数据库名、主机等
-        console.log(`  数据库用户: ${dbUser}, 数据库名: ${dbName}`);
-        if (!dbPassword) console.warn("\x1b[33m警告:\x1b[0m 数据库密码未能从预设中解密，您可能需要在.env文件中手动填写或确保数据库无需密码访问（不推荐）。");
-        if (!jwtSecretPlain) console.warn("\x1b[33m警告:\x1b[0m JWT Secret未能从预设中解密，将使用新生成的。");
-        // ... 其他密钥的类似检查 ...
-
-    } else { // 自定义配置模式
-        // --- 1. MySQL 数据库配置 ---
-        console.log('\n--- 1. MySQL 数据库配置 ---');
-        const defDbUser = PRESET_DB_USER;
-        const defDbPass = PRESET_DB_PASSWORD;
-        const defDbName = PRESET_DB_NAME;
-
-        dbUser = await askQuestion('数据库用户名', defDbUser);
-        dbPassword = await askQuestion('数据库密码', defDbPass, true);
-        dbName = await askQuestion('主数据库名称', defDbName);
-        dbHost = await askQuestion('MySQL 主机名', PRESET_DB_HOST);
-        dbPort = await askQuestion('MySQL 端口号', PRESET_DB_PORT);
-        shadowDbName = await askQuestion('影子数据库名称', `${dbName}_shadow`);
-
-        // --- 2. JWT Secret 配置 ---
+    } else {
         console.log('\n--- 2. JWT Secret 配置 ---');
-        const defJwt = decryptForScriptDefaults(EMBEDDED_JWT_SECRET, scriptPassword);
-        jwtSecretPlain = await askQuestion('请输入或按 Enter 使用预设/新生成 JWT SECRET', defJwt || null, true);
+        const defaultJwt = decryptForScriptDefaults(EMBEDDED_JWT_SECRET, scriptPassword);
+        jwtSecretPlain = await askQuestion('请输入或按 Enter 使用预设/新生成 JWT SECRET', defaultJwt || null, true);
         if (!jwtSecretPlain) {
             jwtSecretPlain = generateKeyHex(32);
             console.log('JWT Secret 已新生成。');
         }
 
-        // --- 3. DeepSeek API ---
         console.log('\n--- 3. DeepSeek AI API 配置 ---');
-        const defDeepSeekKey = decryptForScriptDefaults(EMBEDDED_DEEPSEEK_API_KEY, scriptPassword);
-        deepseekApiKeyPlain = await askQuestion('请输入 DeepSeek API Key', defDeepSeekKey || null, !defDeepSeekKey);
+        const defaultDeepSeekKey = decryptForScriptDefaults(EMBEDDED_DEEPSEEK_API_KEY, scriptPassword);
+        deepseekApiKeyPlain = await askQuestion('请输入 DeepSeek API Key', defaultDeepSeekKey || null, !defaultDeepSeekKey);
         deepseekBaseUrl = await askQuestion('请输入 DeepSeek API Base URL', PRESET_DEEPSEEK_BASE_URL);
 
-        // --- 4. 腾讯翻译 API ---
         console.log('\n--- 4. 腾讯翻译 API 配置 ---');
-        const defTencentId = decryptForScriptDefaults(EMBEDDED_TENCENT_SECRET_ID, scriptPassword);
-        const defTencentKey = decryptForScriptDefaults(EMBEDDED_TENCENT_SECRET_KEY, scriptPassword);
-        tencentSecretIdPlain = await askQuestion('请输入腾讯云 SecretId', defTencentId || null, !defTencentId);
-        tencentSecretKeyPlain = await askQuestion('请输入腾讯云 SecretKey', defTencentKey || null, !defTencentKey && !!tencentSecretIdPlain);
+        const defaultTencentId = decryptForScriptDefaults(EMBEDDED_TENCENT_SECRET_ID, scriptPassword);
+        const defaultTencentKey = decryptForScriptDefaults(EMBEDDED_TENCENT_SECRET_KEY, scriptPassword);
+        tencentSecretIdPlain = await askQuestion('请输入腾讯云 SecretId', defaultTencentId || null, !defaultTencentId);
+        tencentSecretKeyPlain = await askQuestion('请输入腾讯云 SecretKey', defaultTencentKey || null, !defaultTencentKey && !!tencentSecretIdPlain);
         tencentRegion = await askQuestion('请输入腾讯翻译地域', PRESET_TENCENT_TRANSLATE_REGION);
 
-        // --- 5. Mairui API ---
         console.log('\n--- 5. Mairui API 配置 ---');
-        const defMairuiLicence = decryptForScriptDefaults(EMBEDDED_MAIRUI_API_LICENCE, scriptPassword);
-        mairuiApiLicencePlain = await askQuestion('请输入 Mairui API Licence', defMairuiLicence || null, !defMairuiLicence);
+        const defaultMairuiLicence = decryptForScriptDefaults(EMBEDDED_MAIRUI_API_LICENCE, scriptPassword);
+        mairuiApiLicencePlain = await askQuestion('请输入 Mairui API Licence', defaultMairuiLicence || null, !defaultMairuiLicence);
         mairuiBaseUrl = await askQuestion('请输入 Mairui API Base URL', PRESET_MAIRUI_BASE_URL);
     }
 
-    // --- 更新 envContent ---
-    // 数据库 (明文)
-    const dbUrl = `mysql://${dbUser}:${encodeURIComponent(dbPassword || '')}@${dbHost}:${dbPort}/${dbName}`;
-    const shadowDbUrl = `mysql://${dbUser}:${encodeURIComponent(dbPassword || '')}@${dbHost}:${dbPort}/${shadowDbName}`;
-    envContent = envContent.replace(/^DATABASE_URL=".*?"/m, `DATABASE_URL="${dbUrl}"`);
-    envContent = envContent.replace(/^SHADOW_DATABASE_URL=".*?"/m, `SHADOW_DATABASE_URL="${shadowDbUrl}"`);
+    const dbUrlFinal = `mysql://${appDbUser}:${encodeURIComponent(appDbPassword || '')}@${appDbHost}:${appDbPort}/${appDbName}`;
+    const shadowDbUrlFinal = `mysql://${appDbUser}:${encodeURIComponent(appDbPassword || '')}@${appDbHost}:${appDbPort}/${appShadowDbName}`;
+    envContent = envContent.replace(/^DATABASE_URL=".*?"/m, `DATABASE_URL="${dbUrlFinal}"`);
+    envContent = envContent.replace(/^SHADOW_DATABASE_URL=".*?"/m, `SHADOW_DATABASE_URL="${shadowDbUrlFinal}"`);
 
-    // --- 询问是否加密 .env 中的敏感信息 ---
     console.log('\n--- 6. .env 文件敏感信息加密选项 ---');
-    const encryptEnvChoice = await askQuestion(`是否使用 APP_MASTER_KEY 加密 .env 文件中的 API 密钥和 JWT Secret? (Y/n)`, 'Y');
+    const encryptEnvChoice = await askQuestion(`是否使用 APP_MASTER_KEY 加密 .env 文件中的 API 密钥和 JWT Secret? (Y/N)`, 'N');
     const useEncryptionForEnv = encryptEnvChoice.toLowerCase() !== 'n';
+
+    const secretKeysConfig = [
+        {plain: 'JWT_SECRET', encrypted: 'JWT_SECRET_ENCRYPTED', value: jwtSecretPlain},
+        {plain: 'DEEPSEEK_API_KEY', encrypted: 'DEEPSEEK_API_KEY_ENCRYPTED', value: deepseekApiKeyPlain},
+        {plain: 'TENCENT_SECRET_ID', encrypted: 'TENCENT_SECRET_ID_ENCRYPTED', value: tencentSecretIdPlain},
+        {plain: 'TENCENT_SECRET_KEY', encrypted: 'TENCENT_SECRET_KEY_ENCRYPTED', value: tencentSecretKeyPlain},
+        {plain: 'MAIRUI_API_LICENCE', encrypted: 'MAIRUI_API_LICENCE_ENCRYPTED', value: mairuiApiLicencePlain},
+    ];
 
     if (useEncryptionForEnv) {
         console.log(`将使用 APP_MASTER_KEY (${appMasterKey.substring(0, 6)}...) 对敏感信息进行加密后存入 .env。`);
-        envContent = envContent.replace(/^JWT_SECRET_ENCRYPTED=".*?"/m, `JWT_SECRET_ENCRYPTED="${encryptForEnv(jwtSecretPlain, appMasterKey)}"`);
-        envContent = envContent.replace(/^DEEPSEEK_API_KEY_ENCRYPTED=".*?"/m, `DEEPSEEK_API_KEY_ENCRYPTED="${encryptForEnv(deepseekApiKeyPlain, appMasterKey)}"`);
-        envContent = envContent.replace(/^TENCENT_SECRET_ID_ENCRYPTED=".*?"/m, `TENCENT_SECRET_ID_ENCRYPTED="${encryptForEnv(tencentSecretIdPlain, appMasterKey)}"`);
-        envContent = envContent.replace(/^TENCENT_SECRET_KEY_ENCRYPTED=".*?"/m, `TENCENT_SECRET_KEY_ENCRYPTED="${encryptForEnv(tencentSecretKeyPlain, appMasterKey)}"`);
-        envContent = envContent.replace(/^MAIRUI_API_LICENCE_ENCRYPTED=".*?"/m, `MAIRUI_API_LICENCE_ENCRYPTED="${encryptForEnv(mairuiApiLicencePlain, appMasterKey)}"`);
-
-        // 清理或注释掉明文占位符
-        envContent = envContent.replace(/^JWT_SECRET=".*?"/gm, '# JWT_SECRET="" (已使用加密版本 JWT_SECRET_ENCRYPTED)');
-        envContent = envContent.replace(/^DEEPSEEK_API_KEY=".*?"/gm, '# DEEPSEEK_API_KEY="" (已使用加密版本 DEEPSEEK_API_KEY_ENCRYPTED)');
-        // ... 对其他密钥也做类似处理 ...
+        secretKeysConfig.forEach(secret => {
+            const valueToEncrypt = secret.value || "";
+            envContent = envContent.replace(new RegExp(`^${secret.encrypted}=".*?"`, "m"), `${secret.encrypted}="${encryptForEnv(valueToEncrypt, appMasterKey)}"`);
+            envContent = envContent.replace(new RegExp(`^${secret.plain}=".*?"\r?\n?`, "gm"), '');
+        });
     } else {
         console.log('敏感信息将以明文形式存入 .env 文件。');
-        envContent = envContent.replace(/^JWT_SECRET=".*?"/m, `JWT_SECRET="${jwtSecretPlain || ''}"`);
-        envContent = envContent.replace(/^DEEPSEEK_API_KEY=".*?"/m, `DEEPSEEK_API_KEY="${deepseekApiKeyPlain || ''}"`);
-        envContent = envContent.replace(/^TENCENT_SECRET_ID=".*?"/m, `TENCENT_SECRET_ID="${tencentSecretIdPlain || ''}"`);
-        envContent = envContent.replace(/^TENCENT_SECRET_KEY=".*?"/m, `TENCENT_SECRET_KEY="${tencentSecretKeyPlain || ''}"`);
-        envContent = envContent.replace(/^MAIRUI_API_LICENCE=".*?"/m, `MAIRUI_API_LICENCE="${mairuiApiLicencePlain || ''}"`);
-
-        // 清理或注释掉加密占位符
-        envContent = envContent.replace(/^JWT_SECRET_ENCRYPTED=".*?"/gm, '# JWT_SECRET_ENCRYPTED="" (未使用加密)');
-        envContent = envContent.replace(/^DEEPSEEK_API_KEY_ENCRYPTED=".*?"/gm, '# DEEPSEEK_API_KEY_ENCRYPTED="" (未使用加密)');
-        // ... 对其他密钥也做类似处理 ...
+        secretKeysConfig.forEach(secret => {
+            envContent = envContent.replace(new RegExp(`^${secret.plain}=".*?"`, "m"), `${secret.plain}="${secret.value || ''}"`);
+            envContent = envContent.replace(new RegExp(`^${secret.encrypted}=".*?"\r?\n?`, "gm"), '');
+        });
     }
 
-    // 非敏感URL/Region (总是明文)
     envContent = envContent.replace(/^DEEPSEEK_BASE_URL=".*?"/m, `DEEPSEEK_BASE_URL="${deepseekBaseUrl || PRESET_DEEPSEEK_BASE_URL}"`);
     envContent = envContent.replace(/^TENCENT_TRANSLATE_REGION=".*?"/m, `TENCENT_TRANSLATE_REGION="${tencentRegion || PRESET_TENCENT_TRANSLATE_REGION}"`);
     envContent = envContent.replace(/^MAIRUI_BASE_URL=".*?"/m, `MAIRUI_BASE_URL="${mairuiBaseUrl || PRESET_MAIRUI_BASE_URL}"`);
 
-    fs.writeFileSync(envPath, envContent.trim() + '\n', 'utf8');
+    envContent = envContent.replace(/(\r?\n){2,}/g, '\n\n').trim();
+    fs.writeFileSync(envPath, envContent + '\n', 'utf8');
+
     console.log(`\n🎉 \x1b[32m成功！\x1b[0m .env 文件已更新/创建于: ${envPath}`);
     if (useEncryptionForEnv) {
         console.log('\n\x1b[1m重要：\x1b[0m您的敏感密钥已在 .env 文件中被加密。');
@@ -303,7 +395,12 @@ async function setupEnv() {
     } else {
         console.log('\n提示：您的敏感密钥已以明文形式保存在 .env 文件中。请确保此文件不会提交到版本控制系统。');
     }
-    console.log('\n下一步操作建议: ... (与之前一致的prisma, dev server提示)');
+    console.log('\n下一步操作建议:');
+    console.log('1. \x1b[1m请再次确认\x1b[0m 您在MySQL中实际创建/配置的数据库、用户、密码以及主机设置，与刚刚配置到 `.env` 文件中的信息完全一致。');
+    console.log(`   特别是用户 \x1b[36m'${appDbUser || '未配置'}'@'${appDbHost || '未配置'}'\x1b[0m 是否有权访问数据库 \x1b[36m'${appDbName || '未配置'}'\x1b[0m 和 \x1b[36m'${appShadowDbName || '未配置'}'\x1b[0m。`);
+    console.log('2. 运行数据库迁移: \x1b[32mnpx prisma migrate dev --name init\x1b[0m (如果是首次)');
+    console.log(`3. \x1b[1m首先设置好 \x1b[33mAPP_MASTER_KEY\x1b[0m 环境变量 (如果选择了加密.env文件)\x1b[0m, 然后启动开发服务器: \x1b[32mnpm run dev\x1b[0m`);
+
     rl.close();
 }
 
