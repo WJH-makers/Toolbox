@@ -47,11 +47,12 @@
       </div>
     </div>
     <div ref="gameBoardRef" class="game-board">
-      <div v-for="i in (GRID_SIZE * GRID_SIZE)" :key="`bg-cell-${i}`"
-           class="grid-cell">
-      </div>
+      <div
+          v-for="i in (GRID_SIZE * GRID_SIZE)" :key="`bg-cell-${i}`"
+          class="grid-cell"/>
 
-      <div v-for="tile in tiles"
+      <div
+          v-for="tile in tiles"
            :key="tile.id"
            :class="[
              { 'new-tile-pop': tile.isNew, 'merged-tile-pop': tile.justMerged }
@@ -351,8 +352,8 @@ const move = (direction) => {
     for (const cStart of traversalsC) {
       const currentTile = tiles.value.find(t => t.r === rStart && t.c === cStart && !t.deleteMark);
       if (currentTile) {
-        let currentR = rStart;
-        let currentC = cStart;
+        const currentR = rStart;
+        const currentC = cStart;
         let farthestR = currentR;
         let farthestC = currentC;
         let nextR, nextC;
