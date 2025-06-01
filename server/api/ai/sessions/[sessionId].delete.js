@@ -1,4 +1,4 @@
-import {defineEventHandler, createError} from 'h3';
+import {createError, defineEventHandler} from 'h3';
 import prisma from '~/server/utils/prisma';
 
 export default defineEventHandler(async (event) => {
@@ -33,7 +33,6 @@ export default defineEventHandler(async (event) => {
 
         return {success: true, message: '会话已成功删除'};
     } catch (error) {
-        console.error(`删除会话 ${sessionId} 失败:`, error);
         if (error.statusCode) throw error;
         throw createError({statusCode: 500, statusMessage: 'Internal Server Error', message: '删除会话失败'});
     }

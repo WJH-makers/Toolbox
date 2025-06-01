@@ -37,7 +37,6 @@ export default defineEventHandler(async (event) => {
 
         return {success: true, data: sessionWithInitialMessage};
     } catch (error) {
-        console.error("创建新AI会话失败:", error);
         throw createError({statusCode: 500, statusMessage: 'Internal Server Error'});
     }
 });

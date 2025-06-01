@@ -1,4 +1,4 @@
-import {defineEventHandler, readBody, createError} from 'h3';
+import {createError, defineEventHandler, readBody} from 'h3';
 import OpenAI from "openai";
 import prisma from '~/server/utils/prisma';
 
@@ -8,8 +8,6 @@ const DEEPSEEK_BASE_URL = process.env.DEEPSEEK_BASE_URL;
 let openaiInstance;
 if (DEEPSEEK_API_KEY && DEEPSEEK_BASE_URL) {
     openaiInstance = new OpenAI({baseURL: DEEPSEEK_BASE_URL, apiKey: DEEPSEEK_API_KEY});
-} else {
-    console.error('AI Assistant API FATAL ERROR: DEEPSEEK_API_KEY or DEEPSEEK_BASE_URL is not defined in .env');
 }
 
 export default defineEventHandler(async (event) => {
@@ -124,7 +122,6 @@ export default defineEventHandler(async (event) => {
     });
 
     try {
-        console.log(`[2048 AI Assistant] Requesting ${numMovesRequested} moves for AI. Prompt includes ${experienceExamplesPromptPart ? 'experience examples.' : 'no experience examples.'}`);
         const completion = await openaiInstance.chat.completions.create({
             messages: messagesForApi,
             model: 'deepseek-chat',
@@ -133,17 +130,10 @@ export default defineEventHandler(async (event) => {
         });
 
         let aiFullResponseText = completion.choices[0]?.message?.content?.trim() || "ERROR:NO_RESPONSE";
-
-        console.log(`[2048 AI Assistant] Raw Full AI Response from model: "${aiFullResponseText}"`);
-
         const parts = aiFullResponseText.split('\n');
         if (parts.length < 1 || !parts[0].trim()) {
-            console.warn('[2048 AI Assistant] AI response format issue: Move line seems missing or empty.');
             aiFullResponseText = "ERROR:INVALID_FORMAT_MOVES_MISSING";
-        } else if (parts.length > 1 && !parts[1].toUpperCase().startsWith("REASON:")) {
-            console.warn('[2048 AI Assistant] AI response format issue: Reason line present but does not start with REASON:.');
         }
-
         event.node.res.setHeader('Content-Type', 'text/plain; charset=utf-8');
         return aiFullResponseText;
 
@@ -152,11 +142,9 @@ export default defineEventHandler(async (event) => {
         let errorStatusCode = 500;
 
         if (error instanceof OpenAI.APIError) {
-            console.error(`[2048 AI Assistant] OpenAI API Error: Status ${error.status}, Type: ${error.type}, Message: ${error.message}`, error.error);
             errorMessage = `AI服务接口错误: ${error.message} (状态码: ${error.status})`;
             errorStatusCode = error.status || 500;
         } else {
-            console.error(`[2048 AI Assistant] General Error:`, error.message, error.stack);
             errorMessage = error.message || errorMessage;
         }
 

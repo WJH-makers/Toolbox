@@ -83,7 +83,6 @@ export default defineEventHandler(async (event) => {
         return {success: true, message: '用户注册成功', user: userResponse};
 
     } catch (error) {
-        console.error('注册时发生错误:', error);
         if (error.code === 'P2002') {
             setResponseStatus(event, 409);
             return {success: false, message: '用户名或邮箱已存在 (数据库层面)'};

@@ -1,4 +1,4 @@
-import {defineEventHandler, createError} from 'h3';
+import {createError, defineEventHandler} from 'h3';
 import prisma from '~/server/utils/prisma';
 
 export default defineEventHandler(async (event) => {
@@ -31,7 +31,6 @@ export default defineEventHandler(async (event) => {
 
         return {success: true, data: session.messages};
     } catch (error) {
-        console.error(`获取会话 ${sessionId} 消息失败:`, error);
         if (error.statusCode) throw error;
         throw createError({statusCode: 500, statusMessage: 'Internal Server Error'});
     }

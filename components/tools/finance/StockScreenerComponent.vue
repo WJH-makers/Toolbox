@@ -201,7 +201,6 @@ function formatTimestamp(timestampStr) {
   try {
     return timestampStr;
   } catch (e) {
-    console.error("Error formatting timestamp:", e);
     return "无效日期";
   }
 }
@@ -230,7 +229,6 @@ async function fetchAllStockList() {
       throw new Error(response.msg || '获取股票列表失败');
     }
   } catch (error) {
-    console.error("获取股票列表失败:", error);
     stockListError.value = error.data?.message || error.message || "获取股票列表失败。";
   } finally {
     isLoadingStockList.value = false;
@@ -271,7 +269,6 @@ async function fetchStockRealtimeData(stockDm) {
       throw new Error(response.msg || `获取 ${stockDm} 实时行情失败`);
     }
   } catch (error) {
-    console.error(`获取 ${stockDm} 实时行情失败:`, error);
     realtimeError.value = error.data?.message || error.message || "获取实时行情失败。";
   } finally {
     isLoadingRealtime.value = false;
@@ -299,7 +296,6 @@ async function fetchStockKlineData(stockDm, timeLevel) {
       throw new Error(response.msg || `获取 ${stockDm} K线数据失败 (${timeLevel})`);
     }
   } catch (error) {
-    console.error(`获取 ${stockDm} K线数据 (${timeLevel}) 失败:`, error);
     klineError.value = error.data?.message || error.message || "获取K线数据失败。";
   } finally {
     isLoadingKline.value = false;

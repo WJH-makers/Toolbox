@@ -64,7 +64,6 @@ export default defineEventHandler(async (event) => {
         };
 
     } catch (error) {
-        console.error('登录时发生错误:', error);
         let errorMessage = '服务器内部错误，登录失败';
         if (error.name === 'JsonWebTokenError' || error.name === 'TokenExpiredError') {
             errorMessage = '无法生成身份验证令牌，请稍后再试';

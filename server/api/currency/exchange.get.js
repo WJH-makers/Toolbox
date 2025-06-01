@@ -17,7 +17,6 @@ export default defineEventHandler(async (event) => {
     const targetUrl = `${EXTERNAL_API_URL_EXCHANGE}?from=${encodeURIComponent(String(from))}&to=${encodeURIComponent(String(to))}&amount=${encodeURIComponent(String(amount))}`;
 
     try {
-        console.log(`[Currency Exchange Proxy] Calling external API: ${targetUrl}`);
         const externalResponse = await $fetch(targetUrl, {method: 'GET', parseResponse: JSON.parse});
 
         if (externalResponse && externalResponse.code === 200 && externalResponse.data) {
@@ -50,7 +49,6 @@ export default defineEventHandler(async (event) => {
             });
         }
     } catch (error) {
-        console.error('[Currency Exchange Proxy] Error calling external API or processing response:', error);
         throw createError({
             statusCode: error.statusCode || 502,
             statusMessage: error.statusMessage || 'Bad Gateway',

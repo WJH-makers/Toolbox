@@ -64,9 +64,6 @@ export function useThemeManager() {
                 }
             }
         } catch (e) {
-            console.warn('Error initializing theme from localStorage:', e);
-            // 出错时也回退到默认主题或系统偏好（如果适用）
-            // 确保 window.matchMedia 存在
             let systemPrefersDarkOnError = false;
             if (typeof window.matchMedia === 'function') {
                 systemPrefersDarkOnError = window.matchMedia('(prefers-color-scheme: dark)').matches;

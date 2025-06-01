@@ -72,7 +72,6 @@ export function useUserProfile() {
                 errorMessage = e.message;
             }
             error.value = errorMessage;
-            console.error("Update username API error:", e);
             return {success: false, error: errorMessage};
         } finally {
             isLoading.value = false;
@@ -111,7 +110,6 @@ export function useUserProfile() {
                 errorMessage = e.message;
             }
             error.value = errorMessage;
-            console.error("Update email API error:", e);
             return {success: false, error: errorMessage};
         } finally {
             isLoading.value = false;
@@ -149,7 +147,6 @@ export function useUserProfile() {
                 errorMessage = e.message;
             }
             error.value = errorMessage;
-            console.error("Change password API error:", e);
             return {success: false, error: errorMessage};
         } finally {
             isLoading.value = false;
@@ -185,7 +182,6 @@ export function useUserProfile() {
                 errorMessage = e.message;
             }
             error.value = errorMessage;
-            console.error("Delete account API error:", e);
             return {success: false, error: errorMessage};
         } finally {
             isLoading.value = false;

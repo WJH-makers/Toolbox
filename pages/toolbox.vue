@@ -54,9 +54,8 @@ const fetchAllToolData = async () => {
   try {
     await new Promise(resolve => setTimeout(resolve, 300));
     allDomains.value = allToolDomainsData;
-  } catch (e: any) {
+  } catch (e) {
     loadingError.value = e as Error;
-    console.error("Toolbox Quadrant: Failed to process tool data:", e);
   } finally {
     isLoadingData.value = false;
   }

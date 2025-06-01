@@ -72,7 +72,7 @@
               <input v-model="item.value" :disabled="isLoading || !isBodyAllowed" placeholder="值" type="text">
               <button
                   :disabled="isLoading || !isBodyAllowed" class="remove-button"
-                      @click="removeFormUrlencodedItem(index)">移除
+                  @click="removeFormUrlencodedItem(index)">移除
               </button>
             </div>
             <button :disabled="isLoading || !isBodyAllowed" class="add-button" @click="addFormUrlencodedItem">+
@@ -314,7 +314,6 @@ const sendRequest = async () => {
         responseBodyText.value = JSON.stringify(jsonBody, null, 2); // Pretty print
       } catch (e) {
         responseBodyText.value = await rawResponse.text(); // Fallback to text if JSON parsing fails
-        console.warn("Response said JSON, but failed to parse. Showing as text.", e);
       }
     } else {
       responseBodyText.value = await rawResponse.text();
@@ -325,12 +324,6 @@ const sendRequest = async () => {
     const endTime = performance.now();
     responseTime.value = Math.round(endTime - startTime);
     generalError.value = `请求失败: ${e.message}`;
-    console.error("API Request Error:", e);
-    // If fetch throws (e.g. network error), response.value will be null
-    // If it's an HTTP error status, fetch by default doesn't throw unless it's network level
-    // However, if using $fetch, it throws on 4xx/5xx. Raw fetch does not.
-    // Since we are using raw fetch now, we rely on response.ok or status codes.
-    // The catch block here is more for network level errors or programming errors.
   } finally {
     isLoading.value = false;
   }
@@ -352,7 +345,6 @@ const copyResponseBody = async () => {
     alert('响应体已复制到剪贴板！');
   } catch (err) {
     alert('复制失败，请手动复制。');
-    console.error('Failed to copy response body: ', err);
   }
 };
 

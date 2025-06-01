@@ -22,7 +22,6 @@ export default defineEventHandler(async (event) => {
     if (/[一-龥]/.test(originalIngredientName)) { // 简单判断是否含中文
         try {
             ingredientNameToQueryApi = await translateText(originalIngredientName, 'auto', targetApiLang);
-            console.log(`按食材筛选 - 原始食材: "${originalIngredientName}", 翻译为API查询: "${ingredientNameToQueryApi}"`);
         } catch (e) {
             console.error("食材名称翻译失败:", e);
             // 翻译失败，可以选择继续使用原始词（可能无结果），或返回错误
@@ -37,7 +36,6 @@ export default defineEventHandler(async (event) => {
     try {
         apiResponse = await $fetch(filterUrl, {method: 'GET'});
     } catch (error) {
-        console.error('从 TheMealDB API (按食材筛选) 获取数据时出错:', error);
         throw createError({
             statusCode: 500,
             statusMessage: '从 TheMealDB (按食材筛选) 获取食谱失败',
@@ -69,7 +67,6 @@ export default defineEventHandler(async (event) => {
                     translatedName = await translateText(meal.strMeal, targetApiLang, displayLang);
                 }
             } catch (e) {
-                console.error(`翻译菜谱名称 "${meal.strMeal}" 失败:`, e);
                 translatedName = `[翻译失败] ${meal.strMeal}`; // 保留原文并标记错误
             }
             return {

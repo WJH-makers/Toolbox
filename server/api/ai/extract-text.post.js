@@ -40,8 +40,6 @@ export default defineEventHandler(async (event) => {
     const buffer = fileData.data;
 
     try {
-        console.log(`[Extract Text API] Processing file: ${fileData.filename}, type: ${fileData.type}, size: ${buffer.length}`);
-
         if (fileExtension === 'txt') {
             extractedText = buffer.toString('utf8');
         } else if (fileExtension === 'docx' || fileExtension === 'doc') {
@@ -49,7 +47,6 @@ export default defineEventHandler(async (event) => {
                 const result = await mammoth.extractRawText({buffer});
                 extractedText = result.value;
             } catch (docxError) {
-                console.error(`DOCX/DOC parsing error for ${fileData.filename}:`, docxError);
                 extractedText = `[${fileExtension.toUpperCase()} 内容提取失败: ${docxError.message}]`;
             }
         }
@@ -63,7 +60,6 @@ export default defineEventHandler(async (event) => {
         const MAX_EXTRACTED_TEXT_LENGTH = 20000;
         if (extractedText && extractedText.length > MAX_EXTRACTED_TEXT_LENGTH) {
             extractedText = extractedText.substring(0, MAX_EXTRACTED_TEXT_LENGTH) + `\n... [内容已截断，总长度超过 ${MAX_EXTRACTED_TEXT_LENGTH} 字符] ...`;
-            console.log(`[Extract Text API] Extracted text for ${fileData.filename} was truncated.`);
         }
 
         return {
@@ -73,7 +69,6 @@ export default defineEventHandler(async (event) => {
         };
 
     } catch (error) {
-        console.error(`处理文件 ${fileData.filename} 失败:`, error);
         throw createError({
             statusCode: 500,
             statusMessage: 'Internal Server Error',

@@ -235,15 +235,11 @@ onMounted(() => {
   nextTick(() => {
     if (ctx) drawScene(); // 初始绘制
     if (typeof window.MathJax !== 'undefined' && window.MathJax.typesetPromise) {
-      console.log("Vue component mounted, attempting to typeset MathJax content...");
       window.MathJax.typesetPromise().catch((err) => console.error('MathJax typesetPromise failed:', err));
     } else if (typeof window.MathJax !== 'undefined' && window.MathJax.startup && window.MathJax.startup.promise) {
       window.MathJax.startup.promise.then(() => {
-        console.log("MathJax startup promise resolved, attempting typeset...");
         window.MathJax.typesetPromise().catch((err) => console.error('MathJax typesetPromise after startup failed:', err));
       });
-    } else {
-      console.warn("MathJax or MathJax.typesetPromise not available on component mount. LaTeX will not be rendered.");
     }
   });
 });
@@ -316,7 +312,6 @@ function renderMarkdown(mdContent) {
   try {
     return marked.parse(mdContent || '', {breaks: true, gfm: true, async: false});
   } catch (e) {
-    console.error("Markdown parsing error:", e);
     const esc = (str) => str?.replace(/&/g, "&amp;")?.replace(/</g, "&lt;")?.replace(/>/g, "&gt;") || '';
     return `<p>Markdown渲染出错: ${esc(content)}</p>`; // 应该是 esc(mdContent)
   }

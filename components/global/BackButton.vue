@@ -13,7 +13,7 @@ const goBack = () => {
   if (window.history.length > 2 && document.referrer.includes(window.location.origin)) {
     router.back();
   } else {
-    router.push('/toolbox'); // 否则跳转到工具箱主页
+    router.push('/toolbox');
   }
 };
 </script>

@@ -26,7 +26,6 @@ export default defineEventHandler(async (event) => {
         const cookies = parseCookies(event);
         const token = cookies.auth_token;
         if (!token) {
-            console.log(`Auth Middleware: No 'auth_token' cookie found for protected route ${path}`);
             throw createError({
                 statusCode: 401,
                 statusMessage: 'Unauthorized',

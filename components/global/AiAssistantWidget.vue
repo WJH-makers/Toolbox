@@ -207,7 +207,6 @@ function formatRelativeTime(dateString) {
   try {
     return formatDistanceToNowStrict(new Date(dateString), {addSuffix: true, locale: zhCN});
   } catch (e) {
-    console.warn("Error formatting date:", dateString, e);
     return '未知时间';
   }
 }
@@ -221,7 +220,6 @@ function formatMessageContent(content, query = '') {
     }
     return htmlContent;
   } catch (e) {
-    console.error("Markdown parsing error:", e);
     const esc = (str) => str?.replace(/&/g, "&amp;")?.replace(/</g, "&lt;")?.replace(/>/g, "&gt;") || '';
     return `<p>Markdown渲染出错: ${esc(content)}</p>`;
   }
@@ -242,7 +240,6 @@ async function fetchSessionsAndSelectLatest(forceSelectLatest = false) {
       await createNewSessionInternal(false);
     }
   } catch (error) {
-    console.error("加载会话列表失败:", error);
     sessionsError.value = error.data?.message || "无法加载会话列表。";
     messages.value = [{id: Date.now(), role: 'assistant', content: `无法加载会话列表: ${sessionsError.value}`}];
   } finally {
@@ -276,7 +273,6 @@ async function handleSelectSession(sessionId) {
       messages.value.push({id: Date.now(), role: 'assistant', content: '你好！这是一个新的对话，有什么可以帮助你的吗？'});
     }
   } catch (error) {
-    console.error(`加载会话 ${sessionId} 消息失败:`, error);
     chatError.value = `加载会话消息失败: ${error.data?.message || error.message}`;
   } finally {
     isLoadingMessages.value = false;
@@ -302,7 +298,6 @@ async function createNewSessionInternal(focusInput = true) {
       throw new Error(response.message || "创建新会话失败");
     }
   } catch (error) {
-    console.error("创建新会话失败:", error);
     sessionsError.value = `创建新会话失败: ${error.data?.message || error.message}`;
   } finally {
     isCreatingSession.value = false;
@@ -333,7 +328,6 @@ async function handleDeleteSession(sessionId) {
         }
       }
     } catch (error) {
-      console.error(`删除会话 ${sessionId} 失败:`, error);
       sessionsError.value = `删除会话失败: ${error.data?.message || error.message}`;
     } finally {
       isDeletingSession.value = null;
@@ -452,7 +446,6 @@ async function sendMessage() {
       debouncedUpdateAssistantMessageContent(assistantMessageObject, accumulatedStreamContent);
     }
   } catch (error) {
-    console.error('发送消息或处理流失败:', error);
     chatError.value = error.message || '抱歉，与AI助手连接时发生未知错误。';
     assistantMessageObject.content = `⚠️ ${chatError.value}`;
   } finally {
@@ -549,13 +542,11 @@ async function handleFileUpload(event) {
     if (response.success && typeof response.extractedText === 'string') {
       uploadedFileContext.value = response.extractedText;
       fileUploadStatus.value = `文件 "${response.fileName}" 内容已准备好。`;
-      console.log("文件内容已提取:", response.extractedText.substring(0, 300) + "...");
       messageInput.value?.focus();
     } else {
       throw new Error(response.message || "提取文件内容失败或返回格式不正确。");
     }
   } catch (err) {
-    console.error("文件上传或处理失败:", err);
     chatError.value = `处理文件 "${originalFileName}" 失败: ${err.data?.message || err.message || '未知错误'}`;
     uploadedFileName.value = '';
     fileUploadStatus.value = '';

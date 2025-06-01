@@ -18,7 +18,6 @@ export default defineEventHandler(async () => {
             orderBy: {targetCurrency: 'asc'}
         });
         if (cachedRates.length > 0) {
-            console.log(`[AllRates API] Serving ${baseCurrencyForDb} rates from DB cache.`);
             const formattedRates = {};
             let cacheTimestamp = null;
             cachedRates.forEach(r => {
@@ -40,7 +39,6 @@ export default defineEventHandler(async () => {
         }
 
         // 2. 如果缓存未命中或已过期，从外部API获取
-        console.log(`[AllRates API] Fetching all rates from external API (base ${baseCurrencyForDb}).`);
         const externalResponse = await $fetch(EXTERNAL_API_URL_ALLRATES, {parseResponse: JSON.parse});
         if (externalResponse.code === 200 && externalResponse.data && externalResponse.data.rates) {
             const fetchedRatesObject = externalResponse.data.rates;
@@ -67,7 +65,6 @@ export default defineEventHandler(async () => {
                 });
             });
             await prisma.$transaction(dbOperations);
-            console.log(`[AllRates API] Updated DB with ${dbOperations.length} rates based on ${baseCurrencyForDb}.`);
             return {
                 success: true,
                 data: {
@@ -86,7 +83,6 @@ export default defineEventHandler(async () => {
             });
         }
     } catch (error) {
-        console.error('[AllRates API] Error:', error);
         throw createError({
             statusCode: error.statusCode || 500,
             statusMessage: error.statusMessage || 'Internal Server Error',

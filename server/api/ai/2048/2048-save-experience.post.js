@@ -1,5 +1,5 @@
 // server/api/ai/2048-save-experience.post.js
-import {defineEventHandler, readBody, createError} from 'h3';
+import {createError, defineEventHandler, readBody} from 'h3';
 import prisma from '~/server/utils/prisma'; // 确保 Prisma Client 路径正确
 
 const MAX_GLOBAL_AI_EXPERIENCES = 25; // AI只保留最好的25条全局经验记录
@@ -67,14 +67,12 @@ export default defineEventHandler(async (event) => {
                 await prisma.ai2048Experience.deleteMany({
                     where: {id: {in: idsToDelete}}
                 });
-                console.log(`[AI Experience] Pruned ${idsToDelete.length} older/lower-scoring global AI experiences.`);
             }
         }
 
         return {code: 200, msg: 'AI全局经验已成功保存。', data: {experienceId: newExperience.id}};
 
     } catch (error) {
-        console.error('保存AI全局经验到数据库失败:', error);
         if (error instanceof SyntaxError) {
             throw createError({
                 statusCode: 400,

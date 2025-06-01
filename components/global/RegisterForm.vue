@@ -103,7 +103,6 @@ const handleRegister = async () => {
       messageType.value = 'error';
     }
   } catch (error) {
-    console.error('注册请求失败:', error);
     if (error.response && error.response.data && error.response.data.message) {
       serverMessage.value = error.response.data.message;
     } else if (error.request) {

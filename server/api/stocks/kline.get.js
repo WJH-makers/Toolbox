@@ -27,9 +27,6 @@ export default defineEventHandler(async (event) => {
 
     // **重要更新：使用历史数据接口路径 /hszbl/fsjy/**
     const targetUrl = `${baseUrl}/hszbl/fsjy/${encodeURIComponent(stockCode)}/${encodeURIComponent(timeLevel)}/${encodeURIComponent(licence)}`;
-
-    console.log(`[Stock Kline Proxy] Calling Mairui Historical K-line API: GET ${targetUrl}`);
-
     try {
         const responseData = await $fetch(targetUrl, {
             method: 'GET',
@@ -39,7 +36,6 @@ export default defineEventHandler(async (event) => {
             return {code: 200, msg: '历史K线数据请求成功', data: responseData};
         } else if (responseData && typeof responseData === 'object' && typeof responseData.code !== 'undefined') {
             // 处理Mairui API可能返回的错误对象 {code, msg, ...}
-            console.warn('[Stock Kline Proxy] Mairui API returned an error object:', responseData);
             const statusCode = responseData.code === 0 ? 400 : (Number.isInteger(responseData.code) && responseData.code !== 200 ? responseData.code : 500);
             throw createError({
                 statusCode: statusCode,
@@ -47,10 +43,8 @@ export default defineEventHandler(async (event) => {
                 message: responseData.msg || `从Mairui API获取历史K线数据失败 (code: ${responseData.code})`
             });
         } else if (responseData && typeof responseData === 'object' && !Array.isArray(responseData) && responseData.d && responseData.c) {
-            console.warn('[Stock Kline Proxy] Mairui Historical API unexpectedly returned a single object. Wrapping in array.');
             return {code: 200, msg: '历史K线数据请求成功 (返回单个数据点被包装为数组)', data: [responseData]};
         } else {
-            console.warn('[Stock Kline Proxy] Unexpected response structure from Mairui Historical API:', responseData);
             throw createError({
                 statusCode: 502,
                 statusMessage: 'Bad Gateway',
@@ -58,7 +52,6 @@ export default defineEventHandler(async (event) => {
             });
         }
     } catch (error) {
-        console.error(`[Stock Kline Proxy] Error fetching from Mairui Historical API ${targetUrl}:`, error);
         const statusCode = error.response?.status || error.statusCode || 500;
         const statusMessage = error.response?.statusText || error.statusMessage || 'External API Call Failed';
         const message = error.data?.message || error.data?.msg || error.message || '从外部API获取历史K线数据时发生错误。';

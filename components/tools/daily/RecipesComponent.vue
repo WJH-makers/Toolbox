@@ -156,11 +156,9 @@ const hasMorePages = computed(() => currentPage.value < totalPages.value);
 
 async function fetchRecipeData(isLoadMoreOperation = false) {
   if (isLoadMoreOperation && !searchQuery.value.trim()) {
-    console.log("加载更多：基础搜索词为空，操作取消。");
     return;
   }
   if (!isLoadMoreOperation && !searchQuery.value.trim()) {
-    console.log("新搜索：搜索词为空，操作取消。");
     searchResults.value = [];
     totalMeals.value = 0;
     totalPages.value = 0;
@@ -180,9 +178,7 @@ async function fetchRecipeData(isLoadMoreOperation = false) {
     if (isLoadMoreOperation) searchResults.value.push(...(response.meals || [])); else searchResults.value = response.meals || [];
     totalMeals.value = response.totalMeals || 0;
     totalPages.value = response.totalPages || 0;
-    if (!isLoadMoreOperation && searchResults.value.length === 0) console.log("新搜索未找到相关食谱。");
   } catch (error) {
-    console.error('获取食谱数据时出错:', error);
     searchError.value = error.data?.message || error.statusMessage || '获取食谱数据失败';
     if (!isLoadMoreOperation) {
       searchResults.value = [];
@@ -216,7 +212,6 @@ async function showMealDetails(mealId) {
     const englishDetails = await $fetch(`/api/recipes/detailsById?id=${mealId}`);
     selectedMealDetails.value = {...englishDetails, _isTranslated: false};
   } catch (error) {
-    console.error(`获取ID为 '${mealId}' 的食谱详情时出错:`, error);
     detailsError.value = error.data?.message || error.statusMessage || `获取食谱详情 '${mealId}' 失败`;
   } finally {
     isLoadingDetails.value = false;
@@ -245,9 +240,7 @@ async function translateCurrentRecipeDetails() {
     selectedMealDetails.value = {...translatedData, _isTranslated: true};
 
   } catch (error) {
-    console.error('翻译食谱详情失败:', error);
     translationError.value = error.data?.message || error.statusMessage || '翻译失败，请稍后再试。';
-    // 翻译失败，保持 _isTranslated 为 false，按钮仍可点击尝试再次翻译
     if (selectedMealDetails.value) {
       selectedMealDetails.value._isTranslated = false;
     }

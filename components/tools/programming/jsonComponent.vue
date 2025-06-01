@@ -112,7 +112,6 @@ const formatJson = (): void => {
     } else {
       errorMessage.value = '发生未知错误导致JSON格式化失败。';
     }
-    console.error('JSON Parsing Error:', e);
   }
 };
 
@@ -133,7 +132,6 @@ const copyOutputToClipboard = async (): Promise<void> => {
     successMessage.value = '已成功复制到剪贴板！';
   } catch (err) {
     errorMessage.value = '复制失败。您的浏览器可能不支持此功能或未授予权限。请尝试手动复制。';
-    console.error('Failed to copy to clipboard: ', err);
   }
 };
 

@@ -33,7 +33,6 @@ export default defineEventHandler(async (event) => {
         });
         return {success: true, message: '用户名更新成功！', data: updatedUser};
     } catch (error) {
-        console.error('更新用户名失败:', error);
         if (error.code === 'P2002' && error.meta?.target?.includes('username')) {
             event.node.res.statusCode = 409;
             return {success: false, error: '此用户名已被占用 (P2002)'};

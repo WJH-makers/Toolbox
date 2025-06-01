@@ -34,7 +34,6 @@ export default defineEventHandler(async (event) => {
         return {success: true, message: '邮箱更新成功！(实际应用中可能需要验证)', data: updatedUser};
 
     } catch (error) {
-        console.error('更新邮箱失败:', error);
         if (error.code === 'P2002' && error.meta?.target?.includes('email')) {
             event.node.res.statusCode = 409;
             return {success: false, error: '此邮箱已被注册 (P2002)'};

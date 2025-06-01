@@ -39,22 +39,15 @@ const auth = useAuth();
 onMounted(async () => {
   // 确保只在客户端执行，并且如果状态尚未解析
   if (import.meta.client && !auth.authStatusResolved.value) {
-    console.log('index.vue onMounted: 调用 auth.initializeAuthState()');
     await auth.initializeAuthState();
   }
 });
 
 watchEffect(() => {
-  console.log(`watchEffect: authStatusResolved=${auth.authStatusResolved.value}, isLoggedIn=${auth.isLoggedIn.value}`);
   if (auth.authStatusResolved.value) {
     if (auth.isLoggedIn.value) {
-      console.log('用户已登录，正在重定向到 /toolbox ...');
       router.push('/toolbox');
-    } else {
-      console.log('用户未登录，停留在首页。');
     }
-  } else {
-    console.log('等待认证状态解析...');
   }
 });
 

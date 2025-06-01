@@ -374,7 +374,6 @@ const aiProcessSelection = async () => {
       errorMessage.value = "AI未能返回有效的代码片段。";
     }
   } catch (e: any) {
-    console.error("AI Process Selection Error:", e);
     errorMessage.value = `AI处理选中内容失败: ${e.message}`;
   } finally {
     isLoadingSelectionProcessing.value = false;

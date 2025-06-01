@@ -30,7 +30,6 @@ export function useTodos() {
             }
         } catch (e) {
             error.value = e.message || '获取待办事项时发生未知错误';
-            console.error("useTodos - fetchTodos error:", e);
         } finally {
             isLoading.value = false;
         }
@@ -69,7 +68,6 @@ export function useTodos() {
             }
         } catch (e) {
             error.value = e.message || '添加待办事项时发生未知错误';
-            console.error("useTodos - addTodo error:", e);
             return null;
         } finally {
             isLoading.value = false;
@@ -94,7 +92,6 @@ export function useTodos() {
                             if (!isNaN(parsedDate.getTime())) {
                                 bodyToSend[dateKey] = parsedDate.toISOString();
                             } else {
-                                console.warn(`UpdateTodo: Invalid ${dateKey} string provided, sending as null.`);
                                 bodyToSend[dateKey] = null;
                             }
                         }
@@ -115,8 +112,6 @@ export function useTodos() {
                 const index = todos.value.findIndex(t => t.id === id);
                 if (index !== -1) {
                     todos.value[index] = updatedItemFromServer; // Reactive update
-                } else {
-                    console.warn(`[useTodos] updateTodo: Updated todo (id: ${id}) not found in local list.`);
                 }
                 return updatedItemFromServer;
             } else {
@@ -124,7 +119,6 @@ export function useTodos() {
             }
         } catch (e) {
             error.value = e.message || '更新待办事项时发生未知错误';
-            console.error("useTodos - updateTodo error:", e);
             return null;
         } finally {
             isLoading.value = false;
@@ -148,7 +142,6 @@ export function useTodos() {
             }
         } catch (e) {
             error.value = e.message || '删除待办事项时发生未知错误';
-            console.error("useTodos - deleteTodo error:", e);
             return false;
         } finally {
             isLoading.value = false;
@@ -158,7 +151,6 @@ export function useTodos() {
     const toggleComplete = async (todo) => {
         if (!todo || typeof todo.id === 'undefined') {
             error.value = "无效的待办事项";
-            console.error("useTodos - toggleComplete error: Invalid todo item provided.", todo);
             return null;
         }
         return await updateTodo(todo.id, {completed: !todo.completed});
@@ -167,7 +159,6 @@ export function useTodos() {
     const toggleImportant = async (todo) => {
         if (!todo || typeof todo.id === 'undefined') {
             error.value = "无效的待办事项";
-            console.error("useTodos - toggleImportant error: Invalid todo item provided.", todo);
             return null;
         }
         return await updateTodo(todo.id, {important: !todo.important});

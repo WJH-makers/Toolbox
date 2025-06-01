@@ -20,7 +20,6 @@ export default defineEventHandler(async (event) => {
         });
         return {success: true, data: sessions};
     } catch (error) {
-        console.error("获取AI会话列表失败:", error);
         throw createError({statusCode: 500, statusMessage: 'Internal Server Error'});
     }
 });

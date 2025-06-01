@@ -16,7 +16,6 @@ export default defineEventHandler(async (event) => {
         return {success: true, message: '成功退出登录'};
 
     } catch (error) {
-        console.error('登出时发生错误:', error);
         event.node.res.statusCode = 500;
         return {success: false, message: '登出时发生服务器内部错误'};
     }

@@ -47,7 +47,6 @@ export default defineEventHandler(async (event) => {
         });
         return {success: true, data: newHealthMetric, message: '健康记录已成功保存！'};
     } catch (error) {
-        console.error('保存健康记录失败:', error);
         throw createError({
             statusCode: 500,
             statusMessage: 'Internal Server Error',

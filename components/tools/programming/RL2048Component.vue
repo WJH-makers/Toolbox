@@ -456,7 +456,6 @@ const checkGameStatus = () => {
   isGameOver.value = true;
   if (isAutoPlayingAi.value && !hasWon.value) {
     stopAutoPlayAi();
-    console.log("AI Game Over. Final Score:", score.value);
     saveCurrentAiGameExperience("GAMEOVER_AI_AUTO");
   }
 };
@@ -523,7 +522,6 @@ async function fetchAiSuggestionFromBackend(numMoves) {
     let message = '未知AI错误';
     if (error.data && error.data.message) message = error.data.message;
     else if (error.message) message = error.message;
-    console.error('调用2048 AI后端失败:', message);
     return `ERROR_FETCHING_AI_SUGGESTION: ${message}`;
   }
 }
@@ -574,10 +572,7 @@ const seekAiHelp = async () => {
     }
     const parsed = parseAiResponse(responseText);
     aiSuggestionOutput.value = parsed;
-    if (parsed.moves && parsed.moves.length > 0) console.log("AI 提示移动:", parsed.moves.join(', '));
-    else console.warn("AI未能给出单步建议:", parsed);
   } catch (error) {
-    console.error("请求AI帮助失败:", error);
     aiSuggestionOutput.value = {raw: `AI错误: ${error.message || '未知错误'}`, moves: [], reason: ''};
   } finally {
     isAiThinking.value = false;
@@ -588,7 +583,6 @@ const toggleAutoPlayAi = () => (isAutoPlayingAi.value ? stopAutoPlayAi() : start
 
 const startAutoPlayAi = () => {
   if ((isGameOver.value && !hasWon.value) || hasWon.value) {
-    console.log("游戏已结束或已胜利，AI无法启动。");
     return;
   }
   isAutoPlayingAi.value = true;
@@ -628,7 +622,6 @@ const requestAndProcessAiMovesLoop = async () => {
           stopAutoPlayAi(); // This will set isAiThinking = false
           saveCurrentAiGameExperience("GAMEOVER_AI_REPORTED_VERIFIED");
         } else {
-          console.warn("AI reported GAMEOVER, but local check disagrees. Continuing if possible.");
           isAiThinking.value = false; // No moves to execute from this batch
           if (isAutoPlayingAi.value) scheduleNextAiRequestLoop();
         }
@@ -645,12 +638,10 @@ const requestAndProcessAiMovesLoop = async () => {
       isAiThinking.value = false; // Batch fetched, before starting execution from queue
       executeNextAiMoveInLoop();
     } else {
-      console.warn("AI未能给出移动序列或解析失败:", parsed);
       isAiThinking.value = false; // Fetching failed for this batch
       if (isAutoPlayingAi.value) scheduleNextAiRequestLoop();
     }
   } catch (error) {
-    console.error("AI自动玩循环出错:", error);
     aiSuggestionOutput.value = {raw: `AI错误: ${error.message || '未知错误'}`, moves: [], reason: ''};
     isAiThinking.value = false; // Error during fetch
     if (isAutoPlayingAi.value) scheduleNextAiRequestLoop();
@@ -710,7 +701,6 @@ async function saveCurrentAiGameExperience(notes = '') {
     }
   });
 
-  console.log(`准备保存AI游戏经验: GameID=${currentGameId.value}, Moves=${currentAiPlayedMovesHistory.value.length}, Score=${score.value}, MaxTile=${highestTileValue}, Notes=${notes}`);
   try {
     const response = await $fetch('/api/ai/2048/2048-save-experience', {
       method: 'POST',
@@ -725,12 +715,10 @@ async function saveCurrentAiGameExperience(notes = '') {
         notes: notes
       }
     });
-    console.log("AI经验保存调用完成:", response.msg || '成功');
   } catch (error) {
     let message = '未知错误';
     if (error.data && error.data.message) message = error.data.message;
     else if (error.message) message = error.message;
-    console.error("保存AI经验失败:", message);
   }
 }
 

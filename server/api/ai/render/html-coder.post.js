@@ -7,8 +7,6 @@ const DEEPSEEK_BASE_URL = process.env.DEEPSEEK_BASE_URL;
 let openaiInstance;
 if (DEEPSEEK_API_KEY && DEEPSEEK_BASE_URL) {
     openaiInstance = new OpenAI({baseURL: DEEPSEEK_BASE_URL, apiKey: DEEPSEEK_API_KEY});
-} else {
-    console.warn('AI Coder API WARNING: DEEPSEEK_API_KEY or DEEPSEEK_BASE_URL is not defined in .env. AI features will be limited.');
 }
 
 export default defineEventHandler(async (event) => {
@@ -65,7 +63,6 @@ ${currentCode}
         {role: 'user', content: `请根据系统提示中的指令和现有代码，开始生成或修改代码。指令是：“${instruction}”。`},
     ];
     try {
-        console.log(`[AI HTML Coder] Requesting code completion. Instruction: "${instruction}"`);
         const completion = await openaiInstance.chat.completions.create({
             messages: messagesForApi,
             model: 'deepseek-chat',
@@ -84,17 +81,14 @@ ${currentCode}
         if (specificInstructionFound && matchedComment && aiGeneratedCode && !currentCode.includes(aiGeneratedCode)) {
             aiGeneratedCode = currentCode.replace(matchedComment, aiGeneratedCode);
         }
-        console.log(`[AI HTML Coder] AI Generated Code: "${aiGeneratedCode.substring(0, 200)}..."`);
         return {completedCode: aiGeneratedCode};
     } catch (error) {
         let errorMessage = 'AI代码补全服务发生错误。';
         let errorStatusCode = 500;
         if (error instanceof OpenAI.APIError) {
-            console.error(`[AI HTML Coder] OpenAI API Error: Status ${error.status}, Type: ${error.type}, Message: ${error.message}`, error.error);
             errorMessage = `AI服务接口错误: ${error.message} (状态码: ${error.status})`;
             errorStatusCode = error.status || 500;
         } else {
-            console.error(`[AI HTML Coder] General Error:`, error.message, error.stack);
             errorMessage = error.message || errorMessage;
         }
         throw createError({

@@ -344,16 +344,12 @@ function addBall() {
   const newBallToAdd = {...newBall.value, id: currentId, name: ballName, x: safeX};
   balls.value.push(newBallToAdd);
 
-  console.log('小球已添加:', newBallToAdd);
-  console.log('当前小球数量 (balls.value.length):', balls.value.length);
-  console.log('所有小球数据:', JSON.stringify(balls.value)); // 查看完整数据
 
   chartHistoryData.value[currentId] = [];
   if (!selectedBallIdsForChart.value.includes(currentId) && selectedBallIdsForChart.value.length < 3) {
     selectedBallIdsForChart.value.push(currentId);
   }
   newBall.value = defaultNewBallSettings();
-  console.log('下一个新球的默认值:', JSON.stringify(newBall.value));
 
   if (ctx) drawScene();
 }
@@ -509,8 +505,6 @@ onMounted(() => {
   if (simulationCanvas.value) {
     ctx = simulationCanvas.value.getContext('2d');
     drawScene();
-  } else {
-    console.error("Canvas 元素 'simulationCanvas' 未找到!");
   }
 });
 onUnmounted(() => {

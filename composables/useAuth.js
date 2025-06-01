@@ -22,7 +22,6 @@ const _setUserSession = (userData) => {
         }
         return true;
     } else {
-        console.error('[useAuth] _setUserSession: Attempted to set invalid user data structure.');
         _clearUserSession(); // 如果数据无效，也清除会话
         return false;
     }
@@ -42,7 +41,6 @@ const _loadUserFromStorage = () => {
                     localStorage.removeItem('user');
                 }
             } catch (e) {
-                console.error("[useAuth] _loadUserFromStorage: Failed to parse stored user data:", e);
                 localStorage.removeItem('user');
             }
         }
@@ -73,17 +71,13 @@ export function useAuth() {
                 if (isInitialCheck) { // 如果是初始检查，则清除任何现有用户状态
                     _clearUserSession();
                 }
-                console.warn('[useAuth] fetchCurrentUser: API call to /api/user/me not successful or data missing. Response:', response.data);
             }
         } catch (error) {
-            // 任何错误（包括401/403或其他网络错误）都应导致用户状态被清除
             _clearUserSession();
-            console.warn(`[useAuth] fetchCurrentUser: Error occurred. User state cleared. Error:`, error.message);
         } finally {
             if (isInitialCheck) {
                 authStatusResolved.value = true;
                 isLoadingAuth.value = false;
-                console.log(`[useAuth] fetchCurrentUser (initial): authStatusResolved=${authStatusResolved.value}, isLoggedIn=${isLoggedIn.value}`);
             }
         }
     };
@@ -116,7 +110,6 @@ export function useAuth() {
         } finally {
             isLoadingAuth.value = false;
             authStatusResolved.value = true; // 无论登录成功或失败，认证状态的“尝试”已完成
-            console.log(`[useAuth] login finished: authStatusResolved=${authStatusResolved.value}, isLoggedIn=${isLoggedIn.value}`);
         }
     };
 
@@ -132,12 +125,10 @@ export function useAuth() {
         } finally {
             isLoadingAuth.value = false;
             authStatusResolved.value = true; // 登出后，认证状态已确定
-            console.log(`[useAuth] logout finished: authStatusResolved=${authStatusResolved.value}, isLoggedIn=${isLoggedIn.value}`);
             if (redirectToLogin && wasLoggedIn) { // 仅当之前确实是登录状态时才强制跳转
                 try {
                     await router.push('/login');
                 } catch (routerError) {
-                    console.error("[useAuth] Failed to redirect after logout:", routerError);
                     if (typeof window !== 'undefined') window.location.pathname = '/login';
                 }
             }
@@ -151,10 +142,7 @@ export function useAuth() {
 
     const initializeAuthState = async () => {
         if (typeof window !== 'undefined' && !authStatusResolved.value) {
-            console.log('[useAuth] initializeAuthState: Starting initial auth state check...');
             await fetchCurrentUser(true);
-        } else if (typeof window !== 'undefined' && authStatusResolved.value) {
-            console.log('[useAuth] initializeAuthState: Auth state was already resolved.');
         }
     };
 

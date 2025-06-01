@@ -176,7 +176,6 @@ function convertUnits() {
     }
     conversionNote.value = '';
   } catch (error) {
-    console.error("单位换算错误: ", error);
     outputValue.value = null;
     conversionNote.value = '换算时发生错误。';
   }

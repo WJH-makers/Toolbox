@@ -266,7 +266,6 @@ async function saveCurrentRecord() {
     canSaveRecord.value = false;
     await fetchHistory();
   } catch (err) {
-    console.error("保存BMI记录失败:", err);
     saveError.value = err.data?.message || '保存失败，请稍后再试。';
   } finally {
     isSavingRecord.value = false;
@@ -281,7 +280,6 @@ async function fetchHistory() {
     const response = await $fetch('/api/BMI');
     historicalData.value = response.data || [];
   } catch (err) {
-    console.error("获取BMI历史记录失败:", err);
     historyError.value = err.data?.message || '获取历史记录失败。';
   } finally {
     isLoadingHistory.value = false;
@@ -334,12 +332,10 @@ const chartOptions = ref({
 // 新增：加载健康小贴士的函数
 async function loadHealthTips() {
   try {
-    // 假设 health_tips.json 在 Nuxt 项目的 public 目录下
     const response = await $fetch('/BMI/health_tips.json');
     healthTips.value = response || []; // response 本身就是数组
     showRandomTip(); // 加载完后显示一条
   } catch (error) {
-    console.error("加载健康贴士失败:", error);
     currentHealthTip.value = "暂时无法获取健康小贴士。";
   }
 }

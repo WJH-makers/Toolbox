@@ -11,8 +11,6 @@ if (DEEPSEEK_API_KEY) {
         baseURL: DEEPSEEK_BASE_URL,
         apiKey: DEEPSEEK_API_KEY,
     });
-} else {
-    console.error('AI Chat API FATAL ERROR: DEEPSEEK_API_KEY is not defined in .env');
 }
 
 export default defineEventHandler(async (event) => {
@@ -67,8 +65,6 @@ export default defineEventHandler(async (event) => {
             }
             for (let i = 0; i < clientMessagesForContext.length - 1; i++) {
                 if (clientMessagesForContext[i].role === clientMessagesForContext[i + 1].role) {
-                    console.error(`[AI Chat Backend - ${requestedModel}] Error: Successive messages with role '${clientMessagesForContext[i].role}' detected at indices ${i} and ${i + 1} in clientMessagesForContext.`);
-                    console.error('[AI Chat Backend] Client messages causing error:', JSON.stringify(clientMessagesForContext.slice(i, i + 2), null, 2));
                     throw createError({
                         statusCode: 400,
                         statusMessage: 'Bad Request',
@@ -82,8 +78,6 @@ export default defineEventHandler(async (event) => {
             {role: "system", content: "你是一个乐于助人的万能助手。请使用Markdown格式进行回复。"},
             ...clientMessagesForContext
         ];
-
-        console.log(`[AI Chat Backend] Requesting stream from DeepSeek API with model: ${requestedModel}, num_messages_to_api: ${messagesForApi.length}`);
         const streamFromAI = await openai.chat.completions.create({
             messages: messagesForApi,
             model: requestedModel,
@@ -120,7 +114,6 @@ export default defineEventHandler(async (event) => {
                     }
                     controller.close();
                 } catch (streamError) {
-                    console.error('处理AI返回的流时出错:', streamError);
                     controller.error(streamError);
                     if (accumulatedAssistantResponse.trim()) {
                         try {
@@ -146,7 +139,6 @@ export default defineEventHandler(async (event) => {
         return readableStream;
 
     } catch (error) {
-        console.error(`调用 DeepSeek API (model: ${requestedModel}) 失败:`, error.response ? error.response.data : (error.data || error.message), error.status || error.statusCode);
         let errorMessage = '与AI助手通信时发生错误。';
         if (error.data && error.data.message) {
             errorMessage = error.data.message;

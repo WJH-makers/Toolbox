@@ -22,7 +22,6 @@ export default defineEventHandler(async (event) => {
             searchTermForApi = await translateText(originalSearchTerm, 'auto', targetApiLang);
         } catch (e) {
             console.error("搜索词翻译失败（将使用原文）:", e);
-            // searchTermForApi 仍为 originalSearchTerm
         }
     }
 
@@ -33,7 +32,6 @@ export default defineEventHandler(async (event) => {
     try {
         apiResponse = await $fetch(searchUrl, {method: 'GET'});
     } catch (error) {
-        console.error('从 TheMealDB API (搜索) 获取数据时出错:', error);
         throw createError({statusCode: 500, statusMessage: '从 TheMealDB (搜索) 获取食谱失败'});
     }
 

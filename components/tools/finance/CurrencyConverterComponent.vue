@@ -37,7 +37,7 @@
         <div class="swap-button-container">
           <button
               :disabled="!fromCurrency || !toCurrency" class="action-button swap-button" title="交换货币"
-                  @click="swapCurrencies">⇄
+              @click="swapCurrencies">⇄
           </button>
         </div>
 
@@ -47,7 +47,7 @@
             <input
                 id="converted-amount" :value="convertedAmount !== null ? convertedAmount.toFixed(4) : ''"
                 placeholder="结果"
-                   readonly type="text">
+                readonly type="text">
           </div>
           <div class="form-item">
             <label for="to-currency">目标货币:</label>
@@ -61,8 +61,8 @@
         </div>
         <button
             :disabled="isLoadingConversion || !amountToConvert || !fromCurrency || !toCurrency"
-                class="action-button convert-button"
-                @click="fetchAndConvert">
+            class="action-button convert-button"
+            @click="fetchAndConvert">
           {{ isLoadingConversion ? '转换中...' : '获取汇率并转换' }}
         </button>
         <div v-if="conversionRateInfo" class="conversion-rate-info">
@@ -84,14 +84,14 @@
         <label for="base-rate-currency">选择基础货币:</label>
         <select
             id="base-rate-currency" v-model="selectedBaseForTableInUI" :disabled="Object.keys(currencies).length === 0"
-                @change="handleBaseCurrencyChangeForTable">
+            @change="handleBaseCurrencyChangeForTable">
           <option v-for="(name, code) in currenciesForBaseSelect" :key="code" :value="code">
             {{ code }} - {{ name }}
           </option>
         </select>
         <button
             :disabled="isLoadingAllRates" class="action-button refresh-rates-button"
-                @click="fetchAllRatesTable(true)">
+            @click="fetchAllRatesTable(true)">
           {{ isLoadingAllRates ? '刷新中...' : '刷新汇率表' }}
         </button>
       </div>
@@ -215,7 +215,6 @@ async function initializeCurrencyData() {
       throw new Error(responseData.msg || "初始化货币数据失败。");
     }
   } catch (error) {
-    console.error("初始化货币数据失败:", error);
     loadingError.value = error.data?.message || error.message || "初始化货币数据失败，请稍后重试。";
     currencies.value = STATIC_CURRENCIES_FALLBACK;
     fromCurrency.value = 'USD';
@@ -257,7 +256,6 @@ async function fetchAndConvert() {
       throw new Error(responseData.msg || "获取汇率数据失败。");
     }
   } catch (error) {
-    console.error("汇率转换失败:", error);
     conversionLoadingError.value = error.data?.message || error.message || "汇率转换失败，请稍后重试。";
   } finally {
     isLoadingConversion.value = false;
@@ -278,7 +276,6 @@ function formatRateTimestamp(timestamp) {
   try {
     return formatDateFns(new Date(timestamp), 'yyyy-MM-dd HH:mm:ssXXX', {locale: zhCN});
   } catch (e) {
-    console.warn("格式化时间戳错误: ", timestamp, e);
     return '未知时间';
   }
 }
@@ -307,7 +304,6 @@ async function fetchAllRatesTable(forceRefresh = true) {
         throw new Error(responseData.msg || "刷新汇率表数据失败。");
       }
     } catch (error) {
-      console.error("刷新汇率表失败:", error);
       allRatesLoadingError.value = error.data?.message || error.message || "刷新汇率表失败。";
     } finally {
       isLoadingAllRates.value = false;
@@ -339,7 +335,6 @@ const displayedRatesTable = computed(() => {
   } else {
     const rateOfUserSelectedBaseToUSD = usdBasedRates[userSelectedBase]?.rate;
     if (!rateOfUserSelectedBaseToUSD || rateOfUserSelectedBaseToUSD === 0) {
-      console.warn(`无法计算以 ${userSelectedBase} 为基准的汇率。将显示以 ${allRatesBaseFromAPI.value} 为基准的汇率。`);
       displayedBaseCurrencyForTable.value = allRatesBaseFromAPI.value;
       for (const targetCurrencyCode in usdBasedRates) {
         if (usdBasedRates.hasOwnProperty(targetCurrencyCode)) {

@@ -52,7 +52,6 @@ export default defineEventHandler(async (event) => {
 
     } catch (error) {
         if (error.statusCode === 404) throw error;
-        console.error(`从 TheMealDB API (按ID查询详情) 获取ID为 '${mealId}' 的数据时出错:`, error);
         throw createError({statusCode: 500, statusMessage: `从 TheMealDB (按ID查询详情) 获取食谱 '${mealId}' 失败`});
     }
 });

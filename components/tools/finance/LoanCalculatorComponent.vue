@@ -193,9 +193,7 @@ function calculateLoan() {
         if (Math.abs(remainingPrincipal) < 0.01) { // 允许极小的误差
           remainingPrincipal = 0;
         } else if (remainingPrincipal > 0.01) {
-          console.warn(`等额本息计算：最后一期仍有剩余本金 ${remainingPrincipal.toFixed(2)}，已尝试修正。`);
           principalPayment += remainingPrincipal; // 将剩余的全部作为本金还掉
-          // monthlyPayment = principalPayment + interestPayment; // 重新计算最后一期实际月供
           remainingPrincipal = 0;
         }
       }

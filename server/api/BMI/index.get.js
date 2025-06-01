@@ -23,7 +23,6 @@ export default defineEventHandler(async (event) => {
         });
         return {success: true, data: healthMetrics};
     } catch (error) {
-        console.error('获取健康记录失败:', error);
         throw createError({
             statusCode: 500,
             statusMessage: 'Internal Server Error',
