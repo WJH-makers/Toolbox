@@ -315,7 +315,7 @@ const aiGeneralCompleteCode = async () => {
   isLoadingCompletion.value = true;
   errorMessage.value = null;
   try {
-    const response = await fetch('/api/ai/html-coder', {
+    const response = await fetch('/api/ai/render/html-coder', {
       method: 'POST', headers: {'Content-Type': 'application/json'},
       body: JSON.stringify({
         code: code.value,
@@ -351,7 +351,7 @@ const aiProcessSelection = async () => {
   const selection = editorView.value.state.selection.main;
   const selectedText = editorView.value.state.sliceDoc(selection.from, selection.to);
   try {
-    const response = await fetch('/api/ai/html-coder', {
+    const response = await fetch('/api/ai/render/html-coder', {
       method: 'POST', headers: {'Content-Type': 'application/json'},
       body: JSON.stringify({
         code: code.value,
@@ -483,7 +483,7 @@ onMounted(() => {
 }
 
 .editor-panel {
-  flex: 0 1 auto;
+  flex: 0 1;
 }
 
 .codemirror-wrapper {

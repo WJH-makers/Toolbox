@@ -123,7 +123,7 @@ export const allToolDomainsData: Domain[] = [
                 id: 'interactive_timeline',
                 name: '历史时间轴',
                 usage: 160,
-                description: '穿梭时空，探索世界历史与中国历史长河中的重大事件、时期和人物。',
+                description: '追溯人文科技之古今',
                 path: '/tools/learning/timeline',
                 statusPreview: '穿梭历史长河',
             },
@@ -169,11 +169,11 @@ export const allToolDomainsData: Domain[] = [
             },
             {
                 id: 'html_renderer_ai',
-                name: 'HTML渲染(ai辅助版)',
+                name: 'Web渲染(ai辅助版)',
                 usage: 220,
-                description: '基于AI的HTML渲染与优化工具。',
+                description: '基于AI的Web渲染与优化工具。',
                 path: '/tools/programming/html-renderer-ai',
-                statusPreview: 'AI驱动的HTML渲染',
+                statusPreview: 'AI教你做精美前端',
             },
             {
                 id: 'vision_parser',
