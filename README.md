@@ -14,10 +14,10 @@
     * **重要**: 您需要自行安装并运行一个 MySQL 服务器实例。
     * **如何安装 MySQL?**
         * **Windows**: 推荐从 [MySQL Installer for Windows](https://dev.mysql.com/downloads/installer/) 下载并根据向导安装。
-        * **macOS**: 可以使用 [Homebrew](https://brew.sh/) (`brew install mysql`)
-          或从 [MySQL Community Downloads](https://dev.mysql.com/downloads/mysql/) 下载 `.dmg` 安装包。
-        * **Linux (以 Ubuntu 为例)**: 通常可以通过包管理器安装，例如 `sudo apt update && sudo apt install mysql-server`
-          。其他 Linux 发行版请参考其官方文档。
+      * **macOS**: 可以使用 [Homebrew](https://brew.sh/) (`brew install mysql`)
+        或从 [MySQL Community Downloads](https://dev.mysql.com/downloads/mysql/) 下载 `.dmg` 安装包。
+      * **Linux (以 Ubuntu 为例)**: 通常可以通过包管理器安装，例如 `sudo apt update && sudo apt install mysql-server`。其他
+        Linux 发行版请参考其官方文档。
         * **Docker**: 如果您熟悉 Docker，也可以使用官方的 [MySQL Docker 镜像](https://hub.docker.com/_/mysql)。
     * 安装完成后，请确保 MySQL 服务已启动，并且您知道如何连接到它（例如，知道 root 用户密码或已创建了专用的数据库用户）。
 
@@ -46,46 +46,56 @@ npm install
 ```bash
 npm run setup
 ```
-* 该脚本会引导您完成以下操作：
-    * **模式选择**：脚本会首先询问您选择配置模式。您可以选择“默认配置”模式（如果已按照高级指引预先设置了加密的默认值，脚本将尝试自动加载这些值）或“自定义配置”模式（脚本将引导您逐项输入信息）。
-    * 创建或覆盖 `.env` 文件 (此步骤在两种模式下都会执行)。
-  * **数据库配置**
-    ：在“自定义配置”模式下，或当“默认配置”中的数据库信息不完整时，脚本会引导您完成数据库设置。如果您还没有为本项目创建MySQL数据库和用户，脚本会提供相应的SQL命令示例。之后，脚本会要求您输入或确认实际使用的数据库名、用户名、密码、主机和端口。
-  * **JWT密钥生成**：在“自定义配置”模式下，或者当“默认配置”未提供JWT密钥时，脚本会自动为您生成一个安全的 `JWT_SECRET`
-    。您也可以选择在自定义模式中手动输入。
-    * **(可选) API 配置**：在“自定义配置”模式下，或者当“默认配置”中的API信息不完整时，脚本会询问您是否需要配置以下API，并引导您输入相应的密钥和区域信息：
-        * **DeepSeek AI 助手 API** (用于AI助手聊天功能)。
-        * **腾讯翻译 API** (用于菜谱等内容的翻译功能)。
+
+* 该脚本会首先询问您选择配置模式：
+    1. **新手模式 (推荐初次使用者)**: 此模式旨在最大限度地简化配置过程。
+        * **数据库配置**: 脚本会尝试使用常见的默认设置 (如用户 `root`，空密码，连接到本地 MySQL)
+          来配置数据库。如果默认设置失败或您需要创建新的数据库和用户，脚本会提供清晰的指引，并可能生成 SQL 命令供您在 MySQL
+          中执行。目标是让您以最少的输入完成数据库设置。
+        * **JWT 密钥**: 脚本将自动为您生成一个安全的 `JWT_SECRET`，无需手动输入。
+        * **API 密钥 (可选)**: 对于 AI 助手 (DeepSeek) 和文本翻译 (腾讯翻译) 等需要外部 API
+          的功能，脚本会告知您这些是可选配置。在新手模式下，您可以选择跳过这些配置。相关功能在未配置密钥时将不可用，您后续可以随时通过编辑
+          `.env` 文件或重新运行此脚本（选择“自定义模式”）来添加它们。
+    2. **自定义模式**: 此模式允许您手动输入或确认每一个配置项，适合有经验的开发者或需要特定配置的场景。
+    3. **默认配置模式**: 如果项目预设了加密的默认值（通常用于特定部署场景），此模式会尝试加载这些值。
+
+* 无论选择哪种模式，脚本最终都会帮助您创建或更新项目根目录下的 `.env` 文件，其中包含了所有的环境变量。
 * 请按照脚本的提示完成所有步骤。
 
 > **手动配置 (如果不想使用安装向导)**:
 > 如果您不想使用 `npm run setup` 脚本，也可以手动配置：
-> 1. 复制项目根目录下的 `.env.example` 文件为 `.env` (`cp .env.example .env`)。
-> 2. **仔细阅读并编辑** `.env` 文件中的所有配置项，特别是 `DATABASE_URL`, `SHADOW_DATABASE_URL` 和 `JWT_SECRET`。
+> 1. 复制项目根目录下的 `.env.example` 文件为 `.env` (例如，在命令行中运行 `cp .env.example .env`)。
+> 2. **仔细阅读并编辑** `.env` 文件中的所有配置项，特别是 `DATABASE_URL`, `SHADOW_DATABASE_URL` (如果您的 Prisma schema
+     中定义了影子数据库) 和 `JWT_SECRET`。
+     >
 
-* `DATABASE_URL` 和 `SHADOW_DATABASE_URL` 需要您预先在MySQL中创建好对应的数据库和用户。本 `README.md` 的数据库创建提示部分有SQL命令示例。
+* `DATABASE_URL` 需要您预先在MySQL中创建好对应的数据库和用户。您可以参考下面的“数据库创建提示”部分获取SQL命令示例。
 
->     JWT_SECRET必须是一个长且随机的安全字符串。您可以使用node -e "console.log(require('crypto').randomBytes(32).toString('hex'))" 生成。
+>     * `JWT_SECRET` 必须是一个长且随机的安全字符串。您可以使用 Node.js 命令
+
+        `node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"` 在终端中生成一个。
 > 3. **(可选) 配置 API 密钥**:
+     >
 
-* **DeepSeek AI 助手 API (`.env` 文件中)**:
->       DEEPSEEK_API_KEY="your_deepseek_api_key_here"
->
-* `DEEPSEEK_API_KEY`: 您的 DeepSeek API 密钥。
+* **DeepSeek AI 助手 API** (在 `.env` 文件中):
+  >         ```dotenv
 
->       要获取此密钥，您需要拥有一个 DeepSeek 账户并创建 API密钥。更多信息请访问 [DeepSeek Platform](https://platform.deepseek.com/)。
+>         DEEPSEEK_API_KEY="your_deepseek_api_key_here"
+>         ```
+>         要获取此密钥，您需要拥有一个 DeepSeek 账户并创建
+API密钥。更多信息请访问 [DeepSeek Platform](https://platform.deepseek.com/)。
+>     * **腾讯翻译 API** (在 `.env` 文件中):
 
->     腾讯翻译 API (.env 文件中，如果项目使用此功能，例如菜谱翻译):
->       TENCENT_SECRET_ID="your_tencent_cloud_secret_id"
->       TENCENT_SECRET_KEY="your_tencent_cloud_secret_key"
->       TENCENT_TRANSLATE_REGION="ap-guangzhou"
->
->
-* `TENCENT_SECRET_ID`: 您的腾讯云 API SecretId。
+        >         ```dotenv
 
->       TENCENT_SECRET_KEY:您的腾讯云 API SecretKey。
->       TENCENT_TRANSLATE_REGION:您选择的腾讯云文本翻译服务地域 (例如ap-guangzhou, ap-singapore, ap-beijing等)。
->       要获取这些密钥，您需要拥有一个腾讯云账户，并开通“文本翻译 (TMT)”服务。更多信息及开通服务，请访问 [腾讯云文本翻译产品页](https://cloud.tencent.com/product/tmt)
+>         TENCENT_SECRET_ID="your_tencent_cloud_secret_id"
+>         TENCENT_SECRET_KEY="your_tencent_cloud_secret_key"
+>         TENCENT_TRANSLATE_REGION="ap-guangzhou" # 例如 ap-guangzhou, ap-singapore 等
+>         ```
+
+        >         要获取这些密钥，您需要拥有一个腾讯云账户，并开通“文本翻译 (TMT)
+        ”服务。更多信息及开通服务，请访问 [腾讯云文本翻译产品页](https://cloud.tencent.com/product/tmt)。
+
 ---
 
 ### 3. 🗄️ 应用数据库迁移
@@ -110,7 +120,8 @@ Prisma Client 是一个类型安全的数据库查询构建器。虽然上一步
 ```bash
 npx prisma generate
 ```
-* *(此步骤确保您的应用代码可以正确地与数据库交互。)*
+
+* 此步骤确保您的应用代码可以正确地与数据库交互。
 
 ---
 
