@@ -1,73 +1,105 @@
 // composables/useTodos.js
 import {ref} from 'vue';
 
-// Helper function to process date fields from API response
 function processTodoDates(todo) {
-    return {
-        ...todo,
-        startDate: todo.startDate ? new Date(todo.startDate) : null,
-        endDate: todo.endDate ? new Date(todo.endDate) : null,
-        createdAt: new Date(todo.createdAt),
-        updatedAt: new Date(todo.updatedAt),
-    };
+    const processedTodo = {...todo};
+    if (todo.startDate) {
+        processedTodo.startDate = new Date(todo.startDate);
+    } else {
+        processedTodo.startDate = null;
+    }
+    if (todo.endDate) {
+        processedTodo.endDate = new Date(todo.endDate);
+    } else {
+        processedTodo.endDate = null;
+    }
+    processedTodo.createdAt = new Date(todo.createdAt);
+    processedTodo.updatedAt = new Date(todo.updatedAt);
+    return processedTodo;
 }
-
 export function useTodos() {
-    const todos = ref([]);
+    const todos = ref([]); // This will hold objects of type TodoItem (including title, image, etc.)
     const isLoading = ref(false);
     const error = ref(null);
-
     const fetchTodos = async () => {
         isLoading.value = true;
         error.value = null;
         try {
-            // Assuming $fetch is globally available (e.g., via Nuxt)
             const response = await $fetch('/api/todos', {method: 'GET'});
-            if (response.success && response.todos) {
+            if (response.success && Array.isArray(response.todos)) {
                 todos.value = response.todos.map(processTodoDates);
             } else {
-                throw new Error(response.error || '获取待办事项失败');
+                error.value = response.error || '获取待办事项失败';
             }
         } catch (e) {
-            error.value = e.message || '获取待办事项时发生未知错误';
+            console.error('[useTodos] fetchTodos Error:', e);
+            error.value = e.data?.error || e.message || '获取待办事项时发生未知错误';
         } finally {
             isLoading.value = false;
         }
     };
 
-    const addTodo = async (content, important = false, startDate = null, endDate = null) => {
-        if (!content || !content.trim()) {
-            error.value = "内容不能为空";
-            return null;
-        }
+    const addTodo = async (
+        title,          // string, required
+        content,        // string | null, optional
+        important = false, // boolean, defaults to false
+        startDate = null,  // Date | string | null, optional
+        endDate = null,    // Date | string | null, optional
+        image = null       // string | null, optional (Base64 or URL)
+    ) => {
         isLoading.value = true;
         error.value = null;
         try {
-            const body = {
-                content: content.trim(),
-                important
+            const bodyToApi = {
+                title: title,
+                important: important,
             };
+
+            if (content === null || (typeof content === 'string' && content.trim() === '')) {
+                bodyToApi.content = null;
+            } else if (typeof content === 'string') {
+                bodyToApi.content = content;
+            } else {
+                bodyToApi.content = null;
+            }
+
+            if (image === null || (typeof image === 'string' && image.trim() === '')) {
+                bodyToApi.image = null;
+            } else if (typeof image === 'string') {
+                bodyToApi.image = image;
+            } else {
+                bodyToApi.image = null;
+            }
+
             if (startDate) {
-                body.startDate = (startDate instanceof Date) ? startDate.toISOString() : startDate;
+                bodyToApi.startDate = (startDate instanceof Date) ? startDate.toISOString() : new Date(startDate).toISOString();
+            } else {
+                bodyToApi.startDate = null;
             }
             if (endDate) {
-                body.endDate = (endDate instanceof Date) ? endDate.toISOString() : endDate;
+                bodyToApi.endDate = (endDate instanceof Date) ? endDate.toISOString() : new Date(endDate).toISOString();
+            } else {
+                bodyToApi.endDate = null;
             }
+            console.log('[useTodos] Sending body to POST /api/todos:', bodyToApi);
 
             const response = await $fetch('/api/todos', {
                 method: 'POST',
-                body,
+                body: bodyToApi,
             });
 
             if (response.success && response.todo) {
                 const newTodo = processTodoDates(response.todo);
-                todos.value.unshift(newTodo); // Add to the beginning of the list
+                todos.value.unshift(newTodo);
                 return newTodo;
             } else {
-                throw new Error(response.error || '添加待办事项失败');
+                error.value = response.error || '添加待办事项失败';
+                console.error('[useTodos] addTodo failed response:', response);
+                return null;
             }
         } catch (e) {
-            error.value = e.message || '添加待办事项时发生未知错误';
+            console.error('[useTodos] addTodo Error:', e);
+            error.value = e.data?.error || e.message || '添加待办事项时发生未知错误';
             return null;
         } finally {
             isLoading.value = false;
@@ -78,29 +110,37 @@ export function useTodos() {
         isLoading.value = true;
         error.value = null;
         try {
+            // Clone updates to avoid mutating original object, especially if it's reactive
             const bodyToSend = {...updates};
 
-            // Consolidate date processing for updates
+            // Ensure date fields are ISO strings or null
             ['startDate', 'endDate'].forEach(dateKey => {
                 if (Object.prototype.hasOwnProperty.call(bodyToSend, dateKey)) {
-                    if (bodyToSend[dateKey]) {
-                        const dateVal = bodyToSend[dateKey];
-                        if (dateVal instanceof Date) {
-                            bodyToSend[dateKey] = dateVal.toISOString();
-                        } else if (typeof dateVal === 'string') {
-                            const parsedDate = new Date(dateVal);
-                            if (!isNaN(parsedDate.getTime())) {
-                                bodyToSend[dateKey] = parsedDate.toISOString();
-                            } else {
-                                bodyToSend[dateKey] = null;
-                            }
+                    const dateVal = bodyToSend[dateKey];
+                    if (dateVal === null) {
+                        bodyToSend[dateKey] = null;
+                    } else if (dateVal) { // If truthy (not null, not empty string etc.)
+                        const parsedDate = new Date(dateVal); // Handles Date objects and valid date strings
+                        if (!isNaN(parsedDate.getTime())) {
+                            bodyToSend[dateKey] = parsedDate.toISOString();
+                        } else {
+                            console.warn(`[useTodos] Invalid date string for ${dateKey} in update:`, dateVal);
+                            bodyToSend[dateKey] = undefined;
                         }
                     } else {
-                        bodyToSend[dateKey] = null; // Ensure falsy values become null for API
+                        bodyToSend[dateKey] = null;
                     }
                 }
             });
 
+            if (Object.prototype.hasOwnProperty.call(bodyToSend, 'content') && bodyToSend.content === '') {
+                bodyToSend.content = null;
+            }
+            if (Object.prototype.hasOwnProperty.call(bodyToSend, 'image') && bodyToSend.image === '') {
+                bodyToSend.image = null;
+            }
+
+            console.log(`[useTodos] Sending body to PUT /api/todos/${id}:`, bodyToSend);
 
             const response = await $fetch(`/api/todos/${id}`, {
                 method: 'PUT',
@@ -111,14 +151,17 @@ export function useTodos() {
                 const updatedItemFromServer = processTodoDates(response.todo);
                 const index = todos.value.findIndex(t => t.id === id);
                 if (index !== -1) {
-                    todos.value[index] = updatedItemFromServer; // Reactive update
+                    todos.value.splice(index, 1, updatedItemFromServer); // Ensures reactivity
                 }
                 return updatedItemFromServer;
             } else {
-                throw new Error(response.error || '更新待办事项失败');
+                error.value = response.error || '更新待办事项失败';
+                console.error('[useTodos] updateTodo failed response:', response);
+                return null;
             }
         } catch (e) {
-            error.value = e.message || '更新待办事项时发生未知错误';
+            console.error('[useTodos] updateTodo Error:', e);
+            error.value = e.data?.error || e.message || '更新待办事项时发生未知错误';
             return null;
         } finally {
             isLoading.value = false;
@@ -133,15 +176,15 @@ export function useTodos() {
                 method: 'DELETE',
             });
             if (response.success) {
-                // --- MODIFICATION START for deleteTodo ---
-                todos.value = todos.value.filter(t => t.id !== id); // Remove item locally
-                // --- MODIFICATION END for deleteTodo ---
+                todos.value = todos.value.filter(t => t.id !== id);
                 return true;
             } else {
-                throw new Error(response.error || '删除待办事项失败');
+                error.value = response.error || '删除待办事项失败';
+                return false;
             }
         } catch (e) {
-            error.value = e.message || '删除待办事项时发生未知错误';
+            console.error('[useTodos] deleteTodo Error:', e);
+            error.value = e.data?.error || e.message || '删除待办事项时发生未知错误';
             return false;
         } finally {
             isLoading.value = false;
@@ -153,6 +196,7 @@ export function useTodos() {
             error.value = "无效的待办事项";
             return null;
         }
+        // The 'updates' object should match the fields expected by the PUT API and Prisma schema
         return await updateTodo(todo.id, {completed: !todo.completed});
     };
 

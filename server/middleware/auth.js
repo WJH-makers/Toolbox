@@ -1,13 +1,12 @@
-import {defineEventHandler, createError, parseCookies} from 'h3';
+import {createError, defineEventHandler, parseCookies} from 'h3';
 import jwt from 'jsonwebtoken';
 import prisma from '~/server/utils/prisma.js';
 
 const JWT_SECRET = process.env.JWT_SECRET;
 const PROTECTED_API_ROOT_PREFIX = '/api';
-// 定义在 PROTECTED_API_ROOT_PREFIX 下，但应被视为公共访问的路径前缀
 const PUBLIC_API_SUB_PREFIXES = [
-    '/api/auth/',       // 例如：/api/auth/login, /api/auth/register
-    '/api/_nuxt_icon/', // 新增：将 nuxt-icon 模块使用的API路径设为公开
+    '/api/auth/',
+    '/api/_nuxt_icon/',
 ];
 
 export default defineEventHandler(async (event) => {
@@ -64,7 +63,7 @@ export default defineEventHandler(async (event) => {
                 clientMessage = error.message || clientMessage;
                 statusMsg = error.statusMessage || statusMsg;
             }
-            console.error(`Auth Middleware Error for ${rawPath}:`, clientMessage, error.name); // 记录错误名称以便诊断
+            console.error(`Auth Middleware Error for ${rawPath}:`, clientMessage, error.name);
             throw createError({statusCode, statusMessage: statusMsg, message: clientMessage});
         }
     }

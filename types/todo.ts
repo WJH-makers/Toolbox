@@ -1,10 +1,12 @@
 export interface TodoItem {
     id: string;
-    content: string;
+    title: string;
+    content?: string | null;
     completed: boolean;
     important: boolean;
-    startDate?: Date | string | null; // 修改：开始日期，可选
-    endDate?: Date | string | null;   // 修改：结束日期（替换原dueDate），可选
+    startDate?: Date | string | null;
+    endDate?: Date | string | null;
+    image?: string | null;
     createdAt: Date | string;
     updatedAt: Date | string;
     userId: string;

@@ -1,5 +1,3 @@
-// prisma/schema.prisma
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -7,7 +5,7 @@ generator client {
 datasource db {
   provider          = "mysql"
   url               = env("DATABASE_URL")
-  shadowDatabaseUrl = env("SHADOW_DATABASE_URL") // 根据你的设置
+  shadowDatabaseUrl = env("SHADOW_DATABASE_URL") // 根据您的设置
 }
 
 model User {
@@ -22,17 +20,60 @@ model User {
   healthMetrics   UserHealthMetric[]
   aiChatSessions  AiChatSession[]
   exchangeQueries UserExchangeQuery[]
+  wordProgress    UserWordProgress[]
 
   @@map("users")
 }
 
+model VocabularyWord {
+  id          String   @id @default(cuid())
+  english     String   @unique
+  chinese     String   @db.Text
+  phonetic_us String?
+  phonetic_uk String?
+  tags        Json?    @db.Json
+  source      String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  userProgress UserWordProgress[]
+
+  @@index([english])
+  @@index([source])
+  @@map("vocabulary_words")
+}
+
+model UserWordProgress {
+  id               String @id @default(cuid())
+  userId           String
+  vocabularyWordId String
+
+  isMemorized    Boolean   @default(false)
+  lastReviewedAt DateTime?
+  nextReviewAt   DateTime?
+  familiarity    Int?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user           User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  vocabularyWord VocabularyWord @relation(fields: [vocabularyWordId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, vocabularyWordId])
+  @@index([userId, isMemorized])
+  @@index([userId, nextReviewAt])
+  @@map("user_word_progress")
+}
+
 model Todo {
   id        String    @id @default(cuid())
-  content   String
+  title     String    @default("无标题待办")
+  content   String?   @db.Text
   completed Boolean   @default(false)
   important Boolean   @default(false)
   startDate DateTime?
   endDate   DateTime?
+  image     String?   @db.MediumText
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
   userId    String
@@ -41,7 +82,10 @@ model Todo {
   @@index([userId, createdAt])
   @@index([userId, startDate])
   @@index([userId, endDate])
+  @@index([userId, title]) // 为标题添加索引，如果经常按标题搜索的话
 }
+
+// ... (其他模型保持不变) ...
 
 model Recipe {
   id           String   @id @default(cuid())
@@ -145,11 +189,11 @@ model UserExchangeQuery {
 
 model Ai2048Experience {
   id     String @id @default(cuid())
-  gameId String @default(cuid()) // 标识一次AI独立完成的游戏过程
+  gameId String @default(cuid())
 
-  initialBoardStateJson String @db.Text // 新增：该经验片段/游戏开始时的棋盘状态 (JSON字符串)
-  finalBoardStateJson   String @db.Text // 重命名：游戏结束或片段结束时的棋盘状态 (JSON字符串)
-  moveSequenceJson      String @db.Text // AI采取的导致从初始状态到最终状态的完整移动序列 (JSON字符串数组)
+  initialBoardStateJson String @db.Text
+  finalBoardStateJson   String @db.Text
+  moveSequenceJson      String @db.Text
   scoreAchieved         Int
   highestTile           Int
   numberOfMoves         Int
