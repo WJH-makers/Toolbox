@@ -1,6 +1,4 @@
 import {defineEventHandler, createError, getQuery} from 'h3';
-// **不应** 在此文件中导入和使用 translateText 来翻译返回给客户端的初始数据
-
 export default defineEventHandler(async (event) => {
     const queryParams = getQuery(event);
     const mealId = queryParams.id || queryParams.i;

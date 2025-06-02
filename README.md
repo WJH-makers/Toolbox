@@ -8,7 +8,7 @@
 
 在开始之前，请确保您的开发环境中已安装以下软件：
 
-* **Node.js**: 建议使用 LTS 版本 (例如 `v18.x` 或更高版本)。您可以从 [Node.js官网](https://nodejs.org/) 下载。
+* **Node.js**: 建议使用 LTS 版本 (例如 `v20.x` 或更高版本)。您可以从 [Node.js官网](https://nodejs.org/) 下载。
 * **npm** (或 **yarn** / **pnpm**): 通常随 Node.js 一起安装。
 * **MySQL 服务器**: 项目使用 MySQL 数据库。
     * **重要**: 您需要自行安装并运行一个 MySQL 服务器实例。
@@ -29,7 +29,7 @@
 
 ```bash
 cd Desktop # 或者您想要存放项目的其他目录
-git clone [https://github.com/WJH-makers/Toolbox.git](https://github.com/WJH-makers/Toolbox.git) # 克隆代码库
+git clone https://github.com/WJH-makers/Toolbox.git # 克隆代码库
 cd Toolbox # 项目目录
 npm install
 ```
@@ -68,31 +68,23 @@ npm run setup
 > 2. **仔细阅读并编辑** `.env` 文件中的所有配置项，特别是 `DATABASE_URL`, `SHADOW_DATABASE_URL` (如果您的 Prisma schema
      中定义了影子数据库) 和 `JWT_SECRET`。
      >
-
 * `DATABASE_URL` 需要您预先在MySQL中创建好对应的数据库和用户。您可以参考下面的“数据库创建提示”部分获取SQL命令示例。
-
 >     * `JWT_SECRET` 必须是一个长且随机的安全字符串。您可以使用 Node.js 命令
-
         `node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"` 在终端中生成一个。
 > 3. **(可选) 配置 API 密钥**:
      >
-
 * **DeepSeek AI 助手 API** (在 `.env` 文件中):
-  >         ```dotenv
-
+  >         ```env
 >         DEEPSEEK_API_KEY="your_deepseek_api_key_here"
 >         ```
->         要获取此密钥，您需要拥有一个 DeepSeek 账户并创建
-API密钥。更多信息请访问 [DeepSeek Platform](https://platform.deepseek.com/)。
+  >         要获取此密钥，您需要拥有一个 DeepSeek 账户并创建
+  API密钥。更多信息请访问 [DeepSeek Platform](https://platform.deepseek.com/)。
 >     * **腾讯翻译 API** (在 `.env` 文件中):
-
-        >         ```dotenv
-
+        >         ```env
 >         TENCENT_SECRET_ID="your_tencent_cloud_secret_id"
 >         TENCENT_SECRET_KEY="your_tencent_cloud_secret_key"
 >         TENCENT_TRANSLATE_REGION="ap-guangzhou" # 例如 ap-guangzhou, ap-singapore 等
 >         ```
-
         >         要获取这些密钥，您需要拥有一个腾讯云账户，并开通“文本翻译 (TMT)
         ”服务。更多信息及开通服务，请访问 [腾讯云文本翻译产品页](https://cloud.tencent.com/product/tmt)。
 
@@ -135,5 +127,3 @@ npm run dev
 
 * 此命令会执行 `package.json` 文件中 `scripts` 字段里定义的名为 `dev` 的脚本。通常，这个脚本会编译代码、启动一个本地服务器（例如在
   `http://localhost:3000`），并提供热更新功能，让您在修改代码后能立即在浏览器中看到效果。
-
----

@@ -1,0 +1,608 @@
+[
+  {
+    "id": "length",
+    "name": "长度",
+    "units": [
+      {
+        "name": "米",
+        "symbol": "m",
+        "toBase": "val => val",
+        "fromBase": "val => val"
+      },
+      {
+        "name": "厘米",
+        "symbol": "cm",
+        "toBase": "val => val / 100",
+        "fromBase": "val => val * 100"
+      },
+      {
+        "name": "千米",
+        "symbol": "km",
+        "toBase": "val => val * 1000",
+        "fromBase": "val => val / 1000"
+      },
+      {
+        "name": "毫米",
+        "symbol": "mm",
+        "toBase": "val => val / 1000",
+        "fromBase": "val => val * 1000"
+      },
+      {
+        "name": "英寸",
+        "symbol": "in",
+        "toBase": "val => val * 0.0254",
+        "fromBase": "val => val / 0.0254"
+      },
+      {
+        "name": "英尺",
+        "symbol": "ft",
+        "toBase": "val => val * 0.3048",
+        "fromBase": "val => val / 0.3048"
+      },
+      {
+        "name": "码",
+        "symbol": "yd",
+        "toBase": "val => val * 0.9144",
+        "fromBase": "val => val / 0.9144"
+      },
+      {
+        "name": "英里",
+        "symbol": "mi",
+        "toBase": "val => val * 1609.34",
+        "fromBase": "val => val / 1609.34"
+      }
+    ]
+  },
+  {
+    "id": "weight",
+    "name": "重量/质量",
+    "units": [
+      {
+        "name": "千克",
+        "symbol": "kg",
+        "toBase": "val => val",
+        "fromBase": "val => val"
+      },
+      {
+        "name": "克",
+        "symbol": "g",
+        "toBase": "val => val / 1000",
+        "fromBase": "val => val * 1000"
+      },
+      {
+        "name": "毫克",
+        "symbol": "mg",
+        "toBase": "val => val / 1000000",
+        "fromBase": "val => val * 1000000"
+      },
+      {
+        "name": "吨 (公制)",
+        "symbol": "t",
+        "toBase": "val => val * 1000",
+        "fromBase": "val => val / 1000"
+      },
+      {
+        "name": "磅",
+        "symbol": "lb",
+        "toBase": "val => val * 0.45359237",
+        "fromBase": "val => val / 0.45359237"
+      },
+      {
+        "name": "盎司",
+        "symbol": "oz",
+        "toBase": "val => val * 0.0283495231",
+        "fromBase": "val => val / 0.0283495231"
+      }
+    ]
+  },
+  {
+    "id": "temperature",
+    "name": "温度",
+    "units": [
+      {
+        "name": "摄氏度",
+        "symbol": "°C",
+        "toBase": "val => val",
+        "fromBase": "val => val"
+      },
+      {
+        "name": "华氏度",
+        "symbol": "°F",
+        "toBase": "val => (val - 32) * 5 / 9",
+        "fromBase": "val => (val * 9 / 5) + 32"
+      },
+      {
+        "name": "开尔文",
+        "symbol": "K",
+        "toBase": "val => val - 273.15",
+        "fromBase": "val => val + 273.15"
+      }
+    ]
+  },
+  {
+    "id": "area",
+    "name": "面积",
+    "units": [
+      {
+        "name": "平方米",
+        "symbol": "m²",
+        "toBase": "val => val",
+        "fromBase": "val => val"
+      },
+      {
+        "name": "平方厘米",
+        "symbol": "cm²",
+        "toBase": "val => val / 10000",
+        "fromBase": "val => val * 10000"
+      },
+      {
+        "name": "平方千米",
+        "symbol": "km²",
+        "toBase": "val => val * 1000000",
+        "fromBase": "val => val / 1000000"
+      },
+      {
+        "name": "公顷",
+        "symbol": "ha",
+        "toBase": "val => val * 10000",
+        "fromBase": "val => val / 10000"
+      },
+      {
+        "name": "英亩",
+        "symbol": "acre",
+        "toBase": "val => val * 4046.86",
+        "fromBase": "val => val / 4046.86"
+      }
+    ]
+  },
+  {
+    "id": "volume",
+    "name": "体积/容量",
+    "units": [
+      {
+        "name": "立方米",
+        "symbol": "m³",
+        "toBase": "val => val",
+        "fromBase": "val => val"
+      },
+      {
+        "name": "升",
+        "symbol": "L",
+        "toBase": "val => val / 1000",
+        "fromBase": "val => val * 1000"
+      },
+      {
+        "name": "毫升",
+        "symbol": "mL",
+        "toBase": "val => val / 1000000",
+        "fromBase": "val => val * 1000000"
+      },
+      {
+        "name": "立方厘米",
+        "symbol": "cm³",
+        "toBase": "val => val / 1000000",
+        "fromBase": "val => val * 1000000"
+      },
+      {
+        "name": "加仑(美制)",
+        "symbol": "gal (US)",
+        "toBase": "val => val * 0.00378541",
+        "fromBase": "val => val / 0.00378541"
+      },
+      {
+        "name": "加仑(英制)",
+        "symbol": "gal (UK)",
+        "toBase": "val => val * 0.00454609",
+        "fromBase": "val => val / 0.00454609"
+      }
+    ]
+  },
+  {
+    "id": "data",
+    "name": "数据存储",
+    "units": [
+      {
+        "name": "字节",
+        "symbol": "B",
+        "toBase": "val => val",
+        "fromBase": "val => val"
+      },
+      {
+        "name": "比特",
+        "symbol": "bit",
+        "toBase": "val => val / 8",
+        "fromBase": "val => val * 8"
+      },
+      {
+        "name": "千字节 (KiB)",
+        "symbol": "KiB",
+        "toBase": "val => val * 1024",
+        "fromBase": "val => val / 1024"
+      },
+      {
+        "name": "兆字节 (MiB)",
+        "symbol": "MiB",
+        "toBase": "val => val * Math.pow(1024, 2)",
+        "fromBase": "val => val / Math.pow(1024, 2)"
+      },
+      {
+        "name": "吉字节 (GiB)",
+        "symbol": "GiB",
+        "toBase": "val => val * Math.pow(1024, 3)",
+        "fromBase": "val => val / Math.pow(1024, 3)"
+      },
+      {
+        "name": "太字节 (TiB)",
+        "symbol": "TiB",
+        "toBase": "val => val * Math.pow(1024, 4)",
+        "fromBase": "val => val / Math.pow(1024, 4)"
+      },
+      {
+        "name": "KB (10³ B)",
+        "symbol": "KB",
+        "toBase": "val => val * 1000",
+        "fromBase": "val => val / 1000"
+      },
+      {
+        "name": "MB (10⁶ B)",
+        "symbol": "MB",
+        "toBase": "val => val * 1e6",
+        "fromBase": "val => val / 1e6"
+      },
+      {
+        "name": "GB (10⁹ B)",
+        "symbol": "GB",
+        "toBase": "val => val * 1e9",
+        "fromBase": "val => val / 1e9"
+      },
+      {
+        "name": "TB (10¹² B)",
+        "symbol": "TB",
+        "toBase": "val => val * 1e12",
+        "fromBase": "val => val / 1e12"
+      }
+    ]
+  },
+  {
+    "id": "time",
+    "name": "时间",
+    "units": [
+      {
+        "name": "秒",
+        "symbol": "s",
+        "toBase": "val => val",
+        "fromBase": "val => val"
+      },
+      {
+        "name": "毫秒",
+        "symbol": "ms",
+        "toBase": "val => val / 1000",
+        "fromBase": "val => val * 1000"
+      },
+      {
+        "name": "分钟",
+        "symbol": "min",
+        "toBase": "val => val * 60",
+        "fromBase": "val => val / 60"
+      },
+      {
+        "name": "小时",
+        "symbol": "hr",
+        "toBase": "val => val * 3600",
+        "fromBase": "val => val / 3600"
+      },
+      {
+        "name": "天",
+        "symbol": "day",
+        "toBase": "val => val * 86400",
+        "fromBase": "val => val / 86400"
+      },
+      {
+        "name": "周",
+        "symbol": "week",
+        "toBase": "val => val * 604800",
+        "fromBase": "val => val / 604800"
+      },
+      {
+        "name": "年 (平均)",
+        "symbol": "year",
+        "toBase": "val => val * 31557600",
+        "fromBase": "val => val / 31557600"
+      }
+    ]
+  },
+  {
+    "id": "speed",
+    "name": "速度",
+    "units": [
+      {
+        "name": "米/秒",
+        "symbol": "m/s",
+        "toBase": "val => val",
+        "fromBase": "val => val"
+      },
+      {
+        "name": "千米/时",
+        "symbol": "km/h",
+        "toBase": "val => val / 3.6",
+        "fromBase": "val => val * 3.6"
+      },
+      {
+        "name": "英里/时",
+        "symbol": "mph",
+        "toBase": "val => val * 0.44704",
+        "fromBase": "val => val / 0.44704"
+      },
+      {
+        "name": "节",
+        "symbol": "knot",
+        "toBase": "val => val * 0.514444",
+        "fromBase": "val => val / 0.514444"
+      }
+    ]
+  },
+  {
+    "id": "pressure",
+    "name": "压力",
+    "units": [
+      {
+        "name": "帕斯卡",
+        "symbol": "Pa",
+        "toBase": "val => val",
+        "fromBase": "val => val"
+      },
+      {
+        "name": "千帕",
+        "symbol": "kPa",
+        "toBase": "val => val * 1000",
+        "fromBase": "val => val / 1000"
+      },
+      {
+        "name": "巴",
+        "symbol": "bar",
+        "toBase": "val => val * 100000",
+        "fromBase": "val => val / 100000"
+      },
+      {
+        "name": "标准大气压",
+        "symbol": "atm",
+        "toBase": "val => val * 101325",
+        "fromBase": "val => val / 101325"
+      },
+      {
+        "name": "磅/平方英寸",
+        "symbol": "psi",
+        "toBase": "val => val * 6894.76",
+        "fromBase": "val => val / 6894.76"
+      },
+      {
+        "name": "毫米汞柱",
+        "symbol": "mmHg",
+        "toBase": "val => val * 133.322",
+        "fromBase": "val => val / 133.322"
+      }
+    ]
+  },
+  {
+    "id": "angle",
+    "name": "角度",
+    "units": [
+      {
+        "name": "度",
+        "symbol": "°",
+        "toBase": "val => val",
+        "fromBase": "val => val"
+      },
+      {
+        "name": "弧度",
+        "symbol": "rad",
+        "toBase": "val => val * (180 / Math.PI)",
+        "fromBase": "val => val * (Math.PI / 180)"
+      },
+      {
+        "name": "百分度",
+        "symbol": "grad",
+        "toBase": "val => val * 0.9",
+        "fromBase": "val => val / 0.9"
+      }
+    ]
+  },
+  {
+    "id": "energy",
+    "name": "能量/热量",
+    "units": [
+      {
+        "name": "焦耳",
+        "symbol": "J",
+        "toBase": "val => val",
+        "fromBase": "val => val"
+      },
+      {
+        "name": "千焦",
+        "symbol": "kJ",
+        "toBase": "val => val * 1000",
+        "fromBase": "val => val / 1000"
+      },
+      {
+        "name": "卡路里(食物)",
+        "symbol": "kcal (Cal)",
+        "toBase": "val => val * 4184",
+        "fromBase": "val => val / 4184"
+      },
+      {
+        "name": "千瓦时",
+        "symbol": "kWh",
+        "toBase": "val => val * 3600000",
+        "fromBase": "val => val / 3600000"
+      }
+    ]
+  },
+  {
+    "id": "power",
+    "name": "功率",
+    "units": [
+      {
+        "name": "瓦特",
+        "symbol": "W",
+        "toBase": "val => val",
+        "fromBase": "val => val"
+      },
+      {
+        "name": "千瓦",
+        "symbol": "kW",
+        "toBase": "val => val * 1000",
+        "fromBase": "val => val / 1000"
+      },
+      {
+        "name": "英制马力",
+        "symbol": "hp",
+        "toBase": "val => val * 745.7",
+        "fromBase": "val => val / 745.7"
+      }
+    ]
+  },
+  {
+    "id": "current",
+    "name": "电流",
+    "units": [
+      {
+        "name": "安培",
+        "symbol": "A",
+        "toBase": "val => val",
+        "fromBase": "val => val"
+      },
+      {
+        "name": "毫安",
+        "symbol": "mA",
+        "toBase": "val => val / 1000",
+        "fromBase": "val => val * 1000"
+      }
+    ]
+  },
+  {
+    "id": "voltage",
+    "name": "电压",
+    "units": [
+      {
+        "name": "伏特",
+        "symbol": "V",
+        "toBase": "val => val",
+        "fromBase": "val => val"
+      },
+      {
+        "name": "毫伏",
+        "symbol": "mV",
+        "toBase": "val => val / 1000",
+        "fromBase": "val => val * 1000"
+      },
+      {
+        "name": "千伏",
+        "symbol": "kV",
+        "toBase": "val => val * 1000",
+        "fromBase": "val => val / 1000"
+      }
+    ]
+  },
+  {
+    "id": "resistance",
+    "name": "电阻",
+    "units": [
+      {
+        "name": "欧姆",
+        "symbol": "Ω",
+        "toBase": "val => val",
+        "fromBase": "val => val"
+      },
+      {
+        "name": "千欧",
+        "symbol": "kΩ",
+        "toBase": "val => val * 1000",
+        "fromBase": "val => val / 1000"
+      },
+      {
+        "name": "兆欧",
+        "symbol": "MΩ",
+        "toBase": "val => val * 1000000",
+        "fromBase": "val => val / 1000000"
+      }
+    ]
+  },
+  {
+    "id": "frequency",
+    "name": "频率",
+    "units": [
+      {
+        "name": "赫兹",
+        "symbol": "Hz",
+        "toBase": "val => val",
+        "fromBase": "val => val"
+      },
+      {
+        "name": "千赫",
+        "symbol": "kHz",
+        "toBase": "val => val * 1000",
+        "fromBase": "val => val / 1000"
+      },
+      {
+        "name": "兆赫",
+        "symbol": "MHz",
+        "toBase": "val => val * 1000000",
+        "fromBase": "val => val / 1000000"
+      },
+      {
+        "name": "吉赫",
+        "symbol": "GHz",
+        "toBase": "val => val * 1000000000",
+        "fromBase": "val => val / 1000000000"
+      }
+    ]
+  },
+  {
+    "id": "force",
+    "name": "力",
+    "units": [
+      {
+        "name": "牛顿",
+        "symbol": "N",
+        "toBase": "val => val",
+        "fromBase": "val => val"
+      },
+      {
+        "name": "千克力",
+        "symbol": "kgf",
+        "toBase": "val => val * 9.80665",
+        "fromBase": "val => val / 9.80665"
+      },
+      {
+        "name": "磅力",
+        "symbol": "lbf",
+        "toBase": "val => val * 4.44822",
+        "fromBase": "val => val / 4.44822"
+      }
+    ]
+  },
+  {
+    "id": "density",
+    "name": "密度",
+    "units": [
+      {
+        "name": "千克/立方米",
+        "symbol": "kg/m³",
+        "toBase": "val => val",
+        "fromBase": "val => val"
+      },
+      {
+        "name": "克/立方厘米",
+        "symbol": "g/cm³",
+        "toBase": "val => val * 1000",
+        "fromBase": "val => val / 1000"
+      },
+      {
+        "name": "磅/立方英尺",
+        "symbol": "lb/ft³",
+        "toBase": "val => val * 16.0185",
+        "fromBase": "val => val / 16.0185"
+      }
+    ]
+  }
+]
