@@ -9,12 +9,21 @@ datasource db {
 }
 
 model User {
-  id              String              @id @default(cuid())
-  email           String              @unique
-  username        String              @unique
-  password        String
-  createdAt       DateTime            @default(now())
-  updatedAt       DateTime            @updatedAt
+  id        String   @id @default(cuid())
+  email     String   @unique
+  username  String   @unique
+  password  String // 存储哈希后的密码
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // 新增用于登录追踪和账户锁定的字段
+  failedLoginAttempts Int?      @default(0) // 登录失败尝试次数
+  lastFailedLoginAt   DateTime? // 上次登录失败的时间
+  isLocked            Boolean?  @default(false) // 账户是否被锁定
+  lockoutExpiresAt    DateTime? // 账户锁定过期时间
+  lastLoginAt         DateTime? // 用户最后成功登录的时间
+
+  // 现有关系字段
   Todo            Todo[]
   Recipe          Recipe[]
   healthMetrics   UserHealthMetric[]
@@ -51,7 +60,7 @@ model UserWordProgress {
   isMemorized    Boolean   @default(false)
   lastReviewedAt DateTime?
   nextReviewAt   DateTime?
-  familiarity    Int?
+  familiarity    Int? // 例如 0-5 的熟悉度等级
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -73,35 +82,33 @@ model Todo {
   important Boolean   @default(false)
   startDate DateTime?
   endDate   DateTime?
-  image     String?   @db.MediumText
+  image     String?   @db.MediumText // 如果存储 base64 图片，考虑其大小限制
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
   userId    String
   user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId, createdAt])
-  @@index([userId, startDate])
-  @@index([userId, endDate])
-  @@index([userId, title]) // 为标题添加索引，如果经常按标题搜索的话
+  @@index([userId, completed, endDate]) // 常用查询组合
+  @@index([userId, important, createdAt])
+  @@map("todos") // 保持小写加下划线或根据你的习惯
 }
-
-// ... (其他模型保持不变) ...
 
 model Recipe {
   id           String   @id @default(cuid())
   name         String
-  ingredients  String   @db.Text
+  ingredients  String   @db.Text // 可以考虑 Json 类型如果结构复杂
   instructions String   @db.Text
   category     String?
-  prepTime     String?
-  cookTime     String?
+  prepTime     String? // 例如 "30 分钟"
+  cookTime     String? // 例如 "1 小时"
   isFavorite   Boolean  @default(false)
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
   userId       String
   user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  @@index([userId, createdAt])
+  @@index([userId, category])
   @@index([userId, isFavorite])
   @@map("recipes")
 }
@@ -110,20 +117,20 @@ model UserHealthMetric {
   id                 String   @id @default(cuid())
   userId             String
   user               User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  recordedAt         DateTime @default(now())
-  heightCm           Float?
-  weightKg           Float?
-  ageAtRecording     Int?
-  gender             String?
-  activityLevel      String?
-  neckCm             Float?
-  waistCm            Float?
-  hipCm              Float?
-  bmi                Float?
-  bmr                Float?
-  tdee               Float?
-  bodyFatPercent     Float?
-  recommendedWaterMl Float?
+  recordedAt         DateTime @default(now()) // 记录的具体时间
+  heightCm           Float? // 身高 (厘米)
+  weightKg           Float? // 体重 (公斤)
+  ageAtRecording     Int? // 记录时的年龄
+  gender             String? // 例如 "male", "female", "other"
+  activityLevel      String? // 例如 "sedentary", "light", "moderate", "active", "very_active"
+  neckCm             Float? // 颈围 (厘米) - 用于某些体脂计算
+  waistCm            Float? // 腰围 (厘米)
+  hipCm              Float? // 臀围 (厘米)
+  bmi                Float? // Body Mass Index
+  bmr                Float? // Basal Metabolic Rate (基础代谢率)
+  tdee               Float? // Total Daily Energy Expenditure (每日总能量消耗)
+  bodyFatPercent     Float? // 体脂率 (%)
+  recommendedWaterMl Float? // 每日推荐饮水量 (毫升)
   notes              String?  @db.Text
   createdAt          DateTime @default(now())
   updatedAt          DateTime @updatedAt
@@ -136,18 +143,18 @@ model AiChatSession {
   id        String          @id @default(cuid())
   userId    String
   user      User            @relation(fields: [userId], references: [id], onDelete: Cascade)
-  title     String?
+  title     String?         @default("新的聊天")
   createdAt DateTime        @default(now())
   updatedAt DateTime        @updatedAt
   messages  AiChatMessage[]
 
-  @@index([userId, updatedAt])
+  @@index([userId, updatedAt(sort: Desc)]) // 按更新时间降序索引
   @@map("ai_chat_sessions")
 }
 
 model AiChatMessage {
   id        String        @id @default(cuid())
-  role      String
+  role      String // "user" 或 "assistant" (或 "system")
   content   String        @db.Text
   createdAt DateTime      @default(now())
   sessionId String
@@ -159,15 +166,16 @@ model AiChatMessage {
 
 model ExchangeRate {
   id             String   @id @default(cuid())
-  baseCurrency   String
-  targetCurrency String
-  rate           Float
-  name           String?
-  updatedAt      DateTime
-  source         String?
+  baseCurrency   String // 基础货币代码, e.g., "USD"
+  targetCurrency String // 目标货币代码, e.g., "CNY"
+  rate           Float // 汇率：1 baseCurrency = rate targetCurrency
+  name           String? // 可选的货币对名称, e.g., "美元/人民币"
+  updatedAt      DateTime // 汇率数据的最后更新时间
+  source         String? // 数据来源, e.g., "OpenExchangeRates"
 
   @@unique([baseCurrency, targetCurrency])
   @@index([baseCurrency])
+  @@index([targetCurrency]) // 如果也经常按目标货币查询
   @@index([updatedAt])
   @@map("exchange_rates")
 }
@@ -178,30 +186,29 @@ model UserExchangeQuery {
   user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   fromCurrency String
   toCurrency   String
-  amount       Float
-  result       Float
-  rate         Float
+  amount       Float // 原始金额
+  result       Float // 换算结果金额
+  rate         Float // 当时使用的汇率
   queriedAt    DateTime @default(now())
 
-  @@index([userId, queriedAt])
+  @@index([userId, queriedAt(sort: Desc)])
   @@map("user_exchange_queries")
 }
 
 model Ai2048Experience {
   id     String @id @default(cuid())
-  gameId String @default(cuid())
+  gameId String @unique @default(cuid()) // 确保 gameId 唯一
 
-  initialBoardStateJson String @db.Text
+  initialBoardStateJson String @db.Text // 存储 JSON 序列化的棋盘状态
   finalBoardStateJson   String @db.Text
-  moveSequenceJson      String @db.Text
+  moveSequenceJson      String @db.Text // 存储 JSON 序列化的移动序列
   scoreAchieved         Int
   highestTile           Int
   numberOfMoves         Int
 
   createdAt DateTime @default(now())
-  notes     String?
+  notes     String?  @db.Text // 改为 Text 以支持更长备注
 
   @@index([scoreAchieved, highestTile, createdAt(sort: Desc)])
-  @@index([gameId])
   @@map("ai_global_2048_experiences")
 }
