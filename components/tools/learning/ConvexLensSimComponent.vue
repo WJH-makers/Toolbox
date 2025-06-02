@@ -7,14 +7,14 @@
         <label for="focal-length">透镜焦距 (f): {{ focalLength.toFixed(0) }} px</label>
         <input
             id="focal-length" v-model.number="focalLength" :max="canvasWidth * 0.45" class="slider" min="30" step="5"
-               type="range">
+            type="range">
       </div>
       <div class="form-item">
         <label for="lens-curvature">透镜曲率半径 (R): {{ lensCurvatureRadius.toFixed(0) }} px</label>
         <input
             id="lens-curvature" v-model.number="lensCurvatureRadius" :max="canvasWidth * 0.6" class="slider" min="30"
-               step="5"
-               type="range">
+            step="5"
+            type="range">
       </div>
       <div class="form-item">
         <label for="num-rays">光线条数: {{ numRays }}</label>
@@ -24,16 +24,16 @@
         <label for="lens-position-x">透镜位置 X: {{ lensPositionX.toFixed(0) }} px</label>
         <input
             id="lens-position-x" v-model.number="lensPositionX" :max="canvasWidth * 0.8" :min="canvasWidth * 0.2"
-               class="slider" step="10" type="range">
+            class="slider" step="10" type="range">
       </div>
       <div class="form-item">
         <label for="light-source-distance">光源距离画布左边缘: {{ lightSourceDistance.toFixed(0) }} px</label>
         <input
             id="light-source-distance" v-model.number="lightSourceDistance"
-            :max="lensPositionX - lensCurvatureRadius + (lensCurvatureRadius - Math.sqrt(lensCurvatureRadius**2 - LENS_SEMI_HEIGHT**2)) - 20"
+            :max="lensPositionX - Math.abs(lensCurvatureRadius - Math.sqrt(Math.max(0, lensCurvatureRadius**2 - LENS_SEMI_HEIGHT**2))) - 20"
             class="slider"
-               min="0"
-               step="5" type="range">
+            min="0"
+            step="5" type="range">
       </div>
       <button class="action-button reset-defaults-button" @click="resetSimulationDefaults">恢复默认设置</button>
     </div>
@@ -52,8 +52,8 @@
       </p>
     </div>
 
-    <div class="proof-section markdown-body">
-      <div v-html="renderMarkdown(proofMarkdownText)"/>
+    <div class="proof-section markdown-body" ref="proofSectionEl">
+      <div v-html="renderedMarkdownContent"/>
     </div>
 
   </div>
@@ -62,6 +62,7 @@
 <script setup>
 import {ref, onMounted, watch, nextTick, computed} from 'vue';
 import {marked} from 'marked';
+import {isKatexReady} from '~/plugins/katex.client'; // 导入 isKatexReady
 
 const canvasWidth = ref(700);
 const canvasHeight = ref(400);
@@ -76,7 +77,9 @@ const lightSourceDistance = ref(50);
 
 const LENS_HEIGHT_FACTOR = 0.7;
 const LENS_SEMI_HEIGHT = computed(() => canvasHeight.value * LENS_HEIGHT_FACTOR / 2);
-const LENS_EDGE_THICKNESS = ref(4); // 用于 R <= H 情况下的边缘厚度
+const LENS_EDGE_THICKNESS = ref(4);
+
+const proofSectionEl = ref(null); // Ref for the markdown container
 
 function drawLens() {
   if (!ctx) return;
@@ -89,38 +92,38 @@ function drawLens() {
   ctx.beginPath();
   ctx.strokeStyle = '#333';
   ctx.lineWidth = 2;
-  // ctx.fillStyle = 'rgba(173, 216, 230, 0.25)'; // 可选的透镜填充色
 
-  if (R > H) {
-    const sagitta = R - Math.sqrt(R * R - H * H);
+  // Ensure R*R - H*H is not negative before sqrt
+  const R_squared = R * R;
+  const H_squared = H * H;
+
+  if (R > H && R_squared >= H_squared) { // Check R > H and R^2 >= H^2 for Math.sqrt
+    const sagitta = R - Math.sqrt(R_squared - H_squared);
     const center_x_left_arc = x_lens_center - R + sagitta;
     const center_x_right_arc = x_lens_center + R - sagitta;
-    const angle = Math.asin(H / R);
+    const angle = Math.asin(H / R); // H/R <= 1 due to R > H
 
     ctx.arc(center_x_left_arc, y_lens_axis, R, -angle, angle, false);
-    ctx.arc(center_x_right_arc, y_lens_axis, R, Math.PI + angle, Math.PI - angle, false); // 调整方向以正确闭合
+    ctx.arc(center_x_right_arc, y_lens_axis, R, Math.PI + angle, Math.PI - angle, false);
     ctx.closePath();
-  } else {
-    // R <= H, 画一个简化的示意性凸透镜
+  } else { // Simplified lens for R <= H or invalid sqrt
     const fixedEdgeHalfThickness = LENS_EDGE_THICKNESS.value / 2;
-    const centralBulge = Math.min(H * 0.3, 20); // 中心凸出量，基于半高但有上限
+    const centralBulge = Math.min(H * 0.3, 20);
 
-    ctx.moveTo(x_lens_center - fixedEdgeHalfThickness, y_lens_axis - H); // 左上
+    ctx.moveTo(x_lens_center - fixedEdgeHalfThickness, y_lens_axis - H);
     ctx.quadraticCurveTo(
-        x_lens_center - fixedEdgeHalfThickness - centralBulge, y_lens_axis, // 左控制点
-        x_lens_center - fixedEdgeHalfThickness, y_lens_axis + H  // 左下
+        x_lens_center - fixedEdgeHalfThickness - centralBulge, y_lens_axis,
+        x_lens_center - fixedEdgeHalfThickness, y_lens_axis + H
     );
-    ctx.lineTo(x_lens_center + fixedEdgeHalfThickness, y_lens_axis + H); // 右下
+    ctx.lineTo(x_lens_center + fixedEdgeHalfThickness, y_lens_axis + H);
     ctx.quadraticCurveTo(
-        x_lens_center + fixedEdgeHalfThickness + centralBulge, y_lens_axis, // 右控制点
-        x_lens_center + fixedEdgeHalfThickness, y_lens_axis - H  // 右上
+        x_lens_center + fixedEdgeHalfThickness + centralBulge, y_lens_axis,
+        x_lens_center + fixedEdgeHalfThickness, y_lens_axis - H
     );
     ctx.closePath();
   }
-  // ctx.fill();
   ctx.stroke();
 
-  // 主光轴
   ctx.beginPath();
   ctx.moveTo(0, y_lens_axis);
   ctx.lineTo(canvasWidth.value, y_lens_axis);
@@ -129,7 +132,6 @@ function drawLens() {
   ctx.stroke();
   ctx.setLineDash([]);
 
-  // 焦点标记 F (两侧)
   ctx.fillStyle = 'red';
   ctx.font = '12px Arial';
   ctx.textAlign = 'center';
@@ -137,15 +139,15 @@ function drawLens() {
   let lensPhysicalEdgeLeft = x_lens_center;
   let lensPhysicalEdgeRight = x_lens_center;
 
-  if (R > H) {
-    const sagitta = R - Math.sqrt(R * R - H * H);
+  if (R > H && R_squared >= H_squared) {
+    const sagitta = R - Math.sqrt(R_squared - H_squared);
     lensPhysicalEdgeLeft = x_lens_center - sagitta;
     lensPhysicalEdgeRight = x_lens_center + sagitta;
   } else {
     const fixedEdgeHalfThickness = LENS_EDGE_THICKNESS.value / 2;
     const centralBulge = Math.min(H * 0.3, 20);
-    lensPhysicalEdgeLeft = x_lens_center - fixedEdgeHalfThickness - centralBulge * 0.5; // 近似值
-    lensPhysicalEdgeRight = x_lens_center + fixedEdgeHalfThickness + centralBulge * 0.5; // 近似值
+    lensPhysicalEdgeLeft = x_lens_center - fixedEdgeHalfThickness - centralBulge * 0.5;
+    lensPhysicalEdgeRight = x_lens_center + fixedEdgeHalfThickness + centralBulge * 0.5;
   }
 
   const focusPointRightX = lensPositionX.value + focalLength.value;
@@ -192,21 +194,21 @@ function drawRays() {
     if (focalLength.value > 0) {
       ctx.lineTo(F_x, lensY);
       if (F_x < canvasWidth.value && F_x > lensPositionX.value) {
-        const slope = (lensY - incidentRayY) / (F_x - lensPositionX.value);
-        if (Math.abs(incidentRayY - lensY) < 1e-3) {
-          ctx.lineTo(canvasWidth.value, lensY);
-        } else if (isFinite(slope) && Math.abs(slope) > 1e-6) {
-          const extendedX = canvasWidth.value;
-          const extendedY = lensY + slope * (extendedX - F_x);
-          ctx.lineTo(extendedX, extendedY);
-        } else if (Math.abs(slope) < 1e-6 && incidentRayY !== lensY) {
-          ctx.lineTo(canvasWidth.value, incidentRayY);
+        const deltaX = F_x - lensPositionX.value;
+        if (Math.abs(deltaX) < 1e-6) { // Avoid division by zero if lensPositionX is at F_x (unlikely for f > 0)
+          ctx.lineTo(canvasWidth.value, incidentRayY); // Ray continues parallel if somehow deltaX is 0
+        } else {
+          const slope = (lensY - incidentRayY) / deltaX;
+          if (Math.abs(incidentRayY - lensY) < 1e-3) { // Ray along the optical axis
+            ctx.lineTo(canvasWidth.value, lensY);
+          } else if (isFinite(slope)) { // Check if slope is finite
+            const extendedX = canvasWidth.value;
+            const extendedY = lensY + slope * (extendedX - F_x);
+            ctx.lineTo(extendedX, extendedY);
+          }
         }
       }
-      // 在一个beginPath/stroke中连续画线，不需要moveTo回到折射点
-      // 如果需要为每条光线独立路径（例如不同颜色），则需要
-      // ctx.moveTo(lensPositionX.value, incidentRayY);
-    } else {
+    } else { // focalLength is zero or negative
       ctx.lineTo(canvasWidth.value, incidentRayY);
     }
   }
@@ -228,94 +230,171 @@ function resetSimulationDefaults() {
   lightSourceDistance.value = 50;
 }
 
-onMounted(() => {
+const proofMarkdownText = ref(`
+### 附录：特定理想透镜设计中离心率与折射率的关系
+
+在光学设计中，为实现完美成像或消除像差（如球差、彗差），常采用非球面设计。此时，透镜表面的几何特性（如离心率 $e$）与材料折射率会产生特定联系。
+
+**核心结论：“离心率等于折射率”**，例如 $\\mathbf{e} = \\mathbf{n}$ (请修正为 $\\mathbf{e} = \\mathbf{n}$ -> $\mathbf{e} = \mathbf{n}$)，这通常指平行光经单个折射面后完美汇聚，或点光源的光形成平行光。这类表面称为**笛卡尔卵形面 (Cartesian Oval)**，椭圆和双曲面是其特例。
+
+#### 详细推导思路：平行光经双曲面折射聚焦
+
+假设一个双曲面，左侧为介质1 (折射率 $n_1$)，右侧为介质2 (折射率 $n_2$)。平行于主轴的光线从介质1入射，经折射后完美汇聚于介质2中双曲线的右焦点 $F_2$。目标是找出双曲线离心率 $e$ 与 $n_1, n_2$ 的关系。
+
+**1. 坐标与参数设定：**
+   * 双曲线中心：原点 $(0,0)$。
+   * 右焦点 $F_2$：$(c, 0)$，$c$ 为中心到焦点距离。
+   * 顶点：$(b, 0)$，$b$ 为实半轴长。
+   * 离心率：$e = c/b$ (双曲线 $e > 1$)。
+   * 左准线 $D$：$x = b/e$。
+   * **焦准定义**：对双曲线上任意点 $Q(x,y)$，其到焦点 $F_2$ 的距离 $r_2 = QF_2$ 与其到准线 $D$ 的距离 $d(Q,D)$ 之比等于离心率 $e$。
+     即：$r_2 = e \\cdot d(Q,D)$。
+     对于右支双曲线 ($x \\ge b$)，$d(Q,D) = x - b/e$。
+     因此，$r_2 = e(x - b/e) = ex - b$。
+
+**2. 应用费马原理（等光程条件）：**
+   平行光的波前可视为垂直于主轴的平面。为使所有光线光程相等，从波前（例如，取在准线 $D$ 处，$x = b/e$）到折射点 $Q$，再到焦点 $F_2$ 的光程 (OPL) 必须为常数：
+   $$OPL = n_1 \\cdot d(Q,D) + n_2 \\cdot r_2 = \\text{常数}$$
+
+**3. 确切的光学条件与结论：**
+   对于平行于轴的光线在介质 $n_1$ 中，经双曲面折射后汇聚于介质 $n_2$ 中的一个焦点，该双曲面的离心率 $e$ 必须满足以下条件才能实现完美聚焦（即消球差）：
+   $$e = \\frac{n_2}{n_1}$$
+
+**4. 简化与特定结论：**
+   若光线从空气入射到透镜材料中：
+   * 入射介质折射率 $n_1 \\approx 1$ (空气)。
+   * 透镜材料折射率 $n_2 = n$。
+   则关系简化为：
+   $$e = \\frac{n}{1} \\quad \\Rightarrow \\quad \\mathbf{e} = \\mathbf{n}$$
+   (请修正为 $\\mathbf{e} = \\mathbf{n}$ -> $\mathbf{e} = \mathbf{n}$)
+   这意味着，平行光（在空气中）通过一个双曲折射面后，要在折射率为 $n$ 的介质中完美聚焦，该双曲面的离心率 $e$ 必须等于介质的折射率 $n$。
+
+#### 关于椭圆面的情况（补充说明）
+类似地，若平行光从折射率 $n_1$ 的介质入射，通过一个**椭圆折射面**在折射率 $n_2$ 的介质内部的远焦点处完美汇聚，则椭圆离心率 $e$ 必须满足： $$e = \\frac{n_1}{n_2}$$
+
+所以，若光从空气 ($n_1 \\approx 1$) 入射到折射率为 $n$ 的椭圆透镜 ($n_2=n$)，并聚焦在其内部远焦点，则 $e = 1/n$ (或 $n = 1/e$)。这与双曲面的场景 ($\\mathbf{e}=\\mathbf{n}$) (请修正为 $\\mathbf{e}=\\mathbf{n}$) 是不同的。
+
+## 结论与意义
+### 离心率等于折射率之比是设计消球差非球面透镜的一个重要结论。
+#### **请注意**：此为简化解释，实际光学设计更复杂。
+`);
+
+const renderedMarkdownContent = ref('');
+
+// 封装 KaTeX 渲染逻辑
+async function renderLatexContent() {
+  await nextTick(); // 确保 v-html 已经更新了 DOM
+  console.log("[Component DEBUG] Attempting to render LaTeX content.");
+
+  const targetElement = proofSectionEl.value;
+  // @ts-ignore
+  if (targetElement && typeof window.renderMathInElement === 'function') {
+    console.log("[Component DEBUG] Target element and renderMathInElement found. Rendering KaTeX...");
+    try {
+      // @ts-ignore
+      window.renderMathInElement(targetElement, {
+        delimiters: [
+          {left: "$$", right: "$$", display: true},
+          {left: "$", right: "$", display: false},
+          {left: "\\(", right: "\\)", display: false},
+          {left: "\\[", right: "\\]", display: true}
+        ],
+        throwOnError: false,
+        // trust: true, // 如果遇到信任问题可以尝试，但通常不需要
+      });
+      console.log("[Component DEBUG] KaTeX renderMathInElement call completed.");
+    } catch (error) {
+      console.error("[Component ERROR] Error calling KaTeX renderMathInElement:", error);
+    }
+  } else {
+    if (!targetElement) {
+      console.warn("[Component WARN] KaTeX target element (proofSectionEl) not found in DOM.");
+    }
+    // @ts-ignore
+    if (typeof window.renderMathInElement !== 'function') {
+      console.warn("[Component WARN] window.renderMathInElement is not defined when trying to render.");
+      // @ts-ignore
+      console.log(`[Component DEBUG] Is window.katex defined? ${typeof window.katex !== 'undefined'}`);
+    }
+  }
+}
+
+async function updateRenderedMarkdown() {
+  console.log("[Component DEBUG] updateRenderedMarkdown called.");
+  try {
+    // **重要：确保 proofMarkdownText 中的 LaTeX 语法是标准的**
+    // 例如，将 `\\mathbf{e}` 修正为 `\mathbf{e}` (如果是在 JS 字符串中，则 `\\mathbf{e}` 会变成 `\mathbf{e}`)
+    // 在模板字符串 ref(`...`) 中，通常直接写 `$\mathbf{e}$` 即可。
+    let correctedMarkdown = proofMarkdownText.value;
+    // 示例性修正，您可能需要根据实际情况调整或确保源文本正确
+    correctedMarkdown = correctedMarkdown.replace(/\\\\mathbf/g, '\\mathbf');
+
+
+    renderedMarkdownContent.value = marked.parse(correctedMarkdown || '', {
+      breaks: true, gfm: true, async: false
+    });
+    console.log("[Component DEBUG] Markdown parsed successfully.");
+
+    if (isKatexReady.value) { // 检查 KaTeX 是否已由插件加载完毕
+      await renderLatexContent();
+    } else {
+      console.log("[Component DEBUG] KaTeX not ready yet via isKatexReady ref, LaTeX rendering deferred.");
+    }
+  } catch (e) {
+    console.error('[Component ERROR] Markdown parsing error:', e);
+    const esc = (str) => str?.replace(/&/g, "&amp;")?.replace(/</g, "&lt;")?.replace(/>/g, "&gt;") || '';
+    renderedMarkdownContent.value = `<p style="color: red;">Markdown 内容渲染出错: ${esc(e.message)}</p><pre>${esc(proofMarkdownText.value)}</pre>`;
+  }
+}
+
+onMounted(async () => {
+  console.log("[Component DEBUG] Component onMounted hook called.");
   if (opticsCanvas.value) {
     ctx = opticsCanvas.value.getContext('2d');
-  }
-  nextTick(() => {
-    if (ctx) drawScene(); // 初始绘制
-    if (typeof window.MathJax !== 'undefined' && window.MathJax.typesetPromise) {
-      window.MathJax.typesetPromise().catch((err) => console.error('MathJax typesetPromise failed:', err));
-    } else if (typeof window.MathJax !== 'undefined' && window.MathJax.startup && window.MathJax.startup.promise) {
-      window.MathJax.startup.promise.then(() => {
-        window.MathJax.typesetPromise().catch((err) => console.error('MathJax typesetPromise after startup failed:', err));
-      });
+    console.log("[Component DEBUG] Optics canvas context obtained.");
+  } else {
+    await nextTick(); // 尝试等待 canvas ref 准备好
+    if (opticsCanvas.value) {
+      ctx = opticsCanvas.value.getContext('2d');
+      console.log("[Component DEBUG] Optics canvas context obtained after nextTick.");
+    } else {
+      console.warn("[Component WARN] Optics canvas element NOT found even after nextTick onMount.");
     }
-  });
+  }
+
+  // 初始 Markdown 渲染
+  // updateRenderedMarkdown 内部会检查 isKatexReady
+  await updateRenderedMarkdown();
+
+  // 如果 KaTeX 在 onMounted 时还未就绪 (例如插件加载较慢)，通过 watcher 等待它就绪
+  if (!isKatexReady.value) {
+    console.log("[Component DEBUG] KaTeX not ready on mount (isKatexReady is false), setting up watcher.");
+    const unwatchKatex = watch(isKatexReady, async (ready) => {
+      if (ready) {
+        console.log("[Component DEBUG] KaTeX became ready via watcher (isKatexReady is true). Triggering LaTeX render.");
+        // 此时 renderedMarkdownContent 可能已经包含了解析后的 HTML
+        // 我们需要确保 KaTeX 在这些内容上运行
+        await renderLatexContent();
+        unwatchKatex(); // 成功渲染后停止观察
+      } else {
+        console.log("[Component DEBUG] isKatexReady watcher triggered, but value is false.");
+      }
+    }, {immediate: false}); // immediate: false, 因为 onMounted 已经尝试过一次
+  } else {
+    console.log("[Component DEBUG] KaTeX was already ready on mount (isKatexReady is true).");
+    // updateRenderedMarkdown 已经调用过 renderLatexContent (如果 isKatexReady 为 true)
+  }
 });
 
 watch(
     [focalLength, numRays, lensPositionX, lightSourceDistance, lensCurvatureRadius, canvasWidth, canvasHeight],
     () => {
       if (ctx) {
-        nextTick(drawScene);
+        drawScene();
       }
     },
     {immediate: true}
 );
-
-const proofMarkdownText = ref(`
-### 附录：特定理想透镜设计中离心率与折射率的关系
-
-在光学设计中，为实现完美成像或消除像差（如球差、彗差），常采用非球面设计。此时，透镜表面的几何特性（如离心率 *e*）与材料折射率会产生特定联系。
-
-**核心结论：“离心率等于折射率”**，例如 $\\mathbf{e} = \\mathbf{n}$，这通常指平行光经单个折射面后完美汇聚，或点光源的光形成平行光。这类表面称为**笛卡尔卵形面 \\(Cartesian Oval\\)**，椭圆和双曲面是其特例。
-
-#### 详细推导思路：平行光经双曲面折射聚焦
-
-假设一个双曲面，左侧为介质1 (折射率n_1)，右侧为介质2 (折射率n_2)。平行于主轴的光线从介质1入射，经折射后完美汇聚于介质2中双曲线的右焦点 $F_2$。目标是找出双曲线离心率 $e$ 与 $n_1, n_2$ 的关系。
-
-**1. 坐标与参数设定：**
-   * 双曲线中心：原点 $(0,0)$。
-   * 右焦点 $F_2$：$(c, 0)$，$c$ 为中心到焦点距离。
-   * 顶点：$(b, 0)$，$b$ 为实半轴长。
-   * 离心率：$e = c/b$ (双曲线 e > 1)。
-   * 左准线 $D$：$x = b/e$。
-   * **焦准定义**：对双曲线上任意点 $Q(x,y)$，其到焦点 $F_2$ 的距离 $r_2 = QF_2$ 与其到准线 $D$ 的距离 $d(Q,D)$ 之比等于离心率 $e$。
-     即：$r_2 = e \\cdot d(Q,D)$。
-     对于右支双曲线 (x \\ge b)，$d(Q,D) = x - b/e$。
-     因此，$r_2 = e(x - b/e) = ex - b$。
-
-**2. 应用费马原理（等光程条件）：**
-   平行光的波前可视为垂直于主轴的平面。为使所有光线光程相等，从波前（例如，取在准线 $D$ 处，$x = b/e$）到折射点 $Q$，再到焦点 $F_2$ 的光程 (OPL) 必须为常数：
-   $OPL = n_1 \\cdot d(Q,D) + n_2 \\cdot r_2 = \\text{常数}$。
-
-**3. 确切的光学条件与结论：**
-   对于平行于轴的光线在介质 $n_1$ 中，经双曲面折射后汇聚于介质 $n_2$ 中的一个焦点，该双曲面的离心率 $e$ 必须满足以下条件才能实现完美聚焦（即消球差）：
-
-   $e = \\frac{n_2}{n_1}$
-
-**4. 简化与特定结论：**
-   若光线从空气入射到透镜材料中：
-   * 入射介质折射率 $n_1 \\approx 1$ (空气)。
-   * 透镜材料折射率 $n_2 = n$。
-
-   则关系简化为：
-   $e = \\frac{n}{1} \\quad \\Rightarrow \\quad \\mathbf{e} = \\mathbf{n}$
-
-   这意味着，平行光（在空气中）通过一个双曲折射面后，要在折射率为 $n$ 的介质中完美聚焦，该双曲面的离心率 $e$ 必须等于介质的折射率 $n$。
-
-#### 关于椭圆面的情况（补充说明）
-
-类似地，若平行光从折射率 $n_1$ 的介质入射，通过一个**椭圆折射面**在折射率 $n_2$ 的介质内部的远焦点处完美汇聚，则椭圆离心率 $e$ 必须满足： $e = \\frac{n_1}{n_2}$
-
-所以，若光从空气 $(n_1 \\approx 1)$ 入射到折射率为 $n$ 的椭圆透镜 $(n_2=n)$，并聚焦在其内部远焦点，则 $e = 1/n$ (或n = 1/e)。这与双曲面的场景 $(\\mathbf{e}=\\mathbf{n})$ 是不同的。
-
-## 结论与意义
-
-### 离心率等于折射率之比是设计消球差非球面透镜的一个重要结论。
-
-#### **请注意**：此为简化解释，实际光学设计更复杂。
-`);
-
-function renderMarkdown(mdContent) {
-  try {
-    return marked.parse(mdContent || '', {breaks: true, gfm: true, async: false});
-  } catch (e) {
-    const esc = (str) => str?.replace(/&/g, "&amp;")?.replace(/</g, "&lt;")?.replace(/>/g, "&gt;") || '';
-    return `<p>Markdown渲染出错: ${esc(content)}</p>`; // 应该是 esc(mdContent)
-  }
-}
 </script>
 
 <style scoped>
@@ -364,7 +443,7 @@ function renderMarkdown(mdContent) {
   border-radius: 4px;
 }
 
-.form-item input.color-input { /* 确保颜色输入框有样式 */
+.form-item input.color-input {
   padding: 1px;
   height: 28px;
   min-width: 40px;
@@ -393,7 +472,7 @@ function renderMarkdown(mdContent) {
   background-color: #5a6268;
 }
 
-.add-ball-form .form-grid-ball { /* 确保添加小球的表单有样式 */
+.add-ball-form .form-grid-ball {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
   gap: 10px 15px;
@@ -486,8 +565,15 @@ canvas {
   font-style: italic;
 }
 
-.proof-section :deep(span.formula) {
-  font-family: 'Cambria Math', 'Latin Modern Math', 'STIX Two Math', serif;
-  font-style: italic;
+.markdown-body :deep(.katex-display) {
+  display: block;
+  overflow-x: auto;
+  overflow-y: hidden;
+  margin: 1em 0;
+}
+
+.markdown-body :deep(.katex) {
+  font-size: inherit;
+  white-space: nowrap;
 }
 </style>

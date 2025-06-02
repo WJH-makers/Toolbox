@@ -15,11 +15,11 @@ definePageMeta({
 });
 
 useHead({
-  title: '机器视觉解析 - 万能工具箱',
+  title: '机器学习可视化讲解 - 万能工具箱',
   meta: [
     {
       name: 'description',
-      content: '上传图片或视频，进行机器视觉分析，如对象识别、场景理解等。'
+      content: '可视化机器学习模型的工作原理，帮助你更好地理解机器学习算法。'
     }
   ]
 });
