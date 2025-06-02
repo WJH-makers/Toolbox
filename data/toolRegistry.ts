@@ -31,6 +31,22 @@ export const allToolDomainsData: Domain[] = [
                 path: '/tools/daily/bmi',
                 statusPreview: '你的健康助手',
             },
+            {
+                id: 'Anime Searcher',
+                name: '动漫以图搜图',
+                usage: 150,
+                description: '通过一张图，找到一部动漫。',
+                path: '/tools/daily/anime',
+                statusPreview: '二次元顶尖高手',
+            },
+            {
+                id: 'Qcode Recognize',
+                name: '二维码识别',
+                usage: 130,
+                description: '电脑二维码识别。',
+                path: '/tools/daily/qcode',
+                statusPreview: '扫码吗？扫一个吧',
+            },
         ],
     },
     {
