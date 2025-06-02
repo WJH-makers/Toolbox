@@ -1,5 +1,5 @@
 <template>
-  <div class="collision-sim-1d-container">
+  <div class="collision-sim-1d-container" ref="simulationRootEl">
     <h2 style="text-align: center;">一维小球碰撞模拟器 (含数据图表)</h2>
 
     <div class="controls-panel card">
@@ -109,7 +109,7 @@
       <p><strong>总动能:</strong> {{ totalKineticEnergy.toFixed(2) }} J</p>
     </div>
 
-    <div class="physics-explanation-section card">
+    <div class="physics-explanation-section card" ref="physicsExplanationSectionEl">
       <h3>碰撞物理学原理与扩展</h3>
       <hr>
       <h4>1. 一维碰撞中的守恒定律与能量损失</h4>
@@ -178,10 +178,6 @@
       </ul>
       <p>模拟非球形物体碰撞通常需要更专业的物理引擎。</p>
       <hr>
-      <p class="math-rendering-note">
-        <strong>重要提示</strong>: 为了正确显示上述数学公式，请确保您已按照说明在项目的主 HTML 文件 (通常是
-        `public/index.html` 或通过 `nuxt.config.ts` 的 `app.head` 配置) 中引入了 MathJax 库及其配置。
-      </p>
     </div>
 
   </div>
@@ -194,12 +190,20 @@ import {
   Chart as ChartJS, Title, Tooltip, Legend, LineElement, CategoryScale, LinearScale, PointElement, TimeScale, Filler
 } from 'chart.js';
 
+import katex from 'katex'; // eslint-disable-line no-unused-vars
+import renderMathInElement from 'katex/contrib/auto-render';
+import 'katex/dist/katex.min.css';
+
+
 ChartJS.register(Title, Tooltip, Legend, LineElement, CategoryScale, LinearScale, PointElement, TimeScale, Filler);
 
 const canvasWidth = 700;
 const canvasHeight = 150;
+const simulationRootEl = ref(null); // Ref for the root container
 const simulationCanvas = ref(null);
 const physicsChart = ref(null);
+const physicsExplanationSectionEl = ref(null); // Ref for the explanation section
+
 let ctx = null;
 
 const balls = ref([]);
@@ -227,6 +231,7 @@ const frictionConstantK = ref(0.1);
 const selectedBallIdsForChart = ref([]);
 const chartHistoryData = ref({});
 const xAxisTickInterval = ref(10);
+const MAX_CHART_HISTORY_POINTS = 500; // 限制图表历史数据点
 
 const totalMomentumX = computed(() => {
   return balls.value.reduce((sum, ball) => sum + ball.mass * ball.vx, 0);
@@ -297,12 +302,16 @@ function updatePhysics(dt) {
 
     if (selectedBallIdsForChart.value.includes(ball.id)) {
       if (!chartHistoryData.value[ball.id]) chartHistoryData.value[ball.id] = [];
-      chartHistoryData.value[ball.id].push({
+      const history = chartHistoryData.value[ball.id];
+      history.push({
         time: parseFloat(simulationTime.value.toFixed(3)),
         speed: ball.vx,
         kineticEnergy: 0.5 * ball.mass * ball.vx * ball.vx,
         position: ball.x
       });
+      if (history.length > MAX_CHART_HISTORY_POINTS) {
+        history.splice(0, history.length - MAX_CHART_HISTORY_POINTS);
+      }
     }
   });
 
@@ -338,14 +347,14 @@ function updatePhysics(dt) {
 
         const v1_before = b1.vx;
         const v2_before = b2.vx;
-        if ((v2_before - v1_before) * (b2.x - b1.x) < 0) {
+        if ((v2_before - v1_before) * (b2.x - b1.x) < 0) { // 确保它们正在相互靠近或已重叠
           const e = restitutionCoefficient.value;
           if (totalMass > 0) {
             const v1_final = (m1 * v1_before + m2 * v2_before - m2 * e * (v1_before - v2_before)) / totalMass;
             const v2_final = (m1 * v1_before + m2 * v2_before + m1 * e * (v1_before - v2_before)) / totalMass;
             b1.vx = v1_final;
             b2.vx = v2_final;
-          } else {
+          } else { // 处理总质量为0的边缘情况（虽然不应该发生）
             b1.vx = -e * v1_before;
             b2.vx = -e * v2_before;
           }
@@ -378,13 +387,33 @@ function startSimulation() {
   }
   if (!isRunning.value) {
     isRunning.value = true;
-    lastTime = performance.now();
+    lastTime = performance.now(); // 重置 lastTime
     if (!animationFrameId) animationFrameId = requestAnimationFrame(simulationLoop);
   }
 }
 
 function pauseSimulation() {
   isRunning.value = false;
+  // lastTime will be preserved for resume
+}
+
+// KaTeX 渲染辅助函数
+function doKatexRender(element) {
+  if (element && typeof renderMathInElement === 'function') {
+    try {
+      renderMathInElement(element, {
+        delimiters: [
+          {left: "$$", right: "$$", display: true},
+          {left: "$", right: "$", display: false},
+          {left: "\\(", right: "\\)", display: false},
+          {left: "\\[", right: "\\]", display: true}
+        ],
+        throwOnError: false
+      });
+    } catch (error) {
+      console.error("KaTeX renderMathInElement error:", error);
+    }
+  }
 }
 
 function resetSimulation() {
@@ -399,31 +428,38 @@ function resetSimulation() {
   chartHistoryData.value = {};
   selectedBallIdsForChart.value = [];
   newBall.value = defaultNewBallSettings();
-  lastTime = 0;
+  lastTime = 0; // 重置 lastTime
 
   nextTick(() => {
-    if (ctx) drawScene();
+    if (ctx) drawScene(); // 重绘空白场景
     if (physicsChart.value && physicsChart.value.chart) {
       physicsChart.value.chart.data.datasets = [];
-      physicsChart.value.chart.update("none");
+      physicsChart.value.chart.update("none"); // 清空图表
     }
-    if (typeof window.MathJax !== 'undefined') {
-      if (typeof window.MathJax.typesetPromise === 'function') {
-        window.MathJax.typesetPromise();
-      } else if (typeof window.MathJax.typeset === 'function') {
-        window.MathJax.typeset();
-      }
+    // 重置后再次调用 KaTeX 渲染
+    if (physicsExplanationSectionEl.value) { // 针对包含 LaTeX 的特定区域
+      doKatexRender(physicsExplanationSectionEl.value);
     }
+    // 或者，如果你希望渲染根元素下的所有 KaTeX
+    // if (simulationRootEl.value) {
+    //   doKatexRender(simulationRootEl.value);
+    // }
   });
 }
 
 function stepSimulation() {
   if (isRunning.value || balls.value.length === 0) return;
-  if (!lastTime && simulationTime.value > 0) lastTime = performance.now() - (1000 / 60);
-  else if (!lastTime) lastTime = performance.now();
+  // 确保 lastTime 有一个合理的值用于计算 dt
+  if (!lastTime && simulationTime.value > 0) { // 如果暂停后继续单步
+    lastTime = performance.now() - (1000 / 60); // 假设上一帧是 1/60 秒前
+  } else if (!lastTime) { // 第一次单步
+    lastTime = performance.now() - (1000 / 60); // 为了避免 dt 极大或为0
+  }
 
-  updatePhysics(1 / 60);
+
+  updatePhysics(1 / 60); // 固定时间步长进行单步
   drawScene();
+  lastTime = performance.now(); // 更新 lastTime 以便下一次单步或开始
 }
 
 function addBall() {
@@ -435,27 +471,28 @@ function addBall() {
   const ballName = `球${currentId + 1}`;
 
   let xPos = newBall.value.x;
-  if (newBall.value.radius <= 0) newBall.value.radius = 10;
-  if (xPos - newBall.value.radius < 0) xPos = newBall.value.radius;
-  if (xPos + newBall.value.radius > canvasWidth) xPos = canvasWidth - newBall.value.radius;
+  if (newBall.value.radius <= 0) newBall.value.radius = 10; // 确保半径有效
+  // 防止小球初始位置超出边界
+  xPos = Math.max(newBall.value.radius, Math.min(xPos, canvasWidth - newBall.value.radius));
 
   const newBallToAdd = {...newBall.value, id: currentId, name: ballName, x: xPos};
   balls.value.push(newBallToAdd);
 
-  chartHistoryData.value[currentId] = [];
+  chartHistoryData.value[currentId] = []; // 初始化图表历史数据
+  // 自动选中新添加的小球以显示图表 (如果已选数量小于3)
   if (!selectedBallIdsForChart.value.includes(currentId) && selectedBallIdsForChart.value.length < 3) {
     selectedBallIdsForChart.value.push(currentId);
   }
-  newBall.value = defaultNewBallSettings();
+  newBall.value = defaultNewBallSettings(); // 重置表单
 
-  if (ctx) drawScene();
+  if (ctx) drawScene(); // 添加后立即绘制
 }
 
 function removeBall(id) {
   balls.value = balls.value.filter(b => b.id !== id);
   delete chartHistoryData.value[id];
   selectedBallIdsForChart.value = selectedBallIdsForChart.value.filter(ballId => ballId !== id);
-  if (balls.value.length === 0 && !isRunning.value) {
+  if (balls.value.length === 0 && !isRunning.value) { // 如果清空了小球且未运行，重绘
     if (ctx) drawScene();
   }
 }
@@ -470,17 +507,17 @@ const chartData = computed(() => {
       {
         label: `${ball ? ball.name : '未知'} - 速度 (vx)`,
         borderColor: ballColor,
-        backgroundColor: `${ballColor}4D`,
+        backgroundColor: `${ballColor}4D`, // 半透明背景色
         data: history.map(p => ({x: p.time, y: p.speed !== undefined ? parseFloat(p.speed.toFixed(2)) : null})),
         yAxisID: 'yVelocity',
         tension: 0.2,
-        pointRadius: 0,
+        pointRadius: 0, // 不显示数据点
         pointHoverRadius: 4,
-        fill: false,
+        fill: false, // 不填充线下区域
       },
       {
         label: `${ball ? ball.name : '未知'} - 动能 (KE)`,
-        borderColor: lightenDarkenColor(ballColor, 40),
+        borderColor: lightenDarkenColor(ballColor, 40), // 使颜色稍亮/稍暗以区分
         backgroundColor: `${lightenDarkenColor(ballColor, 40)}4D`,
         data: history.map(p => ({
           x: p.time,
@@ -491,10 +528,10 @@ const chartData = computed(() => {
         pointRadius: 0,
         pointHoverRadius: 4,
         fill: false,
-        borderDash: [5, 5],
+        borderDash: [5, 5], // 使用虚线
       }
     ];
-  }).flat();
+  }).flat(); // 将嵌套数组扁平化
 
   return {datasets};
 });
@@ -512,6 +549,7 @@ function lightenDarkenColor(col, amt) {
   if (g > 255) g = 255; else if (g < 0) g = 0;
   let b = (num & 0x0000FF) + amt;
   if (b > 255) b = 255; else if (b < 0) b = 0;
+  // 确保总是返回6位十六进制数
   const rHex = r.toString(16).padStart(2, '0');
   const gHex = g.toString(16).padStart(2, '0');
   const bHex = b.toString(16).padStart(2, '0');
@@ -521,22 +559,23 @@ function lightenDarkenColor(col, amt) {
 const chartOptions = computed(() => ({
   responsive: true,
   maintainAspectRatio: false,
-  animation: false,
-  parsing: false,
-  normalized: true,
+  animation: false, // 关闭动画以提高潜在性能，对于实时数据通常更好
+  parsing: false,   // 数据已预处理
+  normalized: true, // 数据已标准化 (x,y 对象格式)
   interaction: {
     intersect: false,
-    mode: 'index',
+    mode: 'index', // 鼠标悬停时显示同一x轴索引的所有数据
   },
   scales: {
     x: {
-      type: 'linear',
-      title: {display: true, text: `模拟时间 (s)`, font: {size: 14}},
+      type: 'linear', // 时间轴
+      title: {display: true, text: `模拟时间 (s)`, font: {size: 14, weight: '500'}},
       min: 0,
+      // suggestedMax: 考虑动态设置，或让其自动
       ticks: {
         stepSize: xAxisTickInterval.value > 0 ? xAxisTickInterval.value : undefined,
         callback: function (value) {
-          return parseFloat(value.toFixed(1));
+          return parseFloat(value.toFixed(1)); // 格式化刻度标签
         },
         font: {size: 10}
       },
@@ -545,16 +584,16 @@ const chartOptions = computed(() => ({
     yVelocity: {
       type: 'linear',
       position: 'left',
-      title: {display: true, text: '速度 (px/s)', font: {size: 14}},
-      grid: {drawOnChartArea: true, color: '#e9ecef'},
-      ticks: {font: {size: 10}}
+      title: {display: true, text: '速度 (px/s)', font: {size: 14, weight: '500'}, color: '#2980b9'},
+      grid: {drawOnChartArea: true, color: '#e9ecef'}, // 主网格线
+      ticks: {font: {size: 10}, color: '#2980b9'}
     },
     yEnergy: {
       type: 'linear',
       position: 'right',
-      title: {display: true, text: '动能 (J)', font: {size: 14}},
-      grid: {drawOnChartArea: false},
-      ticks: {font: {size: 10}}
+      title: {display: true, text: '动能 (J)', font: {size: 14, weight: '500'}, color: '#27ae60'},
+      grid: {drawOnChartArea: false}, // 避免与左Y轴网格线重叠
+      ticks: {font: {size: 10}, color: '#27ae60'}
     }
   },
   plugins: {
@@ -576,27 +615,23 @@ const chartOptions = computed(() => ({
     }
   },
   elements: {
-    point: {radius: 0, hitRadius: 8, hoverRadius: 5},
-    line: {borderWidth: 2}
+    point: {radius: 0, hitRadius: 8, hoverRadius: 5}, // 鼠标悬停时点的大小
+    line: {borderWidth: 2} // 线条宽度
   }
 }));
+
 
 onMounted(() => {
   if (simulationCanvas.value) {
     ctx = simulationCanvas.value.getContext('2d');
-    drawScene();
+    drawScene(); // 初始绘制场景
   }
-  if (typeof window.MathJax !== 'undefined') {
-    if (typeof window.MathJax.typesetPromise === 'function') {
-      nextTick(() => {
-        window.MathJax.typesetPromise();
-      });
-    } else if (typeof window.MathJax.typeset === 'function') {
-      nextTick(() => {
-        window.MathJax.typeset();
-      });
+
+  nextTick(() => {
+    if (physicsExplanationSectionEl.value) {
+      doKatexRender(physicsExplanationSectionEl.value);
     }
-  }
+  });
 });
 
 onUnmounted(() => {
@@ -658,6 +693,8 @@ h4 {
 
 .empty-state {
   padding: 30px;
+  text-align: center;
+  color: #6c757d;
 }
 
 
@@ -721,9 +758,53 @@ h4 {
 .form-item input[type="range"].slider {
   flex-grow: 1;
   min-width: 150px;
-  height: auto;
+  height: auto; /* 修正默认高度，使其在不同浏览器中表现一致 */
   cursor: pointer;
+  background: #e9ecef; /* 自定义轨道背景 */
+  border-radius: 5px; /* 自定义轨道圆角 */
+  -webkit-appearance: none;
+  appearance: none;
 }
+
+/* 自定义滑块轨道样式 (Webkit) */
+input[type="range"].slider::-webkit-slider-runnable-track {
+  height: 8px;
+  background: #dee2e6;
+  border-radius: 4px;
+}
+
+/* 自定义滑块拇指样式 (Webkit) */
+input[type="range"].slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  margin-top: -5px; /* 使拇指垂直居中于轨道 */
+  width: 18px;
+  height: 18px;
+  background: #007bff;
+  border-radius: 50%;
+  cursor: pointer;
+  border: 2px solid white;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+}
+
+/* 自定义滑块轨道样式 (Mozilla) */
+input[type="range"].slider::-moz-range-track {
+  height: 8px;
+  background: #dee2e6;
+  border-radius: 4px;
+}
+
+/* 自定义滑块拇指样式 (Mozilla) */
+input[type="range"].slider::-moz-range-thumb {
+  width: 14px; /* 调整大小以匹配 Webkit 视觉效果 */
+  height: 14px;
+  background: #007bff;
+  border-radius: 50%;
+  cursor: pointer;
+  border: 2px solid white;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+}
+
 
 .form-item .help-text {
   font-size: 0.85em;
@@ -757,8 +838,8 @@ h4 {
 }
 
 .button:hover:not(:disabled), .add-ball-button:hover:not(:disabled), .simulation-actions button:hover:not(:disabled) {
-  transform: translateY(-1px);
-  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+  transform: translateY(-2px);
+  box-shadow: 0 3px 7px rgba(0, 0, 0, 0.12);
 }
 
 .button:active:not(:disabled), .add-ball-button:active:not(:disabled), .simulation-actions button:active:not(:disabled) {
@@ -870,12 +951,13 @@ h4 {
 
 .ball-selector-item input[type="checkbox"] {
   margin-right: 10px;
-  transform: scale(1);
-  accent-color: var(--primary-color, #007bff);
+  transform: scale(1.1); /* 稍微放大复选框 */
+  accent-color: #007bff; /* 使用主题色 */
 }
 
 .ball-selector-item label {
   font-size: 0.95em;
+  cursor: pointer; /* 使标签也可点击 */
 }
 
 .button-icon.button-remove-small {
@@ -909,7 +991,8 @@ canvas {
 }
 
 .chart-wrapper {
-  height: 400px;
+  height: 400px; /* 保持图表高度 */
+  position: relative; /* 用于可能的 Chart.js 定位 */
 }
 
 .data-display {
@@ -918,6 +1001,7 @@ canvas {
 
 .data-display p strong {
   color: #0056b3;
+  font-weight: 600;
 }
 
 .physics-explanation-section {
@@ -941,7 +1025,7 @@ canvas {
 
 .physics-explanation-section h4 {
   font-size: 1.3em;
-  color: #17a2b8;
+  color: #17a2b8; /* 更改为信息蓝，与按钮一致 */
   margin-top: 30px;
   margin-bottom: 15px;
   padding-bottom: 5px;
@@ -953,6 +1037,7 @@ canvas {
   font-size: 1rem;
   color: #34495e;
   margin-bottom: 15px;
+  line-height: 1.7; /* 增加行高以提高可读性 */
 }
 
 .physics-explanation-section ul {
@@ -963,13 +1048,6 @@ canvas {
 .physics-explanation-section strong {
   color: #2c3e50;
   font-weight: 600;
-}
-
-.physics-explanation-section .math-rendering-note {
-  background-color: #e7f3ff;
-  border: 1px solid #b3d7ff;
-  color: #004085;
-  font-size: 0.95em;
 }
 
 .card {

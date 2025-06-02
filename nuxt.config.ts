@@ -7,16 +7,7 @@ export default defineNuxtConfig({
                     rel: 'stylesheet',
                     href: 'https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap'
                 }
-                // KaTeX CSS 链接已从此移除，将由下面的插件加载
             ],
-            script: [
-                // KaTeX JavaScript 脚本已从此移除，将由下面的插件加载
-            ]
-        }
-    },
-    vue: {
-        compilerOptions: {
-            // 如果之前有 MathJax 相关的 isCustomElement 配置，现在可以移除或注释掉
         }
     },
     compatibilityDate: '2025-05-15',
