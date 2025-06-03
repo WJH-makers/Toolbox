@@ -243,7 +243,7 @@ async function fetchPageData() {
 
   try {
     // 修正：移除API URL中的HTML标签
-    const response = await $fetch(`/api/recipes/search?s=<span class="math-inline">\{encodeURIComponent\(searchQuery\.value\.trim\(\)\)\}&page\=</span>{currentPage.value}&limit=${limitPerPage.value}`);
+    const response = await $fetch(`/api/recipes/search?s=${encodeURIComponent(searchQuery.value.trim())}&page=${currentPage.value}&limit=${limitPerPage.value}`);
     searchResults.value = response.meals || [];
     totalMeals.value = response.totalMeals || 0;
     totalPages.value = response.totalPages || 0;
