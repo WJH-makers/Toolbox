@@ -111,43 +111,48 @@
 </template>
 
 <script lang="ts" setup>
-import {computed, type PropType, ref, watch, onMounted} from 'vue';
+import {computed, ref, watch, onMounted} from 'vue';
 import type {Word} from '~/types/word';
 
-// 定义可选的词书列表
+interface FetchError {
+  data?: {
+    statusMessage?: string;
+    message?: string;
+  };
+  message?: string;
+}
+
+
 interface AvailableList {
-  id: string; // 用于按钮的key和内部标识
-  identifier: string; // API的source参数或本地文件路径
+  id: string;
+  identifier: string;
   mode: 'api' | 'local';
   displayName: string;
-  requiresAuth?: boolean; // 标记此列表是否需要登录
+  requiresAuth?: boolean;
 }
 
 const availableLists = ref<AvailableList[]>([
   {id: 'common-api', identifier: 'common', mode: 'api', displayName: '常用单词', requiresAuth: true},
   {id: 'cet4-api', identifier: 'cet4', mode: 'api', displayName: '大学英语四级', requiresAuth: true},
-  {id: 'local-custom', identifier: '/data/translated-words.json', mode: 'local', displayName: '本地单词本'},
-  // 您可以添加更多列表配置
+  {id: 'local-custom', identifier: '/word/translated-words.json', mode: 'local', displayName: '本地单词本'},
 ]);
 
-// 用户状态
 const currentUserId = ref<string | null>(null);
 const authCheckLoading = ref(true);
 
-// 当前选定的列表配置
 const selectedListSource = ref<string | null>(null);
 const selectedLoadMode = ref<'api' | 'local' | null>(null);
 const selectedDisplayName = ref<string>("未选择");
 
-// 内部状态
 const internalWordList = ref<Word[]>([]);
-const currentInternalListName = ref<string>("未选择"); // 组件内部显示的列表名
+const currentInternalListName = ref<string>("未选择");
 const isLoadingWords = ref(false);
 const fetchError = ref<string | null>(null);
 const isResetting = ref(false);
-const currentLoadingListIdentifier = ref<string | null>(null); // 跟踪当前正在加载的列表的identifier
+const currentLoadingListIdentifier = ref<string | null>(null);
 
 const currentWord = ref<Word | null>(null);
+const currentWordIndex = ref<number>(0);
 const currentMode = ref<'en-to-cn' | 'cn-to-en'>('en-to-cn');
 const showAnswer = ref(false);
 const reviewedCountInSession = ref(0);
@@ -155,19 +160,16 @@ const shuffledList = ref<Word[]>([]);
 
 const wordListCache = new Map<string, Word[]>();
 
-// Computed property for :key binding to ensure component re-renders when essential props change
-const componentKey = computed(() => `<span class="math-inline">\{selectedListSource\.value\}\-</span>{selectedLoadMode.value}-${currentUserId.value}`);
-
-const currentActiveListSource = computed(() => selectedListSource.value); // 用于模板中判断
+const currentActiveListSource = computed(() => selectedListSource.value);
 
 
 function generateCacheKey(identifier: string, mode: 'api' | 'local', userId: string | null): string {
   if (mode === 'api' && userId) {
-    return `user-<span class="math-inline">\{userId\}\-api\-</span>{identifier}`;
+    return `user-${userId}-api-${identifier}`;
   } else if (mode === 'local') {
     return `local-${identifier}`;
   }
-  return `guest-api-${identifier}`; // API列表但无用户ID（访客模式）
+  return `guest-api-${identifier}`;
 }
 
 async function fetchUserData() {
@@ -180,9 +182,7 @@ async function fetchUserData() {
     }>('/api/user/me');
     if (userResponse.success && userResponse.data?.user?.id) {
       currentUserId.value = userResponse.data.user.id;
-      console.log("[Component] 用户已登录，ID:", currentUserId.value);
     } else {
-      console.log("[Component] 用户未登录或获取用户信息失败。");
       currentUserId.value = null;
     }
   } catch (error) {
@@ -195,7 +195,6 @@ async function fetchUserData() {
 
 async function fetchData() {
   if (!selectedListSource.value || !selectedLoadMode.value) {
-    console.warn("[Component] 未选择列表源或加载模式，无法加载数据。");
     internalWordList.value = [];
     initializeSessionList();
     return;
@@ -206,49 +205,46 @@ async function fetchData() {
     internalWordList.value = wordListCache.get(cacheKey)!;
     currentInternalListName.value = selectedDisplayName.value;
     fetchError.value = null;
-    console.log(`[Cache][Component] 从缓存加载 '${selectedDisplayName.value}'`);
     initializeSessionList();
     return;
   }
 
   isLoadingWords.value = true;
   fetchError.value = null;
-  currentInternalListName.value = selectedDisplayName.value; // 显示正确的名字
+  currentInternalListName.value = selectedDisplayName.value;
   currentLoadingListIdentifier.value = selectedListSource.value;
-  // emit('listLoadStatus', { isLoading: true, error: null, listName: `加载中 (${selectedDisplayName.value})...`, wordCount: 0 });
   internalWordList.value = [];
 
   try {
     let words: Word[] = [];
     if (selectedLoadMode.value === 'api') {
-      if (!currentUserId.value) { // 再次检查，以防万一
-        // 理论上，如果 requiresAuth 为 true，selectListToLoad 会阻止到这里
-        console.warn("[Component] API模式需要用户ID，但未提供。将加载为访客模式（如果API支持）。");
-        // 可以尝试不带userId请求，或加载公共列表
-        // words = await $fetch<Word[]>(`/api/vocabulary/session?source=${selectedListSource.value}`); // 访客API调用示例
-        // 为简单起见，如果API列表需要用户ID但没有，则报错
+      if (!currentUserId.value && availableLists.value.find(list => list.identifier === selectedListSource.value && list.mode === 'api' && list.requiresAuth)) {
         throw new Error("此API列表需要用户登录。");
       }
-      // API调用时不再传递userId_DEMO_ONLY，后端应从event.context.auth.userId获取
       words = await $fetch<Word[]>(`/api/vocabulary/session?source=${selectedListSource.value}`);
-    } else { // local
-      words = await $fetch<Word[]>(selectedListSource.value); // selectedListSource 是文件路径
+    } else {
+      words = await $fetch<Word[]>(selectedListSource.value);
     }
 
     internalWordList.value = words;
     if (words && words.length >= 0) {
       wordListCache.set(cacheKey, words);
     }
-  } catch (error: any) {
-    const errorMessage = error.data?.statusMessage || error.data?.message || error.message || `无法加载 '${selectedDisplayName.value}' 单词列表。`;
+  } catch (error: unknown) {
+    let errorMessage = `无法加载 '${selectedDisplayName.value}' 单词列表。`;
+    if (error instanceof Error) {
+      const fetchErrorData = error as FetchError; // Nuxt $fetch specific error
+      errorMessage = fetchErrorData.data?.message || fetchErrorData.data?.statusMessage || fetchErrorData.message || errorMessage;
+    } else if (typeof error === 'string') {
+      errorMessage = error;
+    }
     console.error(`[Component] Error loading list '${selectedDisplayName.value}':`, error);
     fetchError.value = errorMessage;
     internalWordList.value = [];
   } finally {
     isLoadingWords.value = false;
     currentLoadingListIdentifier.value = null;
-    initializeSessionList(); // 无论成功失败，都尝试初始化会话列表（可能是空列表）
-    // emit('listLoadStatus', { isLoading: false, error: fetchError.value, listName: currentInternalListName.value, wordCount: internalWordList.value.length });
+    initializeSessionList();
   }
 }
 
@@ -261,38 +257,37 @@ function initializeSessionList() {
   } else {
     currentWord.value = null;
     shuffledList.value = [];
+    currentWordIndex.value = 0;
     reviewedCountInSession.value = 0;
   }
-  // fetchError.value = null; // 不在这里清除，fetchData的finally会处理
 }
 
 function selectListToLoad(list: AvailableList) {
   if (list.requiresAuth && !currentUserId.value) {
     alert("此词书需要登录才能查看个性化进度。请登录或选择其他词书。");
-    fetchError.value = "请登录以访问此词书。"; // 设置错误信息
-    selectedListSource.value = null; // 清空选择
+    fetchError.value = "请登录以访问此词书。";
+    selectedListSource.value = null;
     selectedLoadMode.value = null;
     selectedDisplayName.value = "无";
     internalWordList.value = [];
     initializeSessionList();
     return;
   }
-  console.log(`[Component] 选定列表: ${list.displayName}`);
   selectedListSource.value = list.identifier;
   selectedLoadMode.value = list.mode;
   selectedDisplayName.value = list.displayName;
-  fetchData(); // 选择列表后立即获取数据
+  fetchData();
 }
 
 function isActiveList(list: AvailableList): boolean {
   return selectedListSource.value === list.identifier && selectedLoadMode.value === list.mode;
 }
 
-// --- 单词卡片交互逻辑 ---
 const displayPrompt = computed(() => {
   if (!currentWord.value) return '';
   return currentMode.value === 'en-to-cn' ? currentWord.value.english : currentWord.value.chinese;
 });
+
 const displayAnswer = computed(() => {
   if (!currentWord.value) return '';
   return currentMode.value === 'en-to-cn' ? currentWord.value.chinese : currentWord.value.english;
@@ -313,10 +308,6 @@ function loadWordByIndex(index: number) {
     showAnswer.value = false;
   } else {
     currentWord.value = null;
-    if (shuffledList.value.length > 0 && reviewedCountInSession.value >= shuffledList.value.length) {
-      // emit('allWordsCompletedInSession', { listName: selectedDisplayName.value, listSource: selectedListSource.value! });
-      console.log(`[Component] 列表 "${selectedDisplayName.value}" 已完成。`);
-    }
   }
 }
 
@@ -334,15 +325,17 @@ function toggleAnswer() {
 function advanceToNextWord() {
   if (reviewedCountInSession.value < shuffledList.value.length - 1) {
     reviewedCountInSession.value++;
-    currentWordIndex.value = (currentWordIndex.value + 1) % shuffledList.value.length;
+    currentWordIndex.value = (currentWordIndex.value + 1) % shuffledList.value.length; // Ensure loop within bounds
     loadWordByIndex(currentWordIndex.value);
   } else {
-    if (currentWord.value) {
+    if (currentWord.value) { // Mark the last word as reviewed
       reviewedCountInSession.value++;
     }
-    loadWordByIndex(shuffledList.value.length);
+    currentWordIndex.value = shuffledList.value.length; // Go beyond bounds to signify completion
+    loadWordByIndex(currentWordIndex.value); // This will set currentWord to null
   }
 }
+
 
 function loadNextWordUIAction() {
   if (currentWord.value) {
@@ -353,22 +346,24 @@ function loadNextWordUIAction() {
 async function handleMarkWord(known: boolean) {
   if (!currentWord.value) return;
   const wordToMark = currentWord.value;
-  // emit('wordReviewedOnServer', { wordId: wordToMark.id, known, englishWord: wordToMark.english });
 
   if (selectedLoadMode.value === 'api' && currentUserId.value) {
     try {
       await $fetch('/api/vocabulary/progress', {
         method: 'POST',
-        body: {wordId: wordToMark.id, known: known} // API应从context获取userId
+        body: {wordId: wordToMark.id, known: known}
       });
-      console.log(`[Component][Progress] 单词 "${wordToMark.english}" 进度已更新 (known: ${known})`);
-    } catch (error: any) {
-      const errorMessage = error.data?.statusMessage || error.data?.message || "更新单词进度失败";
+    } catch (error: unknown) {
+      let errorMessage = "更新单词进度失败";
+      if (error instanceof Error) {
+        const fetchErrorData = error as FetchError;
+        errorMessage = fetchErrorData.data?.message || fetchErrorData.data?.statusMessage || fetchErrorData.message || errorMessage;
+      } else if (typeof error === 'string') {
+        errorMessage = error;
+      }
       console.error(`[Component][Progress] 更新单词 "${wordToMark.english}" 进度失败:`, errorMessage);
       fetchError.value = `更新 "${wordToMark.english}" 进度失败: ${errorMessage.substring(0, 100)}`;
     }
-  } else {
-    console.log(`[Component][Progress] 本地模式或未登录，单词 "${wordToMark.english}" 标记为 (known: ${known}) (未同步服务器)`);
   }
   advanceToNextWord();
 }
@@ -383,49 +378,62 @@ async function resetCurrentListProgress() {
   }
   isResetting.value = true;
   fetchError.value = null;
-  // emit('listLoadStatus', {isLoading: true, error: null, listName: `重置中 (${selectedDisplayName.value})...`, wordCount: internalWordList.value.length});
 
   try {
     await $fetch('/api/vocabulary/progress-reset', {
       method: 'POST',
-      body: {listSource: selectedListSource.value} // API应从context获取userId
+      body: {listSource: selectedListSource.value}
     });
     alert(`列表 "${selectedDisplayName.value}" 的学习进度已重置！`);
     const cacheKey = generateCacheKey(selectedListSource.value, 'api', currentUserId.value);
     wordListCache.delete(cacheKey);
     await fetchData();
-  } catch (error: any) {
-    const errorMessage = error.data?.statusMessage || error.data?.message || "重置进度失败";
+  } catch (error: unknown) {
+    let errorMessage = "重置进度失败";
+    if (error instanceof Error) {
+      const fetchErrorData = error as FetchError;
+      errorMessage = fetchErrorData.data?.message || fetchErrorData.data?.statusMessage || fetchErrorData.message || errorMessage;
+    } else if (typeof error === 'string') {
+      errorMessage = error;
+    }
     console.error(`[Component] 重置 "${selectedDisplayName.value}" 进度失败:`, error);
     fetchError.value = `重置 "${selectedDisplayName.value}" 进度失败: ${errorMessage}`;
-    // emit('listLoadStatus', {isLoading: false, error: fetchError.value, listName: selectedDisplayName.value, wordCount: internalWordList.value.length});
   } finally {
     isResetting.value = false;
   }
 }
 
 onMounted(async () => {
-  await fetchUserData(); // 首先获取用户信息
-  // 用户信息获取后，如果未选择列表，可以让用户选择，或者加载一个默认的
-  // 这里改为不自动加载列表，等待用户点击按钮
+  await fetchUserData();
   if (!selectedListSource.value && availableLists.value.length > 0) {
-    console.log("[Component] 请选择一个词书开始学习。");
-    // 可以默认选中第一个可用的列表，或者什么都不做
-    // selectListToLoad(availableLists.value[0]); // 例如，默认加载第一个列表
+    // No auto-load, user needs to select a list
   }
 });
 
-// 监听外部可能改变用户状态的事件，如果userId变化，重新评估是否加载
 watch(currentUserId, (newUserId, oldUserId) => {
   if (newUserId !== oldUserId) {
-    console.log("[Component] 用户状态变化，可能需要重新加载或调整列表。");
-    // 如果当前有选中的API列表，可能需要刷新以获取该用户的进度
     if (selectedLoadMode.value === 'api' && selectedListSource.value) {
-      const cacheKey = generateCacheKey(selectedListSource.value, 'api', newUserId);
-      const oldCacheKey = generateCacheKey(selectedListSource.value, 'api', oldUserId);
-      wordListCache.delete(oldCacheKey); // 清除旧用户的缓存（如果适用）
-      wordListCache.delete(cacheKey); // 清除新用户的缓存以强制刷新
-      fetchData(); // 重新获取数据
+      const currentListConfig = availableLists.value.find(
+          list => list.identifier === selectedListSource.value && list.mode === 'api'
+      );
+      // If the current list requires auth and the user logged out, clear it.
+      if (currentListConfig?.requiresAuth && !newUserId) {
+        internalWordList.value = [];
+        currentWord.value = null;
+        shuffledList.value = [];
+        selectedListSource.value = null;
+        selectedLoadMode.value = null;
+        selectedDisplayName.value = "未选择";
+        fetchError.value = "请选择一个列表或登录以继续。";
+        initializeSessionList();
+      } else {
+        // User changed, or logged in and list doesn't require auth (or does), refresh data
+        const oldCacheKey = generateCacheKey(selectedListSource.value, 'api', oldUserId);
+        wordListCache.delete(oldCacheKey);
+        const newCacheKey = generateCacheKey(selectedListSource.value, 'api', newUserId);
+        wordListCache.delete(newCacheKey);
+        fetchData();
+      }
     }
   }
 });
@@ -433,7 +441,6 @@ watch(currentUserId, (newUserId, oldUserId) => {
 </script>
 
 <style scoped>
-/* ... (与您之前提供的美化样式一致) ... */
 .word-memorize-component-container {
   display: flex;
   flex-direction: column;

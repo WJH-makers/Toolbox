@@ -119,14 +119,14 @@ export const allToolDomainsData: Domain[] = [
                 path: '/tools/learning/math-logic',
                 statusPreview: '挑战逻辑思维',
             },
-            {
-                id: 'chembio_visualizer',
-                name: '化学与生物一瞥',
-                usage: 130,
-                description: '交互式展示基础化学反应、分子结构或生物细胞结构等。',
-                path: '/tools/learning/chembio',
-                statusPreview: '探索微观世界',
-            },
+            // {
+            //     id: 'chembio_visualizer',
+            //     name: '化学与生物一瞥',
+            //     usage: 130,
+            //     description: '交互式展示基础化学反应、分子结构或生物细胞结构等。',
+            //     path: '/tools/learning/chembio',
+            //     statusPreview: '探索微观世界',
+            // },
             {
                 id: 'word_memorizer',
                 name: '英语单词记忆',
