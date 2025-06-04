@@ -16,9 +16,9 @@ export default defineNuxtConfig({
         'nuxt-particles',
         '@nuxt/eslint',
         '@nuxt/ui',
-        '@nuxt/fonts' // 您已添加 @nuxt/fonts 模块
+        '@nuxt/fonts'
     ],
-    fonts: { // 您已有的字体配置
+    fonts: {
         families: [
             {
                 name: 'Roboto Local',
@@ -35,6 +35,7 @@ export default defineNuxtConfig({
         ]
     },
     css: [
-        '~/assets/css/main.css',
+        '~/assets/css/main.css', // 您已有的全局 CSS
+        'katex/dist/katex.min.css' // 新增：全局引入 KaTeX CSS
     ]
 });

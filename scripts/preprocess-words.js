@@ -3,8 +3,8 @@ import path from 'node:path';
 import {tmt} from "tencentcloud-sdk-nodejs";
 
 
-const INPUT_TXT_FILE_PATH = path.resolve(process.cwd(), 'data', 'words.txt');
-const OUTPUT_JSON_FILE_PATH = path.resolve(process.cwd(), 'data', 'translated-words.json');
+const INPUT_TXT_FILE_PATH = path.resolve(process.cwd(), 'public', 'word', 'words.txt');
+const OUTPUT_JSON_FILE_PATH = path.resolve(process.cwd(), 'public', 'word', 'translated-words.json');
 const API_BATCH_SIZE = 5;
 const DELAY_BETWEEN_BATCHES_MS = 1200;
 const TmtClient = tmt.v20180321.Client;
@@ -106,7 +106,7 @@ async function preprocessWords() {
         } else {
             try {
                 await fs.access(OUTPUT_JSON_FILE_PATH);
-            } catch (e) {
+            } catch {
                 await saveProcessedData([]);
                 console.log(`已创建空的JSON输出文件: ${OUTPUT_JSON_FILE_PATH}`);
             }

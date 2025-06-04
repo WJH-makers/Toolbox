@@ -69,10 +69,6 @@ function generateKeyHex(byteLength = 32) {
     return crypto.randomBytes(byteLength).toString('hex');
 }
 
-function generateRandomString(length = 12) {
-    return crypto.randomBytes(Math.ceil(length / 2)).toString('hex').slice(0, length);
-}
-
 function encryptForEnv(text, masterKeyHex) {
     if (!text) return "";
     try {
@@ -228,7 +224,7 @@ async function setupEnv() {
         console.log('请输入您希望应用程序使用的数据库信息:');
         appDbName = await askQuestion('应用主数据库名称', PRESET_DB_NAME);
         appDbUser = await askQuestion('应用数据库用户名', PRESET_DB_USER);
-        const defaultAppDbPassword = decryptForScriptDefaults(EMBEDDED_PRESET_DB_PASSWORD, scriptPassword) || PRESET_DB_PASSWORD;
+        const defaultAppDbPassword = PRESET_DB_PASSWORD;
         appDbPassword = await askQuestion('应用数据库密码', defaultAppDbPassword, true);
         appDbHost = await askQuestion('应用连接MySQL的主机名', PRESET_DB_HOST);
         appDbPort = await askQuestion('应用连接MySQL的端口号', PRESET_DB_PORT);
@@ -304,7 +300,7 @@ async function setupEnv() {
         console.log(`请确保您已手动创建数据库 '${appDbName}', '${appShadowDbName}' 及用户 '${appDbUser}'@'${appDbHost}' 并授予了相应权限。`);
     }
 
-    if (configMode === '1' && !scriptPassword && (EMBEDDED_PRESET_DB_PASSWORD && !EMBEDDED_PRESET_DB_PASSWORD.includes("在此处粘贴"))) {
+    if (configMode === '1' && !scriptPassword) {
         console.warn("\x1b[33m警告:\x1b[0m 由于未提供脚本主密码，默认模式下部分敏感预设值（如数据库密码、API密钥等）可能为空或使用了固定明文，除非它们有非加密的固定预设。");
     }
 

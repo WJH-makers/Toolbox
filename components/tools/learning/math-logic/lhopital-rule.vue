@@ -1,1005 +1,774 @@
 <template>
-  <div class="math-example-container" ref="transcendentalRootEl">
-    <h3>超越方程数值求解演示</h3>
-    <p>
-      洛必达法则 (L'Hôpital's Rule) 是微积分中求解特定类型不定式极限（如 $\frac{0}{0}$ 或 $\frac{\infty}{\infty}$
-      型）的强大工具。
-      该法则指出，在满足一定条件下，两个函数之比的极限等于它们的导数之比的极限。
-    </p>
-    <p>
-      数学上，如果 $\lim_{x \to c} f(x) = \lim_{x \to c} g(x) = 0$ 或者 $\lim_{x \to c} f(x) = \pm\infty$ 且 $\lim_{x \to
-      c} g(x) = \pm\infty$，
-      并且 $\lim_{x \to c} \frac{f'(x)}{g'(x)}$ 存在（或为 $\pm\infty$），则：
-    </p>
-    <p class="formula-display">
-      $$\lim_{x \to c} \frac{f(x)}{g(x)} = \lim_{x \to c} \frac{f'(x)}{g'(x)}$$
-    </p>
-    <p>注意：使用洛必达法则前，必须确认极限是不定型，并且分子分母函数在点 $c$ 的某去心邻域内可导，且 $g'(x) \neq 0$。</p>
+  <div class="lhopital-derivation-page">
+    <header class="page-header">
+      <h1><span class="cool-math-symbol">L</span> 洛必达法则：极限的几何探秘 🌌</h1>
+      <p class="subtitle">通过几何直观与互动探索，揭开不定式极限的奥秘</p>
+    </header>
 
-    <div class="controls-panel card" ref="controlsPanelEl">
-      <div class="control-section">
-        <h4>1. 选择方程和求解方法</h4>
-        <div class="form-item">
-          <label for="equation-select">选择超越方程 $f(x)=0$:</label>
-          <select id="equation-select" v-model="selectedEquationKey" @change="onEquationSelectChange">
-            <option value="cos_x_minus_x">cos x - x = 0</option>
-            <option value="x_exp_x_minus_c">e^x - C = 0</option>
-            <option value="x_ln_x_minus_c">x\ln x - C = 0(x > 0)</option>
-            <option value="a_pow_x_minus_bx_minus_d">A^x - Bx - D = 0</option>
-          </select>
+    <section id="intro" class="content-section card">
+      <h2><span class="section-icon">🤔</span> 迷雾重重：不定式的挑战</h2>
+      <p v-html="renderHtmlWithInlineKatex('当求解形如 $\\lim_{x \\to c} \\frac{f(x)}{g(x)}$ 的极限时，如果分子分母同时趋向于0（即 $\\frac{0}{0}$ 型）或同时趋向于无穷大（即 $\\frac{\\infty}{\\infty}$ 型），我们称之为“不定式”。直接代入无法求解，世界似乎陷入一片迷雾...')"></p>
+      <p v-html="renderHtmlWithInlineKatex('例如，思考 $\\lim_{x \\to 0} \\frac{\\sin(x)}{x}$。当 $x \\to 0$ 时，$\\sin(x) \\to 0$ 且 $x \\to 0$，这是一个典型的 $\\frac{0}{0}$ 型不定式。')"></p>
+    </section>
+
+    <section id="geometric-intuition" class="content-section card">
+      <h2><span class="section-icon">🔬</span> 几何放大镜：当曲线化为直线</h2>
+      <p v-html="renderHtmlWithInlineKatex('考虑 $\\frac{0}{0}$ 型极限，即 $\\lim_{x \\to c} f(x) = 0$ 且 $\\lim_{x \\to c} g(x) = 0$。当我们在点 $(c, 0)$ 附近极度放大函数 $f(x)$ 和 $g(x)$ 的图像时，会发生什么奇妙的现象呢？')"></p>
+      <div class="geometric-zoom-controls">
+        <div class="control-item">
+          <label for="fx-input-geo">函数 f(x) (过原点):</label>
+          <input type="text" id="fx-input-geo" v-model="geoFunctions.fx" @input="throttledUpdateGeoChartData"/>
         </div>
-        <div class="form-item">
-          <label for="method-select">选择求解方法:</label>
-          <select id="method-select" v-model="selectedMethod">
-            <option value="newton">牛顿-拉弗森法 (Newton-Raphson)</option>
-            <option value="bisection">二分法 (Bisection)</option>
-          </select>
+        <div class="control-item">
+          <label for="gx-input-geo">函数 g(x) (过原点):</label>
+          <input type="text" id="gx-input-geo" v-model="geoFunctions.gx" @input="throttledUpdateGeoChartData"/>
         </div>
-        <div v-if="currentEquation && currentEquation.needsConstantC" class="form-item">
-          <label for="constant-c">常数 C:</label>
-          <input id="constant-c" v-model.number="equationParams.C" type="number" step="0.1">
-        </div>
-        <div v-if="currentEquation && currentEquation.needsConstABD" class="form-item-group">
-          <div class="form-item">
-            <label for="constant-a-eq">常数 A:</label>
-            <input id="constant-a-eq" v-model.number="equationParams.A_const" type="number" step="0.1">
-          </div>
-          <div class="form-item">
-            <label for="constant-b-eq">常数 B:</label>
-            <input id="constant-b-eq" v-model.number="equationParams.B_const" type="number" step="0.1">
-          </div>
-          <div class="form-item">
-            <label for="constant-d-eq">常数 D:</label>
-            <input id="constant-d-eq" v-model.number="equationParams.D_const" type="number" step="0.1">
-          </div>
+        <div class="control-item">
+          <label for="zoom-level">几何缩放级别 (点 c=0): </label>
+          <input type="range" id="zoom-level" min="0.01" max="1" step="0.005" v-model.number="geoZoom.level"
+                 @input="throttledUpdateGeoChartData"/>
+          <span>当前X轴范围: [-{{ geoZoom.currentXMax.toFixed(4) }}, {{ geoZoom.currentXMax.toFixed(4) }}]</span>
         </div>
       </div>
-
-      <div class="control-section">
-        <h4>2. 设置方法参数</h4>
-        <div v-if="selectedMethod === 'newton'">
-          <div class="form-item">
-            <label for="newton-x0">初始猜测值 $x_0$:</label>
-            <input id="newton-x0" v-model.number="newtonParams.x0" type="number" step="0.1">
-          </div>
-        </div>
-        <div v-if="selectedMethod === 'bisection'">
-          <div class="form-item">
-            <label for="bisection-a">区间左端点 $a$:</label>
-            <input id="bisection-a" v-model.number="bisectionParams.a" type="number" step="0.1">
-          </div>
-          <div class="form-item">
-            <label for="bisection-b">区间右端点 $b$:</label>
-            <input id="bisection-b" v-model.number="bisectionParams.b" type="number" step="0.1">
-          </div>
-          <p v-if="!isBisectionBracketValid && bisectionParams.a !== null && bisectionParams.b !== null"
-             class="error-text">
-            注意: $f(a)$ 和 $f(b)$ 必须异号！当前 $f(a) \approx {{ currentFa.toFixed(4) }}$, $f(b) \approx
-            {{ currentFb.toFixed(4) }}$
-          </p>
-        </div>
-        <div class="form-item">
-          <label for="max-iterations">最大迭代次数:</label>
-          <input id="max-iterations" v-model.number="solverParams.maxIterations" type="number" min="1" max="1000"
-                 step="1">
-        </div>
-        <div class="form-item">
-          <label for="tolerance">容差 ($\epsilon$):</label>
-          <input id="tolerance" v-model.number="solverParams.tolerance" type="number" min="1e-10" max="1e-1" step="1e-5"
-                 lang="en">
-        </div>
+      <div class="chart-container">
+        <canvas ref="geometricZoomChartCanvas"></canvas>
       </div>
+      <div class="intuition-explanation">
+        <div v-if="geoDerivatives.f_prime_c_tex !== '?' && geoDerivatives.g_prime_c_tex !== '?'">
+          <p>在点 $x=0$ 附近：</p>
+          $f(x) \approx f'(0) \cdot x = $
+          <KatexRenderer :tex="geoDerivatives.f_prime_c_tex + 'x'"/>
+          <br/>
+          $g(x) \approx g'(0) \cdot x = $
+          <KatexRenderer :tex="geoDerivatives.g_prime_c_tex + 'x'"/>
+          <br/>
+          因此，
+          <KatexRenderer tex="\frac{f(x)}{g(x)} \approx \frac{f'(0)x}{g'(0)x} = \frac{f'(0)}{g'(0)}"
+                         :displayMode="false"/>
+          $\approx$
+          <KatexRenderer :tex="geoDerivatives.ratio_tex"/>
+          (当 $g'(0) \neq 0$)
+        </div>
+        <p class="error-message"
+           v-else-if="geoFunctions.fx && geoFunctions.gx && (geoDerivatives.f_prime_c_tex === '?' || geoDerivatives.g_prime_c_tex === '?')">
+          无法计算导数或函数输入有误。请输入有效的、在x=0可导且f(0)=g(0)=0的函数。例如 f(x)=sin(x), g(x)=x。
+        </p>
+      </div>
+    </section>
 
-      <div class="simulation-actions">
-        <button class="button button-primary" @click="startFullIteration" :disabled="isSolving">开始求解</button>
-        <button class="button button-info" @click="stepIteration"
-                :disabled="isSolving || (iterationHistory.length > 0 && iterationHistory[iterationHistory.length-1].converged)">
-          单步迭代
+    <section id="formal-derivation" class="content-section card">
+      <h2><span class="section-icon">📜</span> 从直观到严谨：法则的诞生</h2>
+      <p v-html="renderHtmlWithInlineKatex('几何直觉告诉我们，在不定点附近，函数的局部行为可以用其切线来近似。洛必达法则正是基于此，并有严格的数学证明（通常基于柯西中值定理）。')"></p>
+      <div class="derivation-steps">
+        <transition-group name="fade-step" tag="ul">
+          <li v-for="(step, index) in formalSteps" :key="step.id" v-show="index <= currentFormalStep"
+              class="derivation-step">
+            <strong>步骤 {{ index + 1 }}:</strong> <span v-html="renderHtmlWithInlineKatex(step.text)"></span>
+          </li>
+        </transition-group>
+        <button @click="nextFormalStep" v-if="currentFormalStep < formalSteps.length -1" class="button-next-step">
+          下一步
         </button>
-        <button class="button button-secondary" @click="resetSolver">重置迭代</button>
       </div>
-    </div>
-
-    <div class="visualization-section card" ref="visualizationSectionEl">
-      <h4 v-html="visualizationTitleHtml"></h4>
-      <canvas ref="solverCanvas" :width="canvasWidth" :height="canvasHeight"></canvas>
-      <div class="form-item view-range-controls">
-        <label for="x-view-min">X轴范围:</label>
-        <input id="x-view-min" v-model.number="xViewRange.min" type="number" step="0.5">
-        <span>到</span>
-        <input id="x-view-max" v-model.number="xViewRange.max" type="number" step="0.5">
-        <label for="y-view-min" style="margin-left: 15px;">Y轴范围:</label>
-        <input id="y-view-min" v-model.number="yViewRange.min" type="number" step="0.5">
-        <span>到</span>
-        <input id="y-view-max" v-model.number="yViewRange.max" type="number" step="0.5">
-      </div>
-    </div>
-
-    <div v-if="iterationHistory.length > 0" class="results-section card" ref="resultsSectionEl">
-      <h4>迭代结果:</h4>
-      <div class="iteration-table-wrapper">
-        <table>
-          <thead>
-          <tr>
-            <th>步骤</th>
-            <th>x{k}</th>
-            <th v-if="selectedMethod === 'bisection'">a{k}</th>
-            <th v-if="selectedMethod === 'bisection'">b{k}</th>
-            <th>f(x{k})</th>
-            <th>|x{k} - x{k-1}|</th>
-            <th>状态</th>
-          </tr>
-          </thead>
-          <tbody>
-          <tr v-for="(item, index) in iterationHistory" :key="index"
-              :class="{highlighted: index === iterationHistory.length -1}">
-            <td>{{ item.iter }}</td>
-            <td>{{ item.xk.toFixed(solverParams.displayPrecision) }}</td>
-            <td v-if="selectedMethod === 'bisection'">
-              {{ item.ak !== undefined ? item.ak.toFixed(solverParams.displayPrecision) : 'N/A' }}
-            </td>
-            <td v-if="selectedMethod === 'bisection'">
-              {{ item.bk !== undefined ? item.bk.toFixed(solverParams.displayPrecision) : 'N/A' }}
-            </td>
-            <td>{{ item.fxk.toExponential(3) }}</td>
-            <td>{{
-                item.error !== undefined ? item.error.toExponential(3) : (index > 0 ? Math.abs(item.xk - iterationHistory[index - 1].xk).toExponential(3) : 'N/A')
-              }}
-            </td>
-            <td :class="item.converged ? 'converged' : (item.maxIterReached ? 'max-iter' : '')">{{ item.status }}</td>
-          </tr>
-          </tbody>
-        </table>
-      </div>
-      <p v-if="currentRoot !== null && iterationHistory.length > 0 && iterationHistory[iterationHistory.length-1].converged && !iterationHistory[iterationHistory.length-1].maxIterReached">
-        <strong>最终近似根: x = {{ currentRoot.toFixed(solverParams.displayPrecision) }}</strong> (在
-        {{ iterationHistory.length }} 次迭代后找到)
+      <p>最终，我们得到洛必达法则：若
+        <KatexRenderer tex="\lim_{x \to c} \frac{f(x)}{g(x)}" :displayMode="false"/>
+        是 $\frac{0}{0}$ 或 $\frac{\infty}{\infty}$ 型，则
       </p>
-    </div>
+      <div class="katex-display-area main-rule">
+        <KatexRenderer tex="\lim_{x \to c} \frac{f(x)}{g(x)} = \lim_{x \to c} \frac{f'(x)}{g'(x)}" :displayMode="true"/>
+      </div>
+      <p v-html="renderHtmlWithInlineKatex('前提是右边的极限存在或为 $\\pm\\infty$，且 $f, g$ 在 $c$ 点附近可导，$g\'(x) \\neq 0$。')"></p>
+    </section>
 
-    <div class="explanation-panel card" ref="explanationPanelEl">
-      <div v-html="explanationHtml"></div>
-    </div>
+    <section id="other-forms" class="content-section card">
+      <h2><span class="section-icon">🎭</span> 触类旁通：不定式的“变形金刚”</h2>
+      <p v-html="renderHtmlWithInlineKatex('洛必达法则不仅限于 $\\frac{0}{0}$ 或 $\\frac{\\infty}{\\infty}$ 型。其他类型的不定式，如 $0 \\cdot \\infty$, $\\infty - \\infty$, $1^\\infty$, $0^0$, $\\infty^0$ 等，通常可以通过巧妙的代数变换转化为这两种基本类型，然后应用洛必达法则。')"></p>
+      <div class="form-transformer">
+        <select v-model="selectedIndeterminateForm" class="form-select">
+          <option value="0_inf">
+            <KatexRenderer tex="0 \cdot \infty" :displayMode="false"/>
+            型
+          </option>
+          <option value="inf_minus_inf">
+            <KatexRenderer tex="\infty - \infty" :displayMode="false"/>
+            型
+          </option>
+          <option value="power_types">幂指类型 (
+            <KatexRenderer tex="1^\infty, 0^0, \infty^0" :displayMode="false"/>
+            )
+          </option>
+        </select>
+        <div class="transformation-explanation">
+          <div v-if="selectedIndeterminateForm === '0_inf'">
+            <p v-html="renderHtmlWithInlineKatex('对于 $f(x) \\cdot g(x)$ 型 (当 $f(x) \\to 0, g(x) \\to \\infty$):')"></p>
+            <p v-html="renderHtmlWithInlineKatex('可以转化为 $\\frac{f(x)}{1/g(x)}$ (趋向于 $\\frac{0}{0}$ 型) 或 $\\frac{g(x)}{1/f(x)}$ (趋向于 $\\frac{\\infty}{\\infty}$ 型)。')"></p>
+            <p v-html="renderHtmlWithInlineKatex('例如: $\\lim_{x \\to 0^+} x \\ln x = \\lim_{x \\to 0^+} \\frac{\\ln x}{1/x}$ ( $\\frac{-\\infty}{\\infty}$ 型)。')"></p>
+          </div>
+          <div v-if="selectedIndeterminateForm === 'inf_minus_inf'">
+            <p v-html="renderHtmlWithInlineKatex('对于 $f(x) - g(x)$ 型 (当 $f(x) \\to \\infty, g(x) \\to \\infty$):')"></p>
+            <p v-html="renderHtmlWithInlineKatex('通常需要通分、分子有理化或提取公因式等方法，将其化为分式形式。')"></p>
+            <p v-html="renderHtmlWithInlineKatex('例如: $\\lim_{x \\to 0} (\\frac{1}{x} - \\frac{1}{\\sin x}) = \\lim_{x \\to 0} \\frac{\\sin x - x}{x \\sin x}$ ( $\\frac{0}{0}$ 型)。')"></p>
+          </div>
+          <div v-if="selectedIndeterminateForm === 'power_types'">
+            <p v-html="renderHtmlWithInlineKatex('对于幂指类型，如 $y = [f(x)]^{g(x)}$:')"></p>
+            <p v-html="renderHtmlWithInlineKatex('通常取对数 $\\ln y = g(x) \\ln f(x)$，先求 $\\lim [g(x) \\ln f(x)]$ (这通常会变成 $0 \\cdot \\infty$ 型)，设结果为 $L$。')"></p>
+            <p v-html="renderHtmlWithInlineKatex('则原极限为 $e^L$。')"></p>
+          </div>
+        </div>
+      </div>
+    </section>
 
+    <section id="playground" class="content-section card">
+      <h2><span class="section-icon">🛠️</span> 实战演练场：应用洛必达法则</h2>
+      <p>
+        在这里，您可以输入具体的函数和极限点，观察洛必达法则是如何一步步求解不定式极限的。（此部分为概念演示，可以集成您已有的求解器组件）</p>
+      <div class="solver-placeholder">
+        <p><em>洛必达法则求解器占位符...</em></p>
+        <p><em>可以包含输入 F(x), G(x), 极限点，然后展示推导步骤和结果。</em></p>
+      </div>
+    </section>
+
+    <footer class="page-footer">
+      <p>探索永无止境，数学充满魅力。</p>
+    </footer>
   </div>
 </template>
 
-<script setup>
-import {ref, onMounted, watch, nextTick, computed} from 'vue';
+<script setup lang="ts">
+import {ref, onMounted, nextTick, watch} from 'vue';
 import katex from 'katex';
-import renderMathInElement from 'katex/contrib/auto-render';
-import 'katex/dist/katex.min.css';
+// 全局 KaTeX CSS 应该在 nuxt.config.ts 或 main.ts/main.css 中导入
+// import 'katex/dist/katex.min.css'; // 如果已在全局导入，此处无需重复
+import * as math from 'mathjs';
+import {
+  Chart,
+  LineController,
+  LineElement,
+  PointElement,
+  LinearScale,
+  Title,
+  Tooltip,
+  Legend,
+  CategoryScale,
+  Filler,
+  Colors
+} from 'chart.js';
+import KatexRenderer from '../../../KatexRenderer.vue'; // 导入新的 KaTeX 组件
 
-const transcendentalRootEl = ref(null);
-const controlsPanelEl = ref(null);
-const explanationPanelEl = ref(null);
-const visualizationSectionEl = ref(null);
-const resultsSectionEl = ref(null); // Added ref for results section
-const solverCanvas = ref(null);
-let ctx = null;
+Chart.register(LineController, LineElement, PointElement, LinearScale, Title, Tooltip, Legend, CategoryScale, Filler, Colors);
 
-const canvasWidth = ref(700);
-const canvasHeight = ref(400);
-
-const selectedEquationKey = ref('cos_x_minus_x');
-const selectedMethod = ref('newton');
-const equationParams = ref({C: 1, A_const: 2, B_const: 1, D_const: 0});
-
-const newtonParams = ref({x0: 0.5});
-const bisectionParams = ref({a: 0, b: 2});
-const solverParams = ref({
-  maxIterations: 50,
-  tolerance: 1e-7,
-  displayPrecision: 8,
-});
-
-const xViewRange = ref({min: -2, max: 3});
-const yViewRange = ref({min: -2, max: 2});
-
-const iterationHistory = ref([]);
-const currentRoot = ref(null);
-const isSolving = ref(false);
-const explanationHtml = ref('');
-
-const equations = {
-  'cos_x_minus_x': {
-    label: '$\\cos x - x = 0$',
-    description: '求解方程 $\\cos(x) = x$。等价于寻找 $f(x) = \\cos(x) - x$ 的根。',
-    func: (x, params) => Math.cos(x) - x,
-    derivative: (x, params) => -Math.sin(x) - 1,
-    g_x_str: '\\cos(x)', g_x_func: (x) => Math.cos(x),
-    h_x_str: 'x', h_x_func: (x) => x,
-    initialNewtonX0: 0.7, initialBisectionA: 0, initialBisectionB: 1,
-    defaultXView: {min: -1, max: 2}, defaultYView: {min: -1.5, max: 1.5},
-    needsConstantC: false, needsConstABD: false,
-  },
-  'x_exp_x_minus_c': {
-    label: '$x e^x - C = 0$',
-    description: '求解方程 $x e^x = C$。等价于寻找 $f(x) = x e^x - C$ 的根。',
-    func: (x, params) => x * Math.exp(x) - params.C,
-    derivative: (x, params) => Math.exp(x) + x * Math.exp(x),
-    g_x_str: 'e^x', g_x_func: (x) => Math.exp(x),
-    h_x_str: 'C/x', h_x_func: (x, params) => (x !== 0 ? params.C / x : NaN),
-    initialNewtonX0: 0.5, initialBisectionA: 0.1, initialBisectionB: 1,
-    defaultXView: {min: -1, max: 2}, defaultYView: {min: -2, max: 3},
-    needsConstantC: true, needsConstABD: false,
-  },
-  'x_ln_x_minus_c': {
-    label: '$x \\ln x - C = 0 \\quad (x > 0)$',
-    description: '求解方程 $x \\ln(x) = C$ ($x > 0$)。等价于寻找 $f(x) = x \\ln(x) - C$ 的根。',
-    func: (x, params) => (x > 0 ? x * Math.log(x) - params.C : NaN),
-    derivative: (x, params) => (x > 0 ? Math.log(x) + 1 : NaN),
-    g_x_str: '\\ln(x)', g_x_func: (x) => (x > 0 ? Math.log(x) : NaN),
-    h_x_str: 'C/x', h_x_func: (x, params) => (x > 0 ? params.C / x : NaN),
-    initialNewtonX0: 1.5, initialBisectionA: 1.1, initialBisectionB: 2.5,
-    defaultXView: {min: 0.1, max: 4}, defaultYView: {min: -2, max: 2},
-    needsConstantC: true, needsConstABD: false,
-  },
-  'a_pow_x_minus_bx_minus_d': {
-    label: '$A^x - Bx - D = 0$',
-    description: '求解方程 $A^x - Bx - D = 0$。等价于寻找 $f(x) = A^x - Bx - D$ 的根。 ($A > 0$)',
-    func: (x, params) => (params.A_const > 0 ? Math.pow(params.A_const, x) - params.B_const * x - params.D_const : NaN),
-    derivative: (x, params) => (params.A_const > 0 ? Math.pow(params.A_const, x) * Math.log(params.A_const) - params.B_const : NaN),
-    initialNewtonX0: 1, initialBisectionA: 0, initialBisectionB: 2,
-    defaultXView: {min: -2, max: 4}, defaultYView: {min: -5, max: 10},
-    needsConstantC: false, needsConstABD: true,
-  },
-};
-
-const currentEquation = computed(() => equations[selectedEquationKey.value]);
-const currentFa = computed(() => {
-  if (selectedMethod.value === 'bisection' && currentEquation.value && bisectionParams.value.a !== null) {
+// --- renderHtmlWithInlineKatex (仍然用于处理段落内混合HTML和$L_ATEX$的情况) ---
+function renderHtmlWithInlineKatex(htmlContent: string): string {
+  if (!htmlContent) return '';
+  // 这个函数直接替换 $...$ 为 KaTeX HTML。
+  // 它本身不处理 displayMode 的公式，那些应使用 <KatexRenderer :displayMode="true" />
+  return htmlContent.replace(/\$(.+?)\$/g, (match, capturedTex) => {
     try {
-      return currentEquation.value.func(bisectionParams.value.a, equationParams.value);
-    } catch {
-      return NaN;
-    }
-  }
-  return NaN;
-});
-const currentFb = computed(() => {
-  if (selectedMethod.value === 'bisection' && currentEquation.value && bisectionParams.value.b !== null) {
-    try {
-      return currentEquation.value.func(bisectionParams.value.b, equationParams.value);
-    } catch {
-      return NaN;
-    }
-  }
-  return NaN;
-});
-const isBisectionBracketValid = computed(() => !isNaN(currentFa.value) && !isNaN(currentFb.value) && currentFa.value * currentFb.value < 0);
-
-const visualizationTitleHtml = computed(() => {
-  let title = '函数图像与迭代过程 (<span>$y = f(x)$</span>';
-  const eq = currentEquation.value;
-  if (eq.g_x_str && eq.h_x_str) {
-    title += ` 或 $y=${eq.g_x_str}$ 与 $y=${eq.h_x_str}$`;
-  }
-  title += ')';
-  return title;
-});
-
-function doKatexRender(element) {
-  if (element && typeof renderMathInElement === 'function') {
-    try {
-      renderMathInElement(element, {
-        delimiters: [
-          {left: "$$", right: "$$", display: true}, {left: "$", right: "$", display: false},
-          {left: "\\(", right: "\\)", display: false}, {left: "\\[", right: "\\]", display: true}
-        ],
-        throwOnError: false
+      return katex.renderToString(capturedTex.replace(/\n/g, ' ').trim(), {
+        throwOnError: false,
+        displayMode: false, // 强制 inline
+        output: "htmlAndMathml",
+        strict: (errorCode) => errorCode === 'unicodeTextInMathMode' ? 'ignore' : 'warn',
       });
-    } catch (error) {
-      console.error("KaTeX renderMathInElement error:", error);
+    } catch (e: unknown) {
+      console.error('Inline KaTeX rendering error:', capturedTex, e);
+      return `<span style="color:red; border:1px dashed red; padding:2px;">${match}(Error)</span>`;
     }
-  }
-}
-
-function updateExplanation() {
-  const eq = currentEquation.value;
-  let html = `<h4>当前方程: ${eq.label}</h4>`;
-  html += `<p>${eq.description}</p>`;
-  if (selectedMethod.value === 'newton') {
-    html += `<h5>牛顿-拉弗森法 (Newton-Raphson):</h5>`;
-    html += `<p>迭代公式: $x_{k+1} = x_k - \\frac{f(x_k)}{f'(x_k)}$</p>`;
-    html += `<p>其中 $x_k$ 是第 $k$ 次迭代的近似值，$f(x_k)$ 是函数在 $x_k$ 处的值，$f'(x_k)$ 是函数在 $x_k$ 处的导数值。</p>`;
-  } else if (selectedMethod.value === 'bisection') {
-    html += `<h5>二分法 (Bisection Method):</h5>`;
-    html += `<p>要求初始区间 $[a, b]$ 满足 $f(a) \cdot f(b) < 0$。</p>`;
-    html += `<p>每次迭代计算中点 $m_k = (a_k + b_k) / 2$，并根据 $f(m_k)$ 的符号缩小区间。</p>`;
-  }
-  explanationHtml.value = html;
-}
-
-let plotScaleX, plotScaleY, plotOriginX, plotOriginY;
-
-function setupPlotting() {
-  const margin = 40;
-  const xRangeEffective = xViewRange.value.max - xViewRange.value.min;
-  const yRangeEffective = yViewRange.value.max - yViewRange.value.min;
-  plotScaleX = (xRangeEffective === 0) ? 1 : (canvasWidth.value - 2 * margin) / xRangeEffective;
-  plotScaleY = (yRangeEffective === 0) ? 1 : (canvasHeight.value - 2 * margin) / yRangeEffective;
-  plotOriginX = margin - xViewRange.value.min * plotScaleX;
-  plotOriginY = margin + yViewRange.value.max * plotScaleY;
-}
-
-function toCanvasX(x_domain) {
-  return plotOriginX + x_domain * plotScaleX;
-}
-
-function toCanvasY(y_domain) {
-  return plotOriginY - y_domain * plotScaleY;
-}
-
-function drawAxes() {
-  if (!ctx) return;
-  setupPlotting();
-  ctx.clearRect(0, 0, canvasWidth.value, canvasHeight.value);
-  ctx.strokeStyle = '#ccc';
-  ctx.lineWidth = 0.5;
-  const tickSize = 5;
-  const xRangeVal = xViewRange.value.max - xViewRange.value.min;
-  const yRangeVal = yViewRange.value.max - yViewRange.value.min;
-  const xStep = xRangeVal > 10 ? 2 : (xRangeVal > 5 ? 1 : (xRangeVal > 2 ? 0.5 : (xRangeVal > 1 ? 0.2 : 0.1)));
-  const yStep = yRangeVal > 10 ? 2 : (yRangeVal > 5 ? 1 : (yRangeVal > 2 ? 0.5 : (yRangeVal > 1 ? 0.2 : 0.1)));
-  for (let x = Math.floor(xViewRange.value.min / xStep) * xStep; x <= Math.ceil(xViewRange.value.max / xStep) * xStep; x += xStep) {
-    if (x > xViewRange.value.max + xStep) break;
-    const cx = toCanvasX(x);
-    ctx.beginPath();
-    ctx.moveTo(cx, plotOriginY - tickSize);
-    ctx.lineTo(cx, plotOriginY + tickSize);
-    ctx.stroke();
-    if (Math.abs(x % (xStep * 2)) < 1e-6 || x === 0 || Math.abs(x - xViewRange.value.min) < 1e-6 || Math.abs(x - xViewRange.value.max) < 1e-6) {
-      ctx.fillStyle = '#666';
-      ctx.font = '10px Arial';
-      ctx.textAlign = 'center';
-      ctx.fillText(x.toFixed(Math.abs(x) < 1e-6 && x !== 0 ? 1 : (Math.abs(xStep) < 1 ? 1 : 0)), cx, plotOriginY + 15);
-    }
-  }
-  for (let y = Math.floor(yViewRange.value.min / yStep) * yStep; y <= Math.ceil(yViewRange.value.max / yStep) * yStep; y += yStep) {
-    if (y > yViewRange.value.max + yStep) break;
-    const cy = toCanvasY(y);
-    ctx.beginPath();
-    ctx.moveTo(plotOriginX - tickSize, cy);
-    ctx.lineTo(plotOriginX + tickSize, cy);
-    ctx.stroke();
-    if (Math.abs(y % (yStep * 2)) < 1e-6 || y === 0 && Math.abs(plotOriginX) > tickSize * 2) {
-      ctx.fillStyle = '#666';
-      ctx.font = '10px Arial';
-      ctx.textAlign = 'right';
-      ctx.fillText(y.toFixed(Math.abs(y) < 1e-6 && y !== 0 ? 1 : (Math.abs(yStep) < 1 ? 1 : 0)), plotOriginX - 8, cy + 3);
-    }
-  }
-  ctx.strokeStyle = '#333';
-  ctx.lineWidth = 1;
-  ctx.beginPath();
-  ctx.moveTo(0, plotOriginY);
-  ctx.lineTo(canvasWidth.value, plotOriginY);
-  ctx.stroke();
-  ctx.beginPath();
-  ctx.moveTo(plotOriginX, 0);
-  ctx.lineTo(plotOriginX, canvasHeight.value);
-  ctx.stroke();
-}
-
-function plotFunction(funcToPlot, color = 'blue', lineWidth = 2, points = 400) {
-  if (!ctx || !funcToPlot) return;
-  ctx.beginPath();
-  ctx.strokeStyle = color;
-  ctx.lineWidth = lineWidth;
-  let firstMove = true;
-  for (let i = 0; i <= points; i++) {
-    const x_domain = xViewRange.value.min + (i / points) * (xViewRange.value.max - xViewRange.value.min);
-    const y_domain = funcToPlot(x_domain, equationParams.value);
-    if (isNaN(y_domain) || !isFinite(y_domain)) {
-      if (!firstMove) ctx.stroke();
-      firstMove = true;
-      continue;
-    }
-    const cx = toCanvasX(x_domain);
-    const cy = toCanvasY(y_domain);
-    if (cx < -5 || cx > canvasWidth.value + 5 || cy < -5 || cy > canvasHeight.value + 5) {
-      if (!firstMove) ctx.stroke();
-      firstMove = true;
-      continue;
-    }
-    if (firstMove) {
-      ctx.moveTo(cx, cy);
-      firstMove = false;
-    } else {
-      ctx.lineTo(cx, cy);
-    }
-  }
-  if (!firstMove) ctx.stroke();
-}
-
-function drawNewtonStep(xk, fxk, fpxk_val) {
-  if (!ctx || fpxk_val === 0 || isNaN(fpxk_val) || isNaN(xk) || isNaN(fxk)) return;
-  const cxk = toCanvasX(xk);
-  const cyk = toCanvasY(fxk);
-  ctx.fillStyle = 'red';
-  ctx.beginPath();
-  ctx.arc(cxk, cyk, 5, 0, 2 * Math.PI);
-  ctx.fill();
-  const x_next = xk - fxk / fpxk_val;
-  const cx_next = toCanvasX(x_next);
-  const cy_next_on_axis = toCanvasY(0);
-  ctx.strokeStyle = 'rgba(255, 165, 0, 0.7)';
-  ctx.lineWidth = 1;
-  ctx.setLineDash([4, 4]);
-  ctx.beginPath();
-  const y_tangent_at_x_min = fxk + fpxk_val * (xViewRange.value.min - xk);
-  const y_tangent_at_x_max = fxk + fpxk_val * (xViewRange.value.max - xk);
-  ctx.moveTo(toCanvasX(xViewRange.value.min), toCanvasY(y_tangent_at_x_min));
-  ctx.lineTo(toCanvasX(xViewRange.value.max), toCanvasY(y_tangent_at_x_max));
-  ctx.stroke();
-  ctx.setLineDash([]);
-  ctx.fillStyle = 'purple';
-  ctx.beginPath();
-  ctx.arc(cx_next, cy_next_on_axis, 6, 0, 2 * Math.PI);
-  ctx.fill();
-}
-
-function drawBisectionStep(ak, bk, mk) {
-  if (!ctx || isNaN(ak) || isNaN(bk) || isNaN(mk)) return;
-  const cak = toCanvasX(ak);
-  const cbk = toCanvasX(bk);
-  const cmk = toCanvasX(mk);
-  const cy_axis = toCanvasY(0);
-  ctx.fillStyle = 'rgba(0, 100, 255, 0.15)';
-  ctx.fillRect(cak, 0, cbk - cak, canvasHeight.value);
-  ctx.strokeStyle = 'rgba(0, 100, 255, 0.5)';
-  ctx.lineWidth = 1;
-  ctx.beginPath();
-  ctx.moveTo(cak, 0);
-  ctx.lineTo(cak, canvasHeight.value);
-  ctx.stroke();
-  ctx.beginPath();
-  ctx.moveTo(cbk, 0);
-  ctx.lineTo(cbk, canvasHeight.value);
-  ctx.stroke();
-  ctx.fillStyle = 'red';
-  ctx.beginPath();
-  ctx.arc(cmk, cy_axis, 5, 0, 2 * Math.PI);
-  ctx.fill();
-}
-
-function redrawCanvas() {
-  if (!ctx) return;
-  drawAxes();
-  plotFunction(currentEquation.value.func, '#007bff');
-  if (currentEquation.value.g_x_func && currentEquation.value.h_x_func) {
-    plotFunction(currentEquation.value.g_x_func, '#28a745', 1);
-    plotFunction(currentEquation.value.h_x_func, '#6f42c1', 1);
-  }
-  const lastIter = iterationHistory.value.length > 0 ? iterationHistory.value[iterationHistory.value.length - 1] : null;
-  if (lastIter) {
-    if (selectedMethod.value === 'newton' && lastIter.fpxk !== undefined && lastIter.prev_xk !== undefined && lastIter.prev_fxk !== undefined) {
-      drawNewtonStep(lastIter.prev_xk, lastIter.prev_fxk, lastIter.fpxk);
-    } else if (selectedMethod.value === 'bisection' && lastIter.ak_prev !== undefined && lastIter.bk_prev !== undefined) {
-      drawBisectionStep(lastIter.ak_prev, lastIter.bk_prev, lastIter.xk);
-    }
-  }
-}
-
-function initializeEquation() {
-  isSolving.value = false;
-  resetSolverInternal(true);
-  const eq = currentEquation.value;
-  newtonParams.value.x0 = eq.initialNewtonX0;
-  bisectionParams.value.a = eq.initialBisectionA;
-  bisectionParams.value.b = eq.initialBisectionB;
-  xViewRange.value = {...eq.defaultXView};
-  yViewRange.value = {...eq.defaultYView};
-  if (!eq.needsConstantC) equationParams.value.C = 1;
-  if (!eq.needsConstABD) {
-    equationParams.value.A_const = 2;
-    equationParams.value.B_const = 1;
-    equationParams.value.D_const = 0;
-  }
-  updateExplanation();
-  redrawCanvas();
-}
-
-function resetSolverInternal(fullResetParams = true) {
-  iterationHistory.value = [];
-  currentRoot.value = null;
-  if (fullResetParams) {
-    const eq = currentEquation.value;
-    if (eq) {
-      newtonParams.value.x0 = eq.initialNewtonX0;
-      bisectionParams.value.a = eq.initialBisectionA;
-      bisectionParams.value.b = eq.initialBisectionB;
-    }
-  }
-}
-
-function resetSolver() {
-  isSolving.value = false;
-  initializeEquation();
-  nextTick(() => {
-    if (transcendentalRootEl.value) doKatexRender(transcendentalRootEl.value);
   });
 }
 
-async function iterateNewton() {
-  let xk = newtonParams.value.x0;
-  if (iterationHistory.value.length > 0) {
-    const lastValidXk = iterationHistory.value.slice().reverse().find(item => !isNaN(item.xk));
-    xk = lastValidXk ? lastValidXk.xk : newtonParams.value.x0;
-  }
-  const fxk = currentEquation.value.func(xk, equationParams.value);
-  const fpxk_val = currentEquation.value.derivative(xk, equationParams.value);
-  let status = "迭代中";
-  let converged = false;
-  let maxIterReached = false;
-  if (isNaN(fxk) || isNaN(fpxk_val)) {
-    status = "失败: 函数或导数在点 " + xk.toFixed(4) + " 未定义";
-    converged = true;
-    maxIterReached = true;
-  } else if (Math.abs(fpxk_val) < 1e-12) {
-    status = "失败: 导数接近零";
-    converged = true;
-    maxIterReached = true;
-  }
-  let xk_plus_1 = xk;
-  if (!converged) xk_plus_1 = xk - fxk / fpxk_val;
-  const error = Math.abs(xk_plus_1 - xk);
-  if (!converged && (error < solverParams.value.tolerance || Math.abs(fxk) < solverParams.value.tolerance)) {
-    status = "收敛";
-    converged = true;
-    currentRoot.value = xk_plus_1;
-  }
-  if (!converged && iterationHistory.value.length + 1 >= solverParams.value.maxIterations) {
-    status = "达到最大迭代次数";
-    maxIterReached = true;
-    converged = true;
-    currentRoot.value = xk_plus_1;
-  }
-  iterationHistory.value.push({
-    iter: iterationHistory.value.length + 1,
-    xk: xk_plus_1,
-    prev_xk: xk,
-    fxk: currentEquation.value.func(xk_plus_1, equationParams.value),
-    prev_fxk: fxk,
-    fpxk: fpxk_val,
-    error: error,
-    status: status,
-    converged: converged,
-    maxIterReached: maxIterReached
-  });
-  if (!maxIterReached && !status.startsWith("失败")) newtonParams.value.x0 = xk_plus_1;
-  redrawCanvas();
-  return converged || maxIterReached;
-}
+// --- Geometric Zoom Section ---
+const geometricZoomChartCanvas = ref<HTMLCanvasElement | null>(null);
+let geometricZoomChartInstance: Chart | null = null;
 
-async function iterateBisection() {
-  let ak = bisectionParams.value.a;
-  let bk = bisectionParams.value.b;
-  if (iterationHistory.value.length > 0) {
-    const last = iterationHistory.value[iterationHistory.value.length - 1];
-    ak = last.next_ak !== undefined ? last.next_ak : ak;
-    bk = last.next_bk !== undefined ? last.next_bk : bk;
-  }
-  const fak = currentEquation.value.func(ak, equationParams.value);
-  const fbk = currentEquation.value.func(bk, equationParams.value);
-  let status = "迭代中";
-  let converged = false;
-  let maxIterReached = false;
-  if ((isNaN(fak) || isNaN(fbk) || fak * fbk >= 0) && iterationHistory.value.length === 0) {
-    status = "失败: f(a)·f(b) < 0 未满足";
-    iterationHistory.value.push({
-      iter: 1,
-      xk: (ak + bk) / 2,
-      ak_prev: ak,
-      bk_prev: bk,
-      ak,
-      bk,
-      fak,
-      fbk,
-      fxk: NaN,
-      error: Math.abs(bk - ak) / 2,
-      status,
-      converged: true,
-      maxIterReached
-    });
-    redrawCanvas();
-    return true;
-  }
-  const mk = (ak + bk) / 2;
-  const fmk = currentEquation.value.func(mk, equationParams.value);
-  const error = Math.abs(bk - ak) / 2;
-  let next_ak = ak, next_bk = bk;
-  if (isNaN(fmk)) {
-    status = "失败: f(m) 未定义";
-    converged = true;
-    maxIterReached = true;
-  } else if (Math.abs(fmk) < solverParams.value.tolerance || error < solverParams.value.tolerance) {
-    status = "收敛";
-    converged = true;
-    currentRoot.value = mk;
-  } else if (fak * fmk < 0) {
-    next_bk = mk;
-  } else {
-    next_ak = mk;
-  }
-  if (!converged && iterationHistory.value.length + 1 >= solverParams.value.maxIterations) {
-    status = "达到最大迭代次数";
-    maxIterReached = true;
-    converged = true;
-    currentRoot.value = mk;
-  }
-  iterationHistory.value.push({
-    iter: iterationHistory.value.length + 1,
-    xk: mk,
-    ak_prev: ak,
-    bk_prev: bk,
-    fak,
-    fbk,
-    fxk: fmk,
-    next_ak,
-    next_bk,
-    error: error,
-    status: status,
-    converged: converged,
-    maxIterReached: maxIterReached
-  });
-  if (!maxIterReached && !status.startsWith("失败")) {
-    bisectionParams.value.a = next_ak;
-    bisectionParams.value.b = next_bk;
-  }
-  redrawCanvas();
-  return converged || maxIterReached;
-}
+const geoFunctions = ref({
+  fx: 'sin(x)',
+  gx: 'x',
+});
 
-async function startFullIteration() {
-  if (isSolving.value) return;
-  isSolving.value = true;
-  resetSolverInternal(false);
-  let convergedOrMaxIter = false;
-  if (selectedMethod.value === 'bisection' && !isBisectionBracketValid.value) {
-    alert("二分法初始区间无效: f(a) 和 f(b) 必须异号。请调整区间 a, b。");
-    isSolving.value = false;
+const geoZoom = ref({
+  level: 0.5,
+  baseXMax: 1,
+  currentXMax: 0.5,
+});
+
+const geoDerivatives = ref<{
+  f_prime_c: number | null;
+  g_prime_c: number | null;
+  f_prime_c_tex: string;
+  g_prime_c_tex: string;
+  ratio_tex: string;
+}>({
+  f_prime_c: null,
+  g_prime_c: null,
+  f_prime_c_tex: '?',
+  g_prime_c_tex: '?',
+  ratio_tex: '?',
+});
+
+let geoUpdateTimeout: number | null = null;
+
+function calculateGeoDerivatives() {
+  geoDerivatives.value.f_prime_c = null;
+  geoDerivatives.value.g_prime_c = null;
+  geoDerivatives.value.f_prime_c_tex = '?';
+  geoDerivatives.value.g_prime_c_tex = '?';
+  geoDerivatives.value.ratio_tex = '?';
+
+  if (!geoFunctions.value.fx || !geoFunctions.value.gx) {
     return;
   }
+
   try {
-    iterationLoop: for (let i = 0; i < solverParams.value.maxIterations; i++) {
-      if (!isSolving.value) break iterationLoop;
-      if (selectedMethod.value === 'newton') {
-        convergedOrMaxIter = await iterateNewton();
-      } else if (selectedMethod.value === 'bisection') {
-        convergedOrMaxIter = await iterateBisection();
+    const fxNode = math.parse(geoFunctions.value.fx.trim());
+    const gxNode = math.parse(geoFunctions.value.gx.trim());
+
+    const f_at_0 = fxNode.evaluate({x: 0});
+    const g_at_0 = gxNode.evaluate({x: 0});
+
+    if (Math.abs(f_at_0) > 1e-9 || Math.abs(g_at_0) > 1e-9) {
+      console.warn("几何可视化中的函数应确保 f(0)=0 和 g(0)=0。");
+    }
+
+    const f_prime_node = math.derivative(fxNode, 'x');
+    const g_prime_node = math.derivative(gxNode, 'x');
+
+    const f_prime_c_val = f_prime_node.evaluate({x: 0});
+    const g_prime_c_val = g_prime_node.evaluate({x: 0});
+
+    if (typeof f_prime_c_val === 'number' && typeof g_prime_c_val === 'number' &&
+        Number.isFinite(f_prime_c_val) && Number.isFinite(g_prime_c_val)) {
+      geoDerivatives.value.f_prime_c = f_prime_c_val;
+      geoDerivatives.value.g_prime_c = g_prime_c_val;
+      geoDerivatives.value.f_prime_c_tex = math.format(f_prime_c_val, {notation: 'fixed', precision: 2});
+      geoDerivatives.value.g_prime_c_tex = math.format(g_prime_c_val, {notation: 'fixed', precision: 2});
+
+      if (Math.abs(g_prime_c_val) > 1e-9) {
+        const ratio = math.divide(f_prime_c_val, g_prime_c_val);
+        geoDerivatives.value.ratio_tex = math.format(ratio, {notation: 'fixed', precision: 2});
+      } else {
+        geoDerivatives.value.ratio_tex = '\\text{未定义 (g\'(0) \\approx 0)}';
       }
-      if (convergedOrMaxIter) break iterationLoop;
-      await new Promise(r => setTimeout(r, 60));
+    } else {
+      console.error('在 x=0 处的导数值不是有限数字。');
     }
-  } finally {
-    isSolving.value = false;
+  } catch (e) {
+    console.error("计算几何演示的导数时出错:", e);
   }
 }
 
-async function stepIteration() {
-  if (isSolving.value) return;
-  if (iterationHistory.value.length > 0 && iterationHistory.value[iterationHistory.value.length - 1].converged) return;
-  if (selectedMethod.value === 'bisection' && iterationHistory.value.length === 0 && !isBisectionBracketValid.value) {
-    alert("二分法初始区间无效: f(a) 和 f(b) 必须异号。");
+function updateGeoChartData() {
+  if (!geometricZoomChartInstance || !geometricZoomChartCanvas.value) return;
+
+  calculateGeoDerivatives();
+
+  const numPoints = 201;
+  const xMax = geoZoom.value.baseXMax * geoZoom.value.level;
+  geoZoom.value.currentXMax = xMax;
+  const xMin = -xMax;
+
+  if (xMin >= xMax || xMax === 0) { // 避免无效范围或除以零
+    if (geometricZoomChartInstance.options?.scales?.x) {
+      geometricZoomChartInstance.options.scales.x.min = -0.1; // 默认小范围
+      geometricZoomChartInstance.options.scales.x.max = 0.1;
+    }
+    geometricZoomChartInstance.update('none');
     return;
   }
-  isSolving.value = true;
-  const method = selectedMethod.value === 'newton' ? iterateNewton : iterateBisection;
+
+  const stepSize = (xMax - xMin) / (numPoints - 1);
+  const labels = Array.from({length: numPoints}, (_, i) => parseFloat((xMin + i * stepSize).toFixed(5)));
+
+  let fxData: (number | null)[], gxData: (number | null)[], fTangentData: (number | null)[],
+      gTangentData: (number | null)[];
+
   try {
-    await method();
-  } finally {
-    isSolving.value = false;
+    const fxNodeCompiled = math.parse(geoFunctions.value.fx.trim() || "0").compile();
+    const gxNodeCompiled = math.parse(geoFunctions.value.gx.trim() || "0").compile();
+
+    fxData = labels.map(x => {
+      try {
+        const val = fxNodeCompiled.evaluate({x});
+        return Number.isFinite(val) ? val : null;
+      } catch {
+        return null;
+      }
+    });
+    gxData = labels.map(x => {
+      try {
+        const val = gxNodeCompiled.evaluate({x});
+        return Number.isFinite(val) ? val : null;
+      } catch {
+        return null;
+      }
+    });
+
+    if (geoDerivatives.value.f_prime_c !== null) {
+      fTangentData = labels.map(x => (geoDerivatives.value.f_prime_c as number) * x);
+    } else {
+      fTangentData = labels.map(() => null);
+    }
+    if (geoDerivatives.value.g_prime_c !== null) {
+      gTangentData = labels.map(x => (geoDerivatives.value.g_prime_c as number) * x);
+    } else {
+      gTangentData = labels.map(() => null);
+    }
+
+  } catch (e) {
+    console.error("解析/编译几何图表函数时出错:", e);
+    fxData = labels.map(() => null);
+    gxData = labels.map(() => null);
+    fTangentData = labels.map(() => null);
+    gTangentData = labels.map(() => null);
+  }
+
+  geometricZoomChartInstance.data.labels = labels;
+  geometricZoomChartInstance.data.datasets[0].data = fxData;
+  geometricZoomChartInstance.data.datasets[1].data = gxData;
+  geometricZoomChartInstance.data.datasets[2].data = fTangentData;
+  geometricZoomChartInstance.data.datasets[3].data = gTangentData;
+
+  if (geometricZoomChartInstance.options?.scales?.x) {
+    geometricZoomChartInstance.options.scales.x.min = xMin;
+    geometricZoomChartInstance.options.scales.x.max = xMax;
+  }
+
+  const allYData = [...fxData, ...gxData, ...fTangentData, ...gTangentData].filter(y => y !== null && Number.isFinite(y)) as number[];
+  let yMinVal = allYData.length > 0 ? Math.min(...allYData) : -1;
+  let yMaxVal = allYData.length > 0 ? Math.max(...allYData) : 1;
+
+  if (yMinVal === yMaxVal) {
+    yMinVal -= 0.5;
+    yMaxVal += 0.5;
+  }
+  const padding = Math.abs(yMaxVal - yMinVal) * 0.1 || 0.1;
+
+  if (geometricZoomChartInstance.options?.scales?.y) {
+    geometricZoomChartInstance.options.scales.y.min = yMinVal - padding;
+    geometricZoomChartInstance.options.scales.y.max = yMaxVal + padding;
+  }
+
+  geometricZoomChartInstance.update('none');
+}
+
+function throttledUpdateGeoChartData() {
+  if (geoUpdateTimeout !== null) {
+    clearTimeout(geoUpdateTimeout);
+  }
+  geoUpdateTimeout = window.setTimeout(() => {
+    updateGeoChartData();
+  }, 100);
+}
+
+
+function setupGeometricZoomChart() {
+  if (geometricZoomChartCanvas.value) {
+    const ctx = geometricZoomChartCanvas.value.getContext('2d');
+    if (ctx) {
+      if (geometricZoomChartInstance) {
+        geometricZoomChartInstance.destroy();
+      }
+      geometricZoomChartInstance = new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels: [],
+          datasets: [
+            {
+              label: 'f(x)',
+              data: [],
+              borderColor: 'rgba(54, 162, 235, 1)',
+              borderWidth: 2,
+              tension: 0.1,
+              pointRadius: 0,
+              fill: false,
+            },
+            {
+              label: 'g(x)',
+              data: [],
+              borderColor: 'rgba(255, 99, 132, 1)',
+              borderWidth: 2,
+              tension: 0.1,
+              pointRadius: 0,
+              fill: false,
+            },
+            {
+              label: "f'(0)x (切线近似)",
+              data: [],
+              borderColor: 'rgba(75, 192, 192, 0.7)',
+              borderDash: [5, 5],
+              borderWidth: 1.5,
+              pointRadius: 0,
+              fill: false,
+            },
+            {
+              label: "g'(0)x (切线近似)",
+              data: [],
+              borderColor: 'rgba(255, 206, 86, 0.7)',
+              borderDash: [5, 5],
+              borderWidth: 1.5,
+              pointRadius: 0,
+              fill: false,
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          animation: {duration: 0},
+          scales: {
+            x: {type: 'linear', position: 'bottom', title: {display: true, text: 'x (围绕 c=0)'}},
+            y: {type: 'linear', position: 'left', title: {display: true, text: 'y'}, beginAtZero: false}
+          },
+          plugins: {
+            tooltip: {enabled: true, mode: 'index', intersect: false},
+            legend: {position: 'top'},
+            colors: {forceOverride: true} // 确保颜色定义生效
+          }
+        }
+      });
+      updateGeoChartData();
+    }
   }
 }
 
-function onEquationSelectChange() {
-  initializeEquation();
-  nextTick(() => {
-    if (transcendentalRootEl.value) {
-      doKatexRender(transcendentalRootEl.value);
-    }
-  });
+watch([() => geoFunctions.value.fx, () => geoFunctions.value.gx], () => {
+  throttledUpdateGeoChartData();
+});
+
+
+// --- Formal Derivation Steps ---
+const formalSteps = ref([
+  {id: 1, text: '假设我们要求解极限 $\\lim_{x \\to c} \\frac{f(x)}{g(x)}$，且满足 $f(c)=0, g(c)=0$。'},
+  {
+    id: 2,
+    text: '由于 $f(c)=0$ 和 $g(c)=0$，我们可以将分数改写为：$\\frac{f(x)}{g(x)} = \\frac{f(x) - f(c)}{g(x) - g(c)}$。'
+  },
+  {
+    id: 3,
+    text: '如果 $f(x)$ 和 $g(x)$ 在 $c$ 点可导，那么当 $x \\to c$ 时，根据导数的定义（或泰勒展开一阶）：<br>$f(x) \\approx f(c) + f\'(c)(x-c) = f\'(c)(x-c)$ <br>$g(x) \\approx g(c) + g\'(c)(x-c) = g\'(c)(x-c)$。'
+  },
+  {
+    id: 4,
+    text: '所以，$\\frac{f(x)}{g(x)} \\approx \\frac{f\'(c)(x-c)}{g\'(c)(x-c)} = \\frac{f\'(c)}{g\'(c)}$ （要求 $g\'(c) \\neq 0$）。'
+  },
+  {
+    id: 5,
+    text: '更严格地，根据柯西中值定理，若 $f, g$ 在包含 $c$ 和 $x$ 的闭区间上连续，在开区间上可导，且 $g\'(t) \\neq 0$（在 $(c,x)$ 或 $(x,c)$ 内），则存在一点 $\\xi$ 在 $c$ 和 $x$ 之间，使得 $\\frac{f(x)-f(c)}{g(x)-g(c)} = \\frac{f\'(\\xi)}{g\'(\\xi)}$。'
+  },
+  {
+    id: 6,
+    text: '当 $x \\to c$ 时，$\\xi \\to c$。因此，$\\lim_{x \\to c} \\frac{f(x)}{g(x)} = \\lim_{\\xi \\to c} \\frac{f\'(\\xi)}{g\'(\\xi)} = \\lim_{x \\to c} \\frac{f\'(x)}{g\'(x)}$，前提是右侧极限存在或为 $\\pm\\infty$。'
+  }
+]);
+const currentFormalStep = ref(0);
+
+function nextFormalStep() {
+  if (currentFormalStep.value < formalSteps.value.length - 1) {
+    currentFormalStep.value++;
+  }
 }
+
+// --- Other Indeterminate Forms ---
+const selectedIndeterminateForm = ref('0_inf');
+
 
 onMounted(() => {
-  if (solverCanvas.value) {
-    ctx = solverCanvas.value.getContext('2d');
-  }
-  initializeEquation();
-
   nextTick(() => {
-    if (transcendentalRootEl.value) {
-      doKatexRender(transcendentalRootEl.value);
-    }
+    setupGeometricZoomChart();
+    // 如果页面模板中有静态的 LaTeX (例如 <p>公式 $$E=mc^2$$</p>)，
+    // 并且没有通过 <KatexRenderer /> 处理，那么你可能需要在这里
+    // 手动对这些特定区域调用 renderMathInElement。
+    // 例如:
+    // const staticMathContainer = document.getElementById('static-math-id');
+    // if (staticMathContainer) {
+    //   renderMathInElement(staticMathContainer, { delimiters: [...] });
+    // }
+    // 但在这个重构版本中，我们更倾向于使用 <KatexRenderer /> 处理所有独立的公式。
   });
 });
-
-watch([selectedEquationKey, selectedMethod, equationParams], () => {
-  if (!isSolving.value) initializeEquation();
-  nextTick(() => {
-    if (transcendentalRootEl.value) doKatexRender(transcendentalRootEl.value);
-  });
-}, {deep: true});
-
-watch([xViewRange, yViewRange], redrawCanvas, {deep: true});
-
-watch(explanationHtml, async (newHtml) => {
-  if (newHtml && explanationPanelEl.value) {
-    await nextTick();
-    doKatexRender(explanationPanelEl.value);
-  }
-}, {flush: 'post'});
-
-watch(visualizationTitleHtml, async () => {
-  await nextTick();
-  if (visualizationSectionEl.value) {
-    doKatexRender(visualizationSectionEl.value);
-  }
-}, {flush: 'post'});
 
 </script>
 
 <style scoped>
-.math-example-container {
+.lhopital-derivation-page {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+  color: #333;
+  line-height: 1.7;
+  max-width: 900px;
+  margin: 0 auto;
   padding: 20px;
-  max-width: 950px;
-  margin: auto;
-  font-family: system-ui, sans-serif;
-  background-color: #fdfdff;
+  background-color: #f4f7f9;
 }
 
-.card {
-  background-color: #ffffff;
-  border: 1px solid #e9ecef;
-  border-radius: 8px;
-  padding: 20px;
-  margin-top: 20px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
-}
-
-h3 {
-  margin-top: 0;
-  color: #0056b3;
-  border-bottom: 2px solid #cfe2ff;
-  padding-bottom: 10px;
-  margin-bottom: 20px;
-  font-size: 1.8em;
-  font-weight: 600;
+.page-header {
   text-align: center;
+  margin-bottom: 40px;
+  padding-bottom: 20px;
+  border-bottom: 2px solid #e0e0e0;
 }
 
-h4 {
-  font-size: 1.25rem;
+.page-header h1 {
+  font-size: 2.8em;
+  font-weight: 700;
+  color: #2c3e50;
+  margin-bottom: 0.2em;
+}
+
+.cool-math-symbol {
+  font-family: 'Times New Roman', Times, serif;
+  font-weight: bold;
+  color: #3498db;
+  margin-right: 5px;
+}
+
+.subtitle {
+  font-size: 1.2em;
+  color: #555;
   margin-top: 0;
-  margin-bottom: 18px;
-  color: #343a40;
-  font-weight: 600;
 }
 
-.controls-panel {
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: 20px;
+.content-section {
+  margin-bottom: 35px;
+  padding: 25px;
+  border-radius: 8px;
+  background-color: #fff;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
 }
 
-.control-section h4 {
-  border-bottom: 1px solid #dee2e6;
+.content-section h2 {
+  font-size: 1.8em;
+  color: #2980b9;
+  margin-top: 0;
+  margin-bottom: 20px;
   padding-bottom: 10px;
-}
-
-.form-item {
-  margin-bottom: 15px;
+  border-bottom: 1px solid #eee;
   display: flex;
   align-items: center;
-  flex-wrap: wrap;
-  gap: 10px;
 }
 
-.form-item label {
-  font-size: 0.9em;
-  color: #495057;
-  min-width: 160px;
-  font-weight: 500;
+.section-icon {
+  margin-right: 12px;
+  font-size: 1.3em;
 }
 
-.form-item select {
-  padding: 8px 10px;
-  border: 1px solid #ced4da;
-  border-radius: 5px;
-  font-size: 0.9em;
-  box-sizing: border-box;
-  min-width: 280px;
-  flex-grow: 1;
-  font-family: 'KaTeX_Main', 'Times New Roman', serif;
-}
-
-.form-item select option {
-  font-family: 'KaTeX_Main', 'Times New Roman', serif;
+.card p, .card li {
   font-size: 1.05em;
-  padding: 3px 5px;
-}
-
-.form-item input[type="number"] {
-  padding: 8px 10px;
-  border: 1px solid #ced4da;
-  border-radius: 5px;
-  font-size: 0.9em;
-  box-sizing: border-box;
-  width: 120px;
-}
-
-.form-item input[type="number"]:focus, .form-item select:focus {
-  border-color: #80bdff;
-  outline: 0;
-  box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, .25);
-}
-
-.form-item-group {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  padding: 10px;
-  border: 1px solid #eee;
-  border-radius: 4px;
-  margin-top: 5px;
-}
-
-.form-item-group .form-item {
-  margin-bottom: 5px;
-}
-
-.simulation-actions {
-  display: flex;
-  gap: 10px;
-  justify-content: center;
-  margin-top: 15px;
-  flex-wrap: wrap;
-}
-
-.button {
-  padding: 9px 18px;
-  font-size: 0.95rem;
-  font-weight: 500;
-  border-radius: 5px;
-  cursor: pointer;
-  transition: all 0.15s ease-in-out;
-  border: 1px solid transparent;
-}
-
-.button:hover:not(:disabled) {
-  transform: translateY(-1px);
-  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
-}
-
-.button:disabled {
-  background-color: #e9ecef !important;
-  border-color: #ced4da !important;
-  color: #6c757d !important;
-  cursor: not-allowed;
-}
-
-.button-primary {
-  background-color: #007bff;
-  color: white;
-  border-color: #007bff;
-}
-
-.button-primary:hover:not(:disabled) {
-  background-color: #0056b3;
-}
-
-.button-info {
-  background-color: #17a2b8;
-  color: white;
-  border-color: #17a2b8;
-}
-
-.button-info:hover:not(:disabled) {
-  background-color: #117a8b;
-}
-
-.button-secondary {
-  background-color: #6c757d;
-  color: white;
-  border-color: #6c757d;
-}
-
-.button-secondary:hover:not(:disabled) {
-  background-color: #545b62;
-}
-
-.visualization-section canvas {
-  border: 1px solid #dee2e6;
-  width: 100%;
-  background-color: #fff;
-  border-radius: 4px;
-  margin-bottom: 10px;
-}
-
-.view-range-controls {
-  margin-top: 10px;
-  gap: 5px;
-  justify-content: flex-start;
-  flex-wrap: wrap;
-}
-
-.view-range-controls input[type="number"] {
-  width: 70px;
-  margin-right: 5px;
-}
-
-.view-range-controls label {
-  min-width: auto;
-  margin-right: 5px;
-}
-
-.results-section table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 0.85em;
-  margin-top: 10px;
-}
-
-.results-section th, .results-section td {
-  border: 1px solid #dee2e6;
-  padding: 8px;
-  text-align: left;
-}
-
-.results-section th {
-  background-color: #f8f9fa;
-  font-weight: 600;
-}
-
-.results-section tr.highlighted td {
-  background-color: #e7f3ff;
-  font-weight: bold;
-}
-
-.results-section td.converged {
-  color: green;
-}
-
-.results-section td.max-iter {
-  color: orange;
-}
-
-.explanation-panel {
-  line-height: 1.7;
-  font-size: 0.95em;
-}
-
-.explanation-panel :deep(h4), .explanation-panel :deep(h5) {
-  margin-top: 1em;
-  margin-bottom: 0.5em;
-  color: #0056b3;
-}
-
-.explanation-panel :deep(p) {
   margin-bottom: 0.8em;
 }
 
-.error-text {
-  color: #dc3545;
-  font-size: 0.85em;
-  margin-left: 10px;
-  width: 100%;
+.card ul {
+  padding-left: 20px;
 }
 
-:deep(.katex) {
-  font-size: 1em !important;
-}
-
-:deep(.katex-display) {
-  display: block;
-  margin: 1em auto;
+.katex-display-area { /* 用于 v-html 的 KaTeX 容器 */
+  padding: 15px;
+  background-color: #f9f9f9;
+  border: 1px solid #e0e0e0;
+  border-radius: 4px;
   text-align: center;
+  overflow-x: auto;
+  margin: 15px 0;
+}
+
+.main-rule :deep(.katex) { /* 针对主要法则的 KaTeX Renderer 组件 */
+  font-size: 1.3em !important;
+}
+
+
+.katex-error { /* 这个样式给 renderHtmlWithInlineKatex 的错误输出用 */
+  color: #e74c3c;
+  font-family: monospace;
+  font-weight: bold;
+  border: 1px dashed #e74c3c;
+  padding: 2px 4px;
+  border-radius: 3px;
+  background-color: #fdd;
+}
+
+/* Geometric Zoom Section */
+.geometric-zoom-controls {
+  margin-bottom: 20px;
+  padding: 15px;
+  background-color: #e9f5fc;
+  border-radius: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+.control-item {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.control-item label {
+  font-weight: 500;
+  color: #333;
+  font-size: 0.95em;
+}
+
+.control-item input[type="text"], .control-item input[type="range"] {
+  padding: 8px 10px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  font-size: 1em;
+}
+
+.control-item input[type="range"] {
+  padding: 0;
+}
+
+.control-item span {
+  font-size: 0.9em;
+  color: #555;
+}
+
+.chart-container {
+  position: relative;
+  height: 400px;
+  background-color: #fff;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  margin-bottom: 15px;
+}
+
+.intuition-explanation {
+  background-color: #f0f9ff;
+  border: 1px solid #c3e0f2;
+  padding: 15px;
+  border-radius: 4px;
+  font-size: 0.95em;
+}
+
+.intuition-explanation :deep(.katex) {
+  font-size: 1.1em !important; /* 应用于 KatexRenderer 组件内的 KaTeX 输出 */
+}
+
+
+/* Formal Derivation Steps */
+.derivation-steps ul {
+  list-style-type: none;
+  padding: 0;
+}
+
+.derivation-step {
+  background-color: #f9f9f9;
+  border-left: 4px solid #3498db;
+  padding: 12px 15px;
+  margin-bottom: 10px;
+  border-radius: 0 4px 4px 0;
+  transition: opacity 0.5s ease, transform 0.5s ease;
+}
+
+.button-next-step {
+  background-color: #3498db;
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 1em;
+  transition: background-color 0.2s;
+  margin-top: 10px;
+}
+
+.button-next-step:hover {
+  background-color: #2980b9;
+}
+
+.fade-step-enter-active, .fade-step-leave-active {
+  transition: opacity 0.8s ease, transform 0.8s ease;
+}
+
+.fade-step-enter-from {
+  opacity: 0;
+  transform: translateX(-20px);
+}
+
+.fade-step-leave-to {
+  opacity: 0;
+  transform: translateX(20px);
+}
+
+/* Other Forms Transformer */
+.form-transformer {
+  padding: 15px;
+  background-color: #fdf6e3;
+  border: 1px solid #fae5a0;
+  border-radius: 6px;
+}
+
+.form-select {
+  width: 100%;
+  padding: 10px;
+  font-size: 1em;
+  margin-bottom: 15px;
+  border-radius: 4px;
+  border: 1px solid #ccc;
+}
+
+.transformation-explanation p {
+  font-size: 1em;
+  background-color: #fff;
+  padding: 10px;
+  border-radius: 4px;
+  border: 1px dashed #ddd;
+}
+
+.transformation-explanation :deep(.katex) {
+  font-size: 1.05em !important;
+}
+
+
+/* Solver Placeholder */
+.solver-placeholder {
+  padding: 20px;
+  text-align: center;
+  background-color: #e9ecef;
+  border: 1px dashed #ced4da;
+  border-radius: 4px;
+  color: #6c757d;
+}
+
+.error-message {
+  color: #c0392b;
+  font-style: italic;
+  font-size: 0.9em;
+  background-color: #fdecea;
+  padding: 8px;
+  border-radius: 4px;
+  border: 1px solid #f5c6cb;
+}
+
+
+.page-footer {
+  text-align: center;
+  margin-top: 50px;
+  padding-top: 20px;
+  border-top: 1px solid #e0e0e0;
+  font-size: 0.9em;
+  color: #777;
+}
+
+/* General KaTeX styling for v-html content if needed */
+:deep(.katex) { /* 这个 :deep 会影响所有 KaTeX 输出，包括 v-html 和 KatexRenderer 组件 */
+  font-size: 1.1em;
+  text-rendering: auto;
+}
+
+/* 下面这个规则是为 KatexRenderer 组件且 displayMode=true 时准备的 */
+/* 但由于 KatexRenderer 的根元素是 span,
+   且其内部 KaTeX 的 .katex-display 类已经处理了块级显示，
+   所以 KatexRenderer 组件的 .katex-display-mode 类主要起辅助作用或用于额外包裹样式。
+*/
+:deep(.katex-display) { /* 这是 KaTeX 内部为 display mode 添加的类 */
+  display: block;
+  text-align: center;
+  margin: 1em 0; /* 添加一些垂直间距 */
 }
 
 :deep(.katex-display > .katex) {
-  text-align: center !important;
-  display: inline-block !important;
+  /* KaTeX 自身会处理其内部结构，这里可能不需要太多覆盖 */
 }
 </style>
