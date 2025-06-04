@@ -6,7 +6,7 @@
 </template>
 
 <script setup>
-import UnitConverterComponent from '~/components/tools/learning/UnitConverterComponent.vue';
+import UnitConverterComponent from '~/components/tools/learning/UnitconverterComponent.vue';
 import ContentCard from '~/components/global/ContentCard.vue';
 import BackButton from '~/components/global/BackButton.vue';
 
