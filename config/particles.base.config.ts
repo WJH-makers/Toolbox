@@ -30,9 +30,14 @@ export const baseParticlesOptions: ISourceOptions = {
             direction: 'none',    // 移动方向
             enable: true,         // 启用粒子移动
             outModes: {default: 'bounce'}, // 粒子移出边界时的行为：反弹
-            random: false,        // 非随机移动（如果 direction 不是 'none'，则按指定方向）
-            speed: 2,             // 移动速度
-            straight: false       // 非直线移动（路径会略微弯曲）
+            random: true,        // 修改处：让粒子初始移动更随机一些
+            speed: 1.5,             // 修改处：稍微降低基础速度，让交互更明显
+            straight: false,       // 非直线移动（路径会略微弯曲）
+            trail: { // 新增：为移动的粒子添加轻微拖尾效果
+                enable: false, // 按需开启，可能会影响性能
+                fill: {color: '#000000'}, // 拖尾颜色
+                length: 5, // 拖尾长度
+            }
         },
     },
     interactivity: {
@@ -40,41 +45,59 @@ export const baseParticlesOptions: ISourceOptions = {
         events: {
             onHover: {
                 enable: true,
-                mode: ['grab', 'bubble'] // 修改处：同时启用 grab 和 bubble 模式
+                mode: ['grab', 'bubble', 'repulse'], // 修改处：同时启用 grab, bubble 和 repulse 模式
+                parallax: { // 新增：启用鼠标悬停时的视差效果
+                    enable: true,
+                    force: 30, // 视差强度，数值越大效果越明显
+                    smooth: 10 // 视差平滑度
+                }
             },
             onClick: {
                 enable: true,
                 mode: 'push' // 点击时 PUSH 新粒子
             },
             resize: {
-                 delay: 0.5, // 调整窗口大小时的延迟（秒）
-                 enable: true // 响应窗口大小调整
+                delay: 0.5,
+                enable: true
             }
         },
         modes: {
             grab: {
-                distance: 140,    // 抓取模式的互动距离
+                distance: 140,
                 links: {
-                    opacity: 1    // 抓取时连接线的透明度 - 会被主题动态覆盖
+                    opacity: 0.8 // 修改处：稍微调高抓取时连接线的透明度
                 }
             },
-            bubble: { // 气泡模式的配置
-                distance: 250, // 气泡模式的互动距离（比之前略小，避免与grab冲突过大）
-                size: 30,      // 粒子变大的尺寸
-                duration: 2,   // 气泡效果的持续时间（秒）
-                opacity: 0.8   // 气泡状态下的透明度
+            bubble: {
+                distance: 200, // 修改处：调整互动距离
+                size: 20,      // 修改处：调整粒子变大的尺寸
+                duration: 0.4, // 修改处：调整气泡效果的持续时间
+                opacity: 0.8
             },
-            repulse: { // 排斥模式的配置
-                distance: 200,
-                duration: 0.4
+            repulse: { // 排斥模式的配置 (之前已定义，现在在onHover中启用)
+                distance: 100, // 修改处：调整排斥距离
+                duration: 0.4,
+                factor: 100, // 排斥强度
+                speed: 1, // 排斥速度
+                maxSpeed: 50, // 排斥时最大速度
+                easing: 'ease-out-quad', // 排斥动画缓动效果
             },
-            push: { // 推入新粒子的配置
+            push: {
                 quantity: 4
             },
-            remove: { // 移除粒子的配置
+            remove: {
                 quantity: 2
             },
+            attract: { // 新增：如果需要吸引效果，可以取消注释并配置
+                distance: 200,
+                duration: 0.4,
+                factor: 5, // 吸引强度
+                speed: 1,
+                maxSpeed: 50,
+                easing: 'ease-out-quad'
+            }
         },
     },
-    detectRetina: true, // 启用Retina屏幕检测，使粒子在高清屏上更清晰
+    detectRetina: true,
 };
+

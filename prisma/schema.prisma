@@ -1,29 +1,30 @@
 generator client {
   provider = "prisma-client-js"
+  // 考虑为 Vercel Serverless Functions 使用 Prisma Accelerate 或 Edge client
+  // previewFeatures = ["driverAdapters"] // 如果使用 Accelerate 和标准 JS client
+  // binaryTargets = ["native", "rhel-openssl-1.0.x"] // 如果部署到 Vercel，可能需要指定 Linux targets
 }
 
 datasource db {
-  provider          = "mysql"
-  url               = env("DATABASE_URL")
-  shadowDatabaseUrl = env("SHADOW_DATABASE_URL") // 根据您的设置
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+  // shadowDatabaseUrl = env("SHADOW_DATABASE_URL") // 对于 Neon 等，通常不需要，可以移除或注释
 }
 
 model User {
   id        String   @id @default(cuid())
   email     String   @unique
   username  String   @unique
-  password  String // 存储哈希后的密码
+  password  String
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  // 新增用于登录追踪和账户锁定的字段
-  failedLoginAttempts Int?      @default(0) // 登录失败尝试次数
-  lastFailedLoginAt   DateTime? // 上次登录失败的时间
-  isLocked            Boolean?  @default(false) // 账户是否被锁定
-  lockoutExpiresAt    DateTime? // 账户锁定过期时间
-  lastLoginAt         DateTime? // 用户最后成功登录的时间
+  failedLoginAttempts Int?      @default(0)
+  lastFailedLoginAt   DateTime?
+  isLocked            Boolean?  @default(false)
+  lockoutExpiresAt    DateTime?
+  lastLoginAt         DateTime?
 
-  // 现有关系字段
   Todo            Todo[]
   Recipe          Recipe[]
   healthMetrics   UserHealthMetric[]
@@ -40,7 +41,7 @@ model VocabularyWord {
   chinese     String   @db.Text
   phonetic_us String?
   phonetic_uk String?
-  tags        Json?    @db.Json
+  tags        Json? // Prisma maps this to jsonb in PostgreSQL
   source      String?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
@@ -60,7 +61,7 @@ model UserWordProgress {
   isMemorized    Boolean   @default(false)
   lastReviewedAt DateTime?
   nextReviewAt   DateTime?
-  familiarity    Int? // 例如 0-5 的熟悉度等级
+  familiarity    Int?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -82,26 +83,26 @@ model Todo {
   important Boolean   @default(false)
   startDate DateTime?
   endDate   DateTime?
-  image     String?   @db.MediumText // 如果存储 base64 图片，考虑其大小限制
+  image     String?   @db.Text // MODIFICATION: Changed from MediumText to Text for PostgreSQL compatibility
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
   userId    String
   user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId, createdAt])
-  @@index([userId, completed, endDate]) // 常用查询组合
+  @@index([userId, completed, endDate])
   @@index([userId, important, createdAt])
-  @@map("todos") // 保持小写加下划线或根据你的习惯
+  @@map("todos")
 }
 
 model Recipe {
   id           String   @id @default(cuid())
   name         String
-  ingredients  String   @db.Text // 可以考虑 Json 类型如果结构复杂
+  ingredients  String   @db.Text // Consider Json if structured
   instructions String   @db.Text
   category     String?
-  prepTime     String? // 例如 "30 分钟"
-  cookTime     String? // 例如 "1 小时"
+  prepTime     String?
+  cookTime     String?
   isFavorite   Boolean  @default(false)
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
@@ -117,20 +118,20 @@ model UserHealthMetric {
   id                 String   @id @default(cuid())
   userId             String
   user               User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  recordedAt         DateTime @default(now()) // 记录的具体时间
-  heightCm           Float? // 身高 (厘米)
-  weightKg           Float? // 体重 (公斤)
-  ageAtRecording     Int? // 记录时的年龄
-  gender             String? // 例如 "male", "female", "other"
-  activityLevel      String? // 例如 "sedentary", "light", "moderate", "active", "very_active"
-  neckCm             Float? // 颈围 (厘米) - 用于某些体脂计算
-  waistCm            Float? // 腰围 (厘米)
-  hipCm              Float? // 臀围 (厘米)
-  bmi                Float? // Body Mass Index
-  bmr                Float? // Basal Metabolic Rate (基础代谢率)
-  tdee               Float? // Total Daily Energy Expenditure (每日总能量消耗)
-  bodyFatPercent     Float? // 体脂率 (%)
-  recommendedWaterMl Float? // 每日推荐饮水量 (毫升)
+  recordedAt         DateTime @default(now())
+  heightCm           Float?
+  weightKg           Float?
+  ageAtRecording     Int?
+  gender             String?
+  activityLevel      String?
+  neckCm             Float?
+  waistCm            Float?
+  hipCm              Float?
+  bmi                Float?
+  bmr                Float?
+  tdee               Float?
+  bodyFatPercent     Float?
+  recommendedWaterMl Float?
   notes              String?  @db.Text
   createdAt          DateTime @default(now())
   updatedAt          DateTime @updatedAt
@@ -148,13 +149,13 @@ model AiChatSession {
   updatedAt DateTime        @updatedAt
   messages  AiChatMessage[]
 
-  @@index([userId, updatedAt(sort: Desc)]) // 按更新时间降序索引
+  @@index([userId, updatedAt(sort: Desc)])
   @@map("ai_chat_sessions")
 }
 
 model AiChatMessage {
   id        String        @id @default(cuid())
-  role      String // "user" 或 "assistant" (或 "system")
+  role      String
   content   String        @db.Text
   createdAt DateTime      @default(now())
   sessionId String
@@ -166,16 +167,16 @@ model AiChatMessage {
 
 model ExchangeRate {
   id             String   @id @default(cuid())
-  baseCurrency   String // 基础货币代码, e.g., "USD"
-  targetCurrency String // 目标货币代码, e.g., "CNY"
-  rate           Float // 汇率：1 baseCurrency = rate targetCurrency
-  name           String? // 可选的货币对名称, e.g., "美元/人民币"
-  updatedAt      DateTime // 汇率数据的最后更新时间
-  source         String? // 数据来源, e.g., "OpenExchangeRates"
+  baseCurrency   String
+  targetCurrency String
+  rate           Float
+  name           String?
+  updatedAt      DateTime // Should this be @updatedAt or manually set?
+  source         String?
 
   @@unique([baseCurrency, targetCurrency])
   @@index([baseCurrency])
-  @@index([targetCurrency]) // 如果也经常按目标货币查询
+  @@index([targetCurrency])
   @@index([updatedAt])
   @@map("exchange_rates")
 }
@@ -186,9 +187,9 @@ model UserExchangeQuery {
   user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   fromCurrency String
   toCurrency   String
-  amount       Float // 原始金额
-  result       Float // 换算结果金额
-  rate         Float // 当时使用的汇率
+  amount       Float
+  result       Float
+  rate         Float
   queriedAt    DateTime @default(now())
 
   @@index([userId, queriedAt(sort: Desc)])
@@ -197,17 +198,17 @@ model UserExchangeQuery {
 
 model Ai2048Experience {
   id     String @id @default(cuid())
-  gameId String @unique @default(cuid()) // 确保 gameId 唯一
+  gameId String @unique @default(cuid())
 
-  initialBoardStateJson String @db.Text // 存储 JSON 序列化的棋盘状态
+  initialBoardStateJson String @db.Text
   finalBoardStateJson   String @db.Text
-  moveSequenceJson      String @db.Text // 存储 JSON 序列化的移动序列
+  moveSequenceJson      String @db.Text
   scoreAchieved         Int
   highestTile           Int
   numberOfMoves         Int
 
   createdAt DateTime @default(now())
-  notes     String?  @db.Text // 改为 Text 以支持更长备注
+  notes     String?  @db.Text
 
   @@index([scoreAchieved, highestTile, createdAt(sort: Desc)])
   @@map("ai_global_2048_experiences")
