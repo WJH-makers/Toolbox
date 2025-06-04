@@ -1,98 +1,109 @@
 <template>
-  <div class="math-example-container" ref="polynomialApproximationRootEl">
-    <h3>多项式逼近常见函数 (泰勒/麦克劳林级数)</h3>
-    <p>
-      许多复杂的函数，如 $\sin(x)$, $\cos(x)$, $e^x$ 等，可以通过它们在某一点的泰勒级数展开，用多项式来进行逼近。当展开点为
-      $x=0$ 时，这被称为麦克劳林级数。项数取得越多，多项式对原函数的逼近效果越好。
-    </p>
+  <div class="polynomial-approximation-container card-style">
+    <header class="demo-header">
+      <h3><span class="header-icon">∑</span>多项式逼近常见函数</h3>
+      <p class="description">
+        许多复杂函数，如
+        <KatexRenderer tex="\sin(x)" :displayMode="false"/>
+        ,
+        <KatexRenderer tex="\cos(x)" :displayMode="false"/>
+        ,
+        <KatexRenderer tex="e^x" :displayMode="false"/>
+        等，可以通过它们在某一点的泰勒级数展开，用多项式来进行逼近。当展开点为
+        <KatexRenderer tex="x=0" :displayMode="false"/>
+        时，这被称为麦克劳林级数。项数取得越多，多项式对原函数的逼近效果越好。
+      </p>
+    </header>
 
-    <div class="controls-panel">
-      <div class="form-item">
-        <label for="function-to-approximate">选择函数进行逼近:</label>
-        <select id="function-to-approximate" v-model="selectedFunctionType">
+    <div class="controls-panel card-style">
+      <div class="control-group">
+        <label for="function-to-approximate" class="control-label">选择函数进行逼近:</label>
+        <select id="function-to-approximate" v-model="selectedFunctionType" class="control-select">
           <option value="sin">sin(x)</option>
           <option value="cos">cos(x)</option>
           <option value="exp">e^x</option>
-          <option value="ln1plusx">ln(1+x) (在x=0附近)</option>
+          <option value="ln1plusx">ln(1+x) (在 x=0 附近)</option>
         </select>
       </div>
-      <div class="form-item">
-        <label for="num-terms-approx">逼近项数 (N): {{ numTerms }}</label>
+      <div class="control-group">
+        <label for="num-terms-approx" class="control-label">逼近项数 (N): {{ numTerms }}</label>
         <input id="num-terms-approx" v-model.number="numTerms" class="slider" max="15" min="1" step="1" type="range">
-        <span>(控制多项式的最高阶数)</span>
+        <span class="info-text">(控制多项式的实际求和项数)</span>
       </div>
-      <div class="form-item">
-        <label for="x-range-approx">X轴显示范围: +/- {{ xAxisRange.toFixed(1) }}</label>
+      <div class="control-group">
+        <label for="x-range-approx" class="control-label">X轴显示范围: +/- {{ xAxisRange.toFixed(1) }}</label>
         <input id="x-range-approx" v-model.number="xAxisRange" class="slider" max="10" min="1" step="0.5" type="range">
       </div>
     </div>
 
-    <div class="simulation-area-wrapper">
+    <div class="simulation-area-wrapper card-style">
       <canvas ref="approximationCanvas" :height="canvasHeight" :width="canvasWidth"/>
     </div>
 
-    <div class="explanation-panel">
-      <h4>常用函数的麦克劳林级数 (在 $x=0$ 附近展开):</h4>
-      <div v-if="selectedFunctionType === 'sin'">
-        <p>$\sin(x) = x - \frac{x^3}{3!} + \frac{x^5}{5!} - \frac{x^7}{7!} + \dots = \sum_{n=0}^{\infty}
-          \frac{(-1)^n}{(2n+1)!} x^{2n+1}$</p>
-      </div>
-      <div v-if="selectedFunctionType === 'cos'">
-        <p>$\cos(x) = 1 - \frac{x^2}{2!} + \frac{x^4}{4!} - \frac{x^6}{6!} + \dots = \sum_{n=0}^{\infty}
-          \frac{(-1)^n}{(2n)!} x^{2n}$</p>
-      </div>
-      <div v-if="selectedFunctionType === 'exp'">
-        <p>$e^x = 1 + x + \frac{x^2}{2!} + \frac{x^3}{3!} + \dots = \sum_{n=0}^{\infty} \frac{x^n}{n!}$</p>
-      </div>
-      <div v-if="selectedFunctionType === 'ln1plusx'">
-        <p>$\ln(1+x) = x - \frac{x^2}{2} + \frac{x^3}{3} - \frac{x^4}{4} + \dots = \sum_{n=1}^{\infty}
-          \frac{(-1)^{n-1}}{n} x^{n}$ (对于 $|x| < 1$ 且 $x=1$)</p>
-      </div>
-      <p><em>当前模拟使用上述级数的前 N 项（由您选择）来构造多项式逼近。</em></p>
+    <div class="explanation-panel card-style">
+      <h4>常用函数的麦克劳林级数 (在
+        <KatexRenderer tex="x=0" :displayMode="false"/>
+        附近展开):
+      </h4>
+      <transition name="fade-explanation" mode="out-in">
+        <div v-if="selectedFunctionType === 'sin'" key="sin-series" class="series-definition">
+          <KatexRenderer
+              tex="\sin(x) = x - \frac{x^3}{3!} + \frac{x^5}{5!} - \frac{x^7}{7!} + \dots = \sum_{n=0}^{\infty} \frac{(-1)^n}{(2n+1)!} x^{2n+1}"
+              :displayMode="true"/>
+        </div>
+        <div v-else-if="selectedFunctionType === 'cos'" key="cos-series" class="series-definition">
+          <KatexRenderer
+              tex="\cos(x) = 1 - \frac{x^2}{2!} + \frac{x^4}{4!} - \frac{x^6}{6!} + \dots = \sum_{n=0}^{\infty} \frac{(-1)^n}{(2n)!} x^{2n}"
+              :displayMode="true"/>
+        </div>
+        <div v-else-if="selectedFunctionType === 'exp'" key="exp-series" class="series-definition">
+          <KatexRenderer
+              tex="e^x = 1 + x + \frac{x^2}{2!} + \frac{x^3}{3!} + \dots = \sum_{n=0}^{\infty} \frac{x^n}{n!}"
+              :displayMode="true"/>
+        </div>
+        <div v-else-if="selectedFunctionType === 'ln1plusx'" key="ln-series" class="series-definition">
+          <KatexRenderer
+              tex="\ln(1+x) = x - \frac{x^2}{2} + \frac{x^3}{3} - \frac{x^4}{4} + \dots = \sum_{n=1}^{\infty} \frac{(-1)^{n-1}}{n} x^{n}"
+              :displayMode="true"/>
+          <p class="series-condition">(对于
+            <KatexRenderer tex="|x| < 1" :displayMode="false"/>
+            且
+            <KatexRenderer tex="x=1" :displayMode="false"/>
+            收敛)
+          </p>
+        </div>
+      </transition>
+      <p class="info-text emphasized"><em>当前模拟使用上述级数的前 N 项（由您选择的 "{{ numTerms }}"
+        控制）来构造多项式逼近。</em></p>
     </div>
+    <footer class="demo-footer">
+      <p>体验泰勒/麦克劳林级数如何用简单的多项式描绘复杂函数之美。</p>
+    </footer>
   </div>
 </template>
 
 <script setup>
-import {ref, onMounted, watch, nextTick, computed} from 'vue';
-// KaTeX imports - 确保已安装 katex: npm install katex
-import katex from 'katex'; // eslint-disable-line no-unused-vars
-import renderMathInElement from 'katex/contrib/auto-render';
-import 'katex/dist/katex.min.css';
+import {ref, onMounted, watch, computed} from 'vue';
 
-const polynomialApproximationRootEl = ref(null);
+import KatexRenderer from '../../../KatexRenderer.vue'; // 确保路径正确
+
 const approximationCanvas = ref(null);
 let ctx = null;
 
 const canvasWidth = ref(700);
-const canvasHeight = ref(400);
+const canvasHeight = ref(450); // 稍微增加画布高度
 
 // --- UI Parameters ---
-const selectedFunctionType = ref('sin'); // 'sin', 'cos', 'exp', 'ln1plusx'
-const numTerms = ref(3); // N: 逼近多项式的项数 (注意：对于sin/cos，这可能意味着阶数更高)
+const selectedFunctionType = ref('sin');
+const numTerms = ref(3); // N: 实际求和的项数
 const xAxisRange = ref(Math.PI); // X轴显示范围从 -xAxisRange 到 +xAxisRange
 
 // --- Computed Values ---
 const yOffset = computed(() => canvasHeight.value / 2);
-const xScale = computed(() => (canvasWidth.value - 100) / (2 * xAxisRange.value)); // 50px 边距
-const xPixelOffset = ref(50); // Y轴位置
+const xPixelOffset = ref(50); // Y轴（0点）在画布上的像素偏移量
+// xScale 计算画布上每单位x值对应的像素数
+const xScale = computed(() => (canvasWidth.value - 2 * xPixelOffset.value) / (2 * xAxisRange.value));
 
-// --- KaTeX Rendering ---
-function doKatexRender(element) {
-  if (element && typeof renderMathInElement === 'function') {
-    try {
-      renderMathInElement(element, {
-        delimiters: [
-          {left: "$$", right: "$$", display: true}, {left: "$", right: "$", display: false},
-          {left: "\\(", right: "\\)", display: false}, {left: "\\[", right: "\\]", display: true}
-        ],
-        throwOnError: false
-      });
-    } catch (error) {
-      console.error("KaTeX renderMathInElement error:", error);
-    }
-  }
-}
 
 // --- Factorial function ---
 function factorial(n) {
@@ -106,37 +117,39 @@ function factorial(n) {
 }
 
 // --- Function to approximate and its Taylor polynomial ---
-function getFunctionAndApproximation(x_val, type, N_terms) {
-  let originalValue = 0;
+function getFunctionAndApproximation(x_val, type, N_actual_terms) {
+  let originalValue = NaN; // 初始化为 NaN
   let approximatedValue = 0;
 
   switch (type) {
     case 'sin':
       originalValue = Math.sin(x_val);
-      for (let n = 0; n < N_terms; n++) { // N_terms 控制求和次数
+      for (let n = 0; n < N_actual_terms; n++) {
         approximatedValue += (Math.pow(-1, n) * Math.pow(x_val, 2 * n + 1)) / factorial(2 * n + 1);
       }
       break;
     case 'cos':
       originalValue = Math.cos(x_val);
-      for (let n = 0; n < N_terms; n++) { // N_terms 控制求和次数
+      for (let n = 0; n < N_actual_terms; n++) {
         approximatedValue += (Math.pow(-1, n) * Math.pow(x_val, 2 * n)) / factorial(2 * n);
       }
       break;
     case 'exp':
       originalValue = Math.exp(x_val);
-      for (let n = 0; n < N_terms; n++) { // N_terms 控制求和次数 (实际是n阶)
+      // For e^x, N_terms means polynomial up to x^(N_terms-1) / (N_terms-1)! if N_terms starts from 1
+      // Or, if N_terms means sum of N_terms items (0th to N_terms-1th power)
+      for (let n = 0; n < N_actual_terms; n++) { // Sum N terms (0 to N-1)
         approximatedValue += Math.pow(x_val, n) / factorial(n);
       }
       break;
     case 'ln1plusx':
-      originalValue = (x_val > -1) ? Math.log(1 + x_val) : NaN; // ln(1+x) 定义域 x > -1
-      if (Math.abs(x_val) < 1 || Math.abs(x_val - 1) < 1e-9) { // 级数收敛域 |x|<1 及 x=1
-        for (let n = 1; n <= N_terms; n++) { // N_terms 控制求和次数 (实际是n阶)
+      originalValue = (x_val > -1) ? Math.log(1 + x_val) : NaN;
+      approximatedValue = NaN; // Default for out of convergence
+      if (Math.abs(x_val) < 1 || (Math.abs(x_val - 1) < 1e-9 && x_val === 1)) {
+        approximatedValue = 0; // Reset for summation
+        for (let n = 1; n <= N_actual_terms; n++) { // Sum N terms
           approximatedValue += (Math.pow(-1, n - 1) * Math.pow(x_val, n)) / n;
         }
-      } else {
-        approximatedValue = NaN; // 超出收敛域，逼近无意义
       }
       break;
   }
@@ -148,69 +161,72 @@ function getFunctionAndApproximation(x_val, type, N_terms) {
 function drawAxes() {
   if (!ctx) return;
   ctx.beginPath();
-  ctx.strokeStyle = '#ccc';
+  ctx.strokeStyle = '#d1d8e0'; // Lighter axes
   ctx.lineWidth = 1;
+
   // X-axis
   ctx.moveTo(0, yOffset.value);
   ctx.lineTo(canvasWidth.value, yOffset.value);
-  // Y-axis
+  // Y-axis (at xPixelOffset)
   ctx.moveTo(xPixelOffset.value, 0);
   ctx.lineTo(xPixelOffset.value, canvasHeight.value);
   ctx.stroke();
 
-  ctx.fillStyle = '#555';
-  ctx.font = '10px Arial';
+  ctx.fillStyle = '#495057'; // Darker gray for text
+  ctx.font = '11px Inter, sans-serif';
+
   // X-axis labels
   ctx.textAlign = 'center';
-  ctx.fillText('0', xPixelOffset.value, yOffset.value + 12);
-  ctx.fillText(xAxisRange.value.toFixed(1), canvasWidth.value - xPixelOffset.value / 2, yOffset.value + 12);
-  ctx.fillText((-xAxisRange.value).toFixed(1), xPixelOffset.value + (xPixelOffset.value - (canvasWidth.value - xPixelOffset.value / 2)), yOffset.value + 12);
+  ctx.textBaseline = 'top';
+  ctx.fillText('0', xPixelOffset.value, yOffset.value + 6);
+  ctx.fillText(xAxisRange.value.toFixed(1), canvasWidth.value - xPixelOffset.value, yOffset.value + 6);
+  ctx.fillText((-xAxisRange.value).toFixed(1), xPixelOffset.value, yOffset.value + 6); // Corrected this label's X position
 
+  // Y-axis labels (Dynamic based on a typical visible range, e.g. -2 to 2)
+  const yAxisLabelValues = [-2, -1, 1, 2];
+  const yPlotScaleFactor = (canvasHeight.value / 2 - 20) / 2.2; // Scale Y values in range [-2.2, 2.2] to fit canvas height with padding
 
-  // Y-axis labels (dynamic based on typical function range, e.g., -2 to 2)
-  const yPlotScale = canvasHeight.value / 4; // Assume plot range approx -2 to 2 maps to canvasHeight/2 up and down
   ctx.textAlign = 'right';
-  ctx.fillText('2.0', xPixelOffset.value - 5, yOffset.value - 1.9 * yPlotScale); // Approximate
-  ctx.fillText('1.0', xPixelOffset.value - 5, yOffset.value - 0.9 * yPlotScale);
-  ctx.fillText('-1.0', xPixelOffset.value - 5, yOffset.value + 1.1 * yPlotScale);
-  ctx.fillText('-2.0', xPixelOffset.value - 5, yOffset.value + 2.1 * yPlotScale);
+  ctx.textBaseline = 'middle';
+  yAxisLabelValues.forEach(val => {
+    if (val === 0) return; // Avoid drawing '0' again if Y-axis passes through X-axis '0' label
+    ctx.fillText(val.toFixed(1), xPixelOffset.value - 8, yOffset.value - val * yPlotScaleFactor);
+  });
 
-  ctx.fillText('f(x)', xPixelOffset.value + 20, 15);
-  ctx.fillText('x', canvasWidth.value - 10, yOffset.value - 5);
+  // Axis titles
+  ctx.textAlign = 'left';
+  ctx.fillText('f(x)', xPixelOffset.value + 10, 15);
+  ctx.textAlign = 'right';
+  ctx.fillText('x', canvasWidth.value - 10, yOffset.value - 10);
 }
 
-function plotFunction(func, color, lineWidth = 2, N_terms_for_approx) {
+function plotFunction(plotOriginal, color, lineWidth = 2) {
   if (!ctx) return;
   ctx.beginPath();
   ctx.strokeStyle = color;
   ctx.lineWidth = lineWidth;
   let firstPoint = true;
 
-  // Determine Y scaling factor based on typical ranges of these functions
-  // e.g. sin/cos are in [-1,1]. e^x can grow large.
-  // We'll scale so that y=1 corresponds to roughly canvasHeight/4 pixels from center.
-  const yPlotScale = (canvasHeight.value / 2 - 20) / 1.5; // Map y=1.5 to most of the half-height
+  // Y scaling: map a conceptual function range (e.g., -2 to 2 for sin/cos) to canvas pixels
+  const yRangeMax = selectedFunctionType.value === 'exp' ? Math.exp(xAxisRange.value) : (selectedFunctionType.value === 'ln1plusx' ? 2 : 2.2);
+  const yPlotScale = (canvasHeight.value / 2 - 20) / yRangeMax; // 20px padding top/bottom
 
-  for (let px = 0; px < canvasWidth.value; px++) {
-    // Map pixel x to domain x
-    const x_domain = (px - xPixelOffset.value - (canvasWidth.value - 2 * xPixelOffset.value) / 2) / xScale.value;
+  for (let px = xPixelOffset.value; px < canvasWidth.value - xPixelOffset.value; px++) {
+    // Map pixel x to domain x: from -xAxisRange to +xAxisRange
+    const x_domain = ((px - xPixelOffset.value) / xScale.value) - xAxisRange.value;
 
-    let y_val;
-    if (N_terms_for_approx !== undefined) { // This is the approximation
-      y_val = func(x_domain, selectedFunctionType.value, N_terms_for_approx).approximated;
-    } else { // This is the original function
-      y_val = func(x_domain, selectedFunctionType.value, 0).original; // N_terms not used for original
-    }
+    const {original, approximated} = getFunctionAndApproximation(x_domain, selectedFunctionType.value, numTerms.value);
+    const y_val = plotOriginal ? original : approximated;
 
-    if (isNaN(y_val)) { // Handle discontinuities or undefined regions (like ln(1+x) for x <= -1)
-      if (!firstPoint) ctx.stroke(); // End current path segment
-      firstPoint = true; // Start new path segment after discontinuity
+    if (isNaN(y_val) || !Number.isFinite(y_val)) {
+      if (!firstPoint) ctx.stroke();
+      firstPoint = true;
       continue;
     }
 
-    const y_canvas = yOffset.value - y_val * yPlotScale; // Invert Y and scale
+    const y_canvas = yOffset.value - y_val * yPlotScale;
 
-    if (firstPoint) {
+    if (px === xPixelOffset.value || firstPoint) { // Start new path from the first plottable point
       ctx.moveTo(px, y_canvas);
       firstPoint = false;
     } else {
@@ -226,170 +242,268 @@ function drawScene() {
   drawAxes();
 
   // Plot original function
-  plotFunction(getFunctionAndApproximation, 'rgba(0, 180, 0, 0.7)', 1.5);
+  plotFunction(true, 'rgba(40, 167, 69, 0.8)', 1.5); // Green for original
 
   // Plot Taylor polynomial approximation
-  plotFunction(getFunctionAndApproximation, 'rgba(0, 123, 255, 0.9)', 2, numTerms.value);
+  plotFunction(false, 'rgba(0, 123, 255, 1)', 2.5); // Blue for approximation
 }
 
-function resetSimulationDefaults() {
-  selectedFunctionType.value = 'sin';
-  numTerms.value = 3;
-  xAxisRange.value = Math.PI;
-  nextTick(() => {
-    if (polynomialApproximationRootEl.value) doKatexRender(polynomialApproximationRootEl.value);
-    drawScene();
-  });
-}
 
 // --- Lifecycle and Watchers ---
-onMounted(async () => {
+onMounted(() => {
   if (approximationCanvas.value) {
     ctx = approximationCanvas.value.getContext('2d');
+    if (!ctx) {
+      console.error("Failed to get 2D context from canvas.");
+      return;
+    }
+  } else {
+    console.error("Canvas element not found on mount.");
+    return;
   }
   drawScene(); // Initial draw
-
-  await nextTick(); // Ensure DOM is fully rendered by Vue
-  if (polynomialApproximationRootEl.value) {
-    doKatexRender(polynomialApproximationRootEl.value); // Initial KaTeX render for all static content
-  }
+  // KaTeX rendering is now handled by KatexRenderer components.
+  // Any static KaTeX directly in the template (not via <KatexRenderer>) would need manual handling
+  // if `renderMathInElement` was fully removed and not replaced by scoped calls.
+  // For this refactor, we assume all distinct formulas use KatexRenderer.
 });
 
 watch(
     [selectedFunctionType, numTerms, xAxisRange, canvasWidth, canvasHeight],
-    async () => {
+    () => {
       if (ctx) {
         drawScene();
       }
-      await nextTick();
-      if (polynomialApproximationRootEl.value) {
-        doKatexRender(polynomialApproximationRootEl.value);
-      }
+      // No need to call a global KaTeX render function here anymore if using KatexRenderer component
+      // for all dynamic formula updates. Static parts are handled by their own components.
     },
-    {flush: 'post'} // Ensure DOM updates from v-if are done before KaTeX runs
+    {flush: 'post'}
 );
 
 </script>
+
 <style scoped>
-.math-example-container {
-  padding: 20px;
-  max-width: 800px;
-  margin: auto;
-  font-family: system-ui, sans-serif;
-  background-color: #fdfdff; /* Lighter background */
+.polynomial-approximation-container {
+  padding: 25px;
+  max-width: 850px;
+  margin: 20px auto;
+  font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+  background-color: #f8f9fc;
+  border-radius: 12px;
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.08);
 }
 
-.controls-panel {
-  background-color: #f8f9fa;
-  padding: 20px;
-  border-radius: 8px;
-  margin-bottom: 20px;
-  border: 1px solid #e0e6ed;
-  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.07);
+.card-style { /* Common styling for panels */
+  background-color: #ffffff;
+  padding: 20px 25px;
+  border-radius: 10px;
+  margin-bottom: 25px;
+  border: 1px solid #e7eaf0;
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.04);
 }
 
-.form-item {
-  margin-bottom: 15px;
+.demo-header {
+  text-align: center;
+  margin-bottom: 30px;
+  padding-bottom: 20px;
+  border-bottom: 1px solid #e0e6ed;
+}
+
+.demo-header h3 {
+  font-size: 2em;
+  font-weight: 600;
+  color: #2c3e50;
+  margin-top: 0;
+  margin-bottom: 0.5em;
+}
+
+.demo-header .header-icon {
+  margin-right: 10px;
+  color: #3498db;
+  font-size: 1.2em;
+}
+
+.description {
+  font-size: 1em;
+  line-height: 1.7;
+  color: #555e68;
+  max-width: 700px;
+  margin: 0 auto 10px auto;
+}
+
+.description :deep(.katex) { /* Style for KatexRenderer in description */
+  font-size: 1.05em !important; /* Slightly larger for readability in prose */
+}
+
+
+.controls-panel .control-group {
+  margin-bottom: 18px;
   display: flex;
   align-items: center;
   flex-wrap: wrap;
-  gap: 10px;
+  gap: 12px;
 }
 
-.form-item label {
-  font-size: 0.9em;
-  color: #343a40;
-  min-width: 180px; /* Increased min-width */
+.control-label {
+  font-size: 0.95em;
+  color: #34495e;
+  min-width: 190px; /* Adjusted width */
   font-weight: 500;
+  padding-right: 10px;
 }
 
-.form-item input[type="range"].slider {
-  flex-grow: 1;
-  min-width: 200px;
-  margin-right: 10px;
-}
-
-.form-item input[type="number"], .form-item select { /* Style select like number */
-  width: 100px; /* Consistent width */
-  padding: 8px 10px;
-  border-radius: 5px;
+.control-select,
+.control-input-number { /* Not used in this version, but kept for consistency if added */
+  padding: 9px 12px; /* Slightly larger padding */
+  border-radius: 6px;
   border: 1px solid #ced4da;
-  font-size: 0.9em;
-  box-sizing: border-box;
+  font-size: 0.95em;
+  background-color: #fff;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
 }
 
-.form-item span {
-  font-size: 0.85em;
-  color: #6c757d;
+.control-select {
+  min-width: 240px;
+}
+
+.control-select:focus {
+  border-color: #3498db;
+  box-shadow: 0 0 0 0.2rem rgba(52, 152, 219, 0.25);
+  outline: none;
+}
+
+.slider {
+  flex-grow: 1;
+  min-width: 250px;
+  margin-right: 10px;
+  accent-color: #3498db;
+  height: 6px;
+  background: #e9ecef;
+  border-radius: 3px;
+  outline: none;
+  opacity: 0.9;
+  transition: opacity 0.2s;
+}
+
+.slider:hover {
+  opacity: 1;
+}
+
+.slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 18px;
+  height: 18px;
+  background: #3498db;
+  border-radius: 50%;
+  cursor: pointer;
+  border: 2px solid white;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+}
+
+.slider::-moz-range-thumb {
+  width: 16px;
+  height: 16px;
+  background: #3498db;
+  border-radius: 50%;
+  cursor: pointer;
+  border: 2px solid white;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+}
+
+.info-text {
+  font-size: 0.9em;
+  color: #555e68;
+  margin-left: 5px;
+}
+
+.info-text.emphasized {
+  font-style: italic;
+  margin-top: 10px;
+  display: block; /* Make it take full width for centering or block display */
+  text-align: center;
 }
 
 .simulation-area-wrapper {
   display: flex;
   justify-content: center;
   align-items: center;
-  margin-bottom: 20px;
-  background-color: #e9ecef;
-  padding: 10px;
-  border-radius: 4px;
-  border: 1px solid #d1d9e0;
+  margin-bottom: 25px;
+  background-color: #eef1f5;
+  padding: 15px;
+  border-radius: 8px;
+  border: 1px solid #d8dde3;
 }
 
 canvas {
-  border: 1px solid #adb5bd;
-  background-color: #ffffff; /* White canvas background */
+  border: 1px solid #c5ced6;
+  background-color: #ffffff;
+  border-radius: 4px;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
 }
 
 .explanation-panel {
-  margin-top: 20px;
-  padding: 20px;
-  background-color: #f1f3f5; /* Slightly different background */
-  border-radius: 6px;
-  font-size: 0.95em; /* Increased font size slightly */
-  line-height: 1.7;
-  color: #212529;
-  border: 1px solid #dee2e6;
+  margin-top: 25px;
+  padding: 20px 25px;
+  font-size: 1em;
+  line-height: 1.75;
+  color: #34495e;
 }
 
 .explanation-panel h4 {
   margin-top: 0;
-  color: #0056b3;
-  margin-bottom: 0.75em;
-  font-size: 1.2em;
-  border-bottom: 1px solid #cfe2ff;
-  padding-bottom: 8px;
-}
-
-.explanation-panel p {
-  margin-bottom: 0.8em;
-}
-
-/* Ensure KaTeX inherits font size correctly or set a base */
-:deep(.katex) {
-  font-size: 1.05em !important; /* Slightly larger KaTeX for readability */
-}
-
-:deep(.katex-display) {
-  margin: 1em 0 !important; /* Add more vertical margin for display math */
-  overflow-x: auto;
-  padding: 0.5em 0; /* Add some padding if content is too wide */
-
-}
-
-h3 { /* Copied from original request */
-  margin-top: 0;
-  color: #0056b3;
-  border-bottom: 2px solid #cfe2ff;
-  padding-bottom: 10px;
-  margin-bottom: 20px;
-  font-size: 1.6em;
-  font-weight: 600;
-}
-
-p {
-  line-height: 1.7;
+  color: #2c3e50;
   margin-bottom: 1em;
-  color: #333;
-  font-size: 0.95em;
+  font-size: 1.25em;
+  font-weight: 600;
+  border-bottom: 1px solid #e0e6ed;
+  padding-bottom: 0.5em;
 }
 
+.series-definition {
+  margin-bottom: 1.5em; /* Space between different series definitions */
+}
+
+.series-definition :deep(.katex-display) { /* Target display KaTeX from KatexRenderer */
+  margin: 0.8em auto !important; /* Center and provide vertical spacing */
+}
+
+.series-condition {
+  text-align: center;
+  font-size: 0.9em;
+  color: #6c757d;
+  margin-top: -0.5em; /* Pull up slightly under the formula */
+}
+
+.series-condition :deep(.katex) {
+  font-size: 0.95em !important;
+}
+
+
+.demo-footer {
+  text-align: center;
+  margin-top: 40px;
+  padding-top: 20px;
+  border-top: 1px solid #e0e6ed;
+  font-size: 0.95em;
+  color: #6c757d;
+}
+
+/* Vue Transition Styles */
+.fade-explanation-enter-active,
+.fade-explanation-leave-active {
+  transition: opacity 0.4s ease, transform 0.3s ease;
+}
+
+.fade-explanation-enter-from,
+.fade-explanation-leave-to {
+  opacity: 0;
+  transform: translateY(10px);
+}
+
+/* Ensure global KaTeX styles apply correctly - this is mostly for sizing within components */
+:deep(.katex) {
+  font-size: 1.1em !important; /* Base size for KaTeX output */
+  text-rendering: optimizeLegibility;
+}
 </style>

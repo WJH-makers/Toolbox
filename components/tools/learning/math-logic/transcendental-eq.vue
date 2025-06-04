@@ -1,241 +1,373 @@
 <template>
-  <div class="math-example-container" ref="transcendentalRootEl">
-    <h3>超越方程数值求解演示</h3>
-    <div class="controls-panel card" ref="controlsPanelEl">
+  <div class="transcendental-solver-page">
+    <header class="demo-header">
+      <h3><span class="header-icon">💡</span>超越方程数值求解演示</h3>
+    </header>
+
+    <div class="controls-panel card">
       <div class="control-section">
         <h4>1. 选择方程和求解方法</h4>
         <div class="form-item">
-          <label for="equation-select">选择超越方程 $f(x)=0$:</label>
-          <select id="equation-select" v-model="selectedEquationKey" @change="onEquationSelectChange">
+          <label for="equation-select">选择超越方程
+            <KatexRenderer tex="f(x)=0" :displayMode="false"/>
+            :</label>
+          <select id="equation-select" v-model="selectedEquationKey" @change="initializeEquation"
+                  class="control-select">
             <option value="cos_x_minus_x">cos x - x = 0</option>
             <option value="x_exp_x_minus_c">e^x - C = 0</option>
-            <option value="x_ln_x_minus_c">x\ln x - C = 0(x > 0)</option>
+            <option value="x_ln_x_minus_c">x ln(x) - C = 0 (x > 0)</option>
             <option value="a_pow_x_minus_bx_minus_d">A^x - Bx - D = 0</option>
           </select>
         </div>
         <div class="form-item">
           <label for="method-select">选择求解方法:</label>
-          <select id="method-select" v-model="selectedMethod">
+          <select id="method-select" v-model="selectedMethod" @change="resetSolverInternal(false)"
+                  class="control-select">
             <option value="newton">牛顿-拉弗森法 (Newton-Raphson)</option>
             <option value="bisection">二分法 (Bisection)</option>
           </select>
         </div>
-        <div v-if="currentEquation && currentEquation.needsConstantC" class="form-item">
-          <label for="constant-c">常数 C:</label>
-          <input id="constant-c" v-model.number="equationParams.C" type="number" step="0.1">
-        </div>
-        <div v-if="currentEquation && currentEquation.needsConstABD" class="form-item-group">
-          <div class="form-item">
-            <label for="constant-a-eq">常数 A:</label>
-            <input id="constant-a-eq" v-model.number="equationParams.A_const" type="number" step="0.1">
+        <transition name="fade-fast">
+          <div v-if="currentEquationDetails && currentEquationDetails.needsConstantC"
+               class="form-item param-input-group">
+            <label for="constant-c">常数 C:</label>
+            <input id="constant-c" v-model.number="equationParams.C" type="number" step="0.1"
+                   class="control-input-number">
           </div>
-          <div class="form-item">
-            <label for="constant-b-eq">常数 B:</label>
-            <input id="constant-b-eq" v-model.number="equationParams.B_const" type="number" step="0.1">
+        </transition>
+        <transition name="fade-fast">
+          <div v-if="currentEquationDetails && currentEquationDetails.needsConstABD"
+               class="param-input-group form-item-columns">
+            <div class="form-item">
+              <label for="constant-a-eq">常数 A:</label>
+              <input id="constant-a-eq" v-model.number="equationParams.A_const" type="number" step="0.1"
+                     class="control-input-number">
+            </div>
+            <div class="form-item">
+              <label for="constant-b-eq">常数 B:</label>
+              <input id="constant-b-eq" v-model.number="equationParams.B_const" type="number" step="0.1"
+                     class="control-input-number">
+            </div>
+            <div class="form-item">
+              <label for="constant-d-eq">常数 D:</label>
+              <input id="constant-d-eq" v-model.number="equationParams.D_const" type="number" step="0.1"
+                     class="control-input-number">
+            </div>
           </div>
-          <div class="form-item">
-            <label for="constant-d-eq">常数 D:</label>
-            <input id="constant-d-eq" v-model.number="equationParams.D_const" type="number" step="0.1">
-          </div>
-        </div>
+        </transition>
       </div>
 
       <div class="control-section">
         <h4>2. 设置方法参数</h4>
-        <div v-if="selectedMethod === 'newton'">
-          <div class="form-item">
-            <label for="newton-x0">初始猜测值 $x_0$:</label>
-            <input id="newton-x0" v-model.number="newtonParams.x0" type="number" step="0.1">
+        <transition name="fade-fast" mode="out-in">
+          <div v-if="selectedMethod === 'newton'" :key="'newton-params'">
+            <div class="form-item">
+              <label for="newton-x0">初始猜测值
+                <KatexRenderer tex="x_0" :displayMode="false"/>
+                :</label>
+              <input id="newton-x0" v-model.number="newtonParams.x0" type="number" step="0.1"
+                     class="control-input-number">
+            </div>
           </div>
-        </div>
-        <div v-if="selectedMethod === 'bisection'">
+          <div v-else-if="selectedMethod === 'bisection'" :key="'bisection-params'" class="form-item-columns">
+            <div class="form-item">
+              <label for="bisection-a">区间左端点
+                <KatexRenderer tex="a" :displayMode="false"/>
+                :</label>
+              <input id="bisection-a" v-model.number="bisectionParams.a" type="number" step="0.1"
+                     class="control-input-number">
+            </div>
+            <div class="form-item">
+              <label for="bisection-b">区间右端点
+                <KatexRenderer tex="b" :displayMode="false"/>
+                :</label>
+              <input id="bisection-b" v-model.number="bisectionParams.b" type="number" step="0.1"
+                     class="control-input-number">
+            </div>
+            <p v-if="!isBisectionBracketValid && bisectionParams.a !== null && bisectionParams.b !== null"
+               class="error-text form-item-full-width">
+              注意:
+              <KatexRenderer tex="f(a)" :displayMode="false"/>
+              和
+              <KatexRenderer tex="f(b)" :displayMode="false"/>
+              必须异号！当前
+              <KatexRenderer :tex="`f(a) \\approx ${currentFa.toFixed(4)}`" :displayMode="false"/>
+              ,
+              <KatexRenderer :tex="`f(b) \\approx ${currentFb.toFixed(4)}`" :displayMode="false"/>
+            </p>
+          </div>
+        </transition>
+        <div class="form-item-columns">
           <div class="form-item">
-            <label for="bisection-a">区间左端点 $a$:</label>
-            <input id="bisection-a" v-model.number="bisectionParams.a" type="number" step="0.1">
+            <label for="max-iterations">最大迭代次数:</label>
+            <input id="max-iterations" v-model.number="solverParams.maxIterations" type="number" min="1" max="1000"
+                   step="1" class="control-input-number">
           </div>
           <div class="form-item">
-            <label for="bisection-b">区间右端点 $b$:</label>
-            <input id="bisection-b" v-model.number="bisectionParams.b" type="number" step="0.1">
+            <label for="tolerance">容差 (
+              <KatexRenderer tex="\epsilon" :displayMode="false"/>
+              ):</label>
+            <input id="tolerance" v-model.number="solverParams.tolerance" type="number" min="1e-10" max="1e-1"
+                   step="1e-5" class="control-input-number">
           </div>
-          <p v-if="!isBisectionBracketValid && bisectionParams.a !== null && bisectionParams.b !== null"
-             class="error-text">
-            注意: $f(a)$ 和 $f(b)$ 必须异号！当前 $f(a) \approx {{ currentFa.toFixed(4) }}$, $f(b) \approx
-            {{ currentFb.toFixed(4) }}$
-          </p>
-        </div>
-        <div class="form-item">
-          <label for="max-iterations">最大迭代次数:</label>
-          <input id="max-iterations" v-model.number="solverParams.maxIterations" type="number" min="1" max="1000"
-                 step="1">
-        </div>
-        <div class="form-item">
-          <label for="tolerance">容差 ($\epsilon$):</label>
-          <input id="tolerance" v-model.number="solverParams.tolerance" type="number" min="1e-10" max="1e-1" step="1e-5"
-                 lang="en">
         </div>
       </div>
 
       <div class="simulation-actions">
-        <button class="button button-primary" @click="startFullIteration" :disabled="isSolving">开始求解</button>
+        <button class="button button-primary" @click="startFullIteration" :disabled="isSolving">
+          <span class="button-icon">▶️</span>开始求解
+        </button>
         <button class="button button-info" @click="stepIteration"
                 :disabled="isSolving || (iterationHistory.length > 0 && iterationHistory[iterationHistory.length-1].converged)">
-          单步迭代
+          <span class="button-icon">➡️</span>单步迭代
         </button>
-        <button class="button button-secondary" @click="resetSolver">重置迭代</button>
+        <button class="button button-secondary" @click="resetSolver">
+          <span class="button-icon">🔄</span>重置迭代
+        </button>
       </div>
     </div>
 
-    <div class="visualization-section card" ref="visualizationSectionEl">
-      <h4 v-html="visualizationTitleHtml"></h4>
+    <div class="visualization-section card">
+      <h4>
+        函数图像与迭代点
+        <span class="subtitle-katex">(<KatexRenderer tex="y = f(x)" :displayMode="false"/>
+        <template v-if="currentEquationDetails && currentEquationDetails.g_x_str && currentEquationDetails.h_x_str">
+          或 <KatexRenderer :tex="`y=${currentEquationDetails.g_x_str}`" :displayMode="false"/> 与 <KatexRenderer
+            :tex="`y=${currentEquationDetails.h_x_str}`" :displayMode="false"/>
+        </template>
+        )</span>
+      </h4>
       <canvas ref="solverCanvas" :width="canvasWidth" :height="canvasHeight"></canvas>
       <div class="form-item view-range-controls">
         <label for="x-view-min">X轴范围:</label>
-        <input id="x-view-min" v-model.number="xViewRange.min" type="number" step="0.5">
+        <input id="x-view-min" v-model.number="xViewRange.min" type="number" step="0.5"
+               class="control-input-number short">
         <span>到</span>
-        <input id="x-view-max" v-model.number="xViewRange.max" type="number" step="0.5">
-        <label for="y-view-min" style="margin-left: 15px;">Y轴范围:</label>
-        <input id="y-view-min" v-model.number="yViewRange.min" type="number" step="0.5">
+        <input id="x-view-max" v-model.number="xViewRange.max" type="number" step="0.5"
+               class="control-input-number short">
+        <label for="y-view-min" class="range-label-y">Y轴范围:</label>
+        <input id="y-view-min" v-model.number="yViewRange.min" type="number" step="0.5"
+               class="control-input-number short">
         <span>到</span>
-        <input id="y-view-max" v-model.number="yViewRange.max" type="number" step="0.5">
+        <input id="y-view-max" v-model.number="yViewRange.max" type="number" step="0.5"
+               class="control-input-number short">
       </div>
     </div>
 
-    <div v-if="iterationHistory.length > 0" class="results-section card" ref="resultsSectionEl">
-      <h4>迭代结果:</h4>
-      <div class="iteration-table-wrapper">
-        <table>
-          <thead>
-          <tr>
-            <th>步骤</th>
-            <th>x{k}</th>
-            <th v-if="selectedMethod === 'bisection'">a{k}</th>
-            <th v-if="selectedMethod === 'bisection'">b{k}</th>
-            <th>f(x{k})</th>
-            <th>|x{k} - x{k-1}|</th>
-            <th>状态</th>
-          </tr>
-          </thead>
-          <tbody>
-          <tr v-for="(item, index) in iterationHistory" :key="index"
-              :class="{highlighted: index === iterationHistory.length -1}">
-            <td>{{ item.iter }}</td>
-            <td>{{ item.xk.toFixed(solverParams.displayPrecision) }}</td>
-            <td v-if="selectedMethod === 'bisection'">
-              {{ item.ak !== undefined ? item.ak.toFixed(solverParams.displayPrecision) : 'N/A' }}
-            </td>
-            <td v-if="selectedMethod === 'bisection'">
-              {{ item.bk !== undefined ? item.bk.toFixed(solverParams.displayPrecision) : 'N/A' }}
-            </td>
-            <td>{{ item.fxk.toExponential(3) }}</td>
-            <td>{{
-                item.error !== undefined ? item.error.toExponential(3) : (index > 0 ? Math.abs(item.xk - iterationHistory[index - 1].xk).toExponential(3) : 'N/A')
-              }}
-            </td>
-            <td :class="item.converged ? 'converged' : (item.maxIterReached ? 'max-iter' : '')">{{ item.status }}</td>
-          </tr>
-          </tbody>
-        </table>
+    <transition name="fade-slow">
+      <div v-if="iterationHistory.length > 0" class="results-section card">
+        <h4>迭代结果:</h4>
+        <div class="iteration-table-wrapper">
+          <table>
+            <thead>
+            <tr>
+              <th>步骤</th>
+              <th>
+                <KatexRenderer tex="x_k" :displayMode="false"/>
+              </th>
+              <th v-if="selectedMethod === 'bisection'">
+                <KatexRenderer tex="a_k" :displayMode="false"/>
+              </th>
+              <th v-if="selectedMethod === 'bisection'">
+                <KatexRenderer tex="b_k" :displayMode="false"/>
+              </th>
+              <th>
+                <KatexRenderer tex="f(x_k)" :displayMode="false"/>
+              </th>
+              <th>
+                <KatexRenderer tex="|x_k - x_{k-1}|" :displayMode="false"/>
+              </th>
+              <th>状态</th>
+            </tr>
+            </thead>
+            <tbody>
+            <tr v-for="(item, index) in iterationHistory" :key="index"
+                :class="{highlighted: index === iterationHistory.length -1 && !item.converged, 'final-converged': item.converged && index === iterationHistory.length -1 }">
+              <td>{{ item.iter }}</td>
+              <td>{{ item.xk.toFixed(solverParams.displayPrecision) }}</td>
+              <td v-if="selectedMethod === 'bisection'">
+                {{ item.ak !== undefined ? item.ak.toFixed(solverParams.displayPrecision) : 'N/A' }}
+              </td>
+              <td v-if="selectedMethod === 'bisection'">
+                {{ item.bk !== undefined ? item.bk.toFixed(solverParams.displayPrecision) : 'N/A' }}
+              </td>
+              <td>{{ item.fxk.toExponential(3) }}</td>
+              <td>{{
+                  item.error !== undefined ? item.error.toExponential(3) : (index > 0 ? Math.abs(item.xk - iterationHistory[index - 1].xk).toExponential(3) : 'N/A')
+                }}
+              </td>
+              <td :class="{ 'status-converged': item.converged && !item.maxIterReached, 'status-max-iter': item.maxIterReached, 'status-failed': item.status.startsWith('失败') }">
+                {{ item.status }}
+              </td>
+            </tr>
+            </tbody>
+          </table>
+        </div>
+        <p v-if="currentRoot !== null && iterationHistory.length > 0 && iterationHistory[iterationHistory.length-1].converged && !iterationHistory[iterationHistory.length-1].maxIterReached"
+           class="final-root-display">
+          <strong>最终近似根:
+            <KatexRenderer :tex="`x \\approx ${currentRoot.toFixed(solverParams.displayPrecision)}`"
+                           :displayMode="false"/>
+          </strong>
+          (在 {{ iterationHistory.length }} 次迭代后找到)
+        </p>
       </div>
-      <p v-if="currentRoot !== null && iterationHistory.length > 0 && iterationHistory[iterationHistory.length-1].converged && !iterationHistory[iterationHistory.length-1].maxIterReached">
-        <strong>最终近似根: x = {{ currentRoot.toFixed(solverParams.displayPrecision) }}</strong> (在
-        {{ iterationHistory.length }} 次迭代后找到)
-      </p>
-    </div>
+    </transition>
 
-    <div class="explanation-panel card" ref="explanationPanelEl">
-      <div v-html="explanationHtml"></div>
+    <div class="explanation-panel card">
+      <transition name="fade-slow" mode="out-in">
+        <div :key="selectedEquationKey + selectedMethod">
+          <h4>
+            当前方程:
+            <KatexRenderer :tex="currentEquationDetails?.label || ''" :displayMode="false"/>
+          </h4>
+          <p v-html="renderHtmlWithInlineKatex(currentEquationDetails?.description || '')"></p>
+          <div v-if="selectedMethod === 'newton'">
+            <h5>牛顿-拉弗森法 (Newton-Raphson):</h5>
+            <p>迭代公式:</p>
+            <KatexRenderer tex="x_{k+1} = x_k - \frac{f(x_k)}{f'(x_k)}" :displayMode="true"/>
+            <p><span
+                v-html="renderHtmlWithInlineKatex('其中 $x_k$ 是第 $k$ 次迭代的近似值, $f(x_k)$ 是函数在 $x_k$ 处的值, $f\'(x_k)$ 是函数在 $x_k$ 处的导数值。')"></span>
+            </p>
+            <p class="method-ProsCons"><strong>优点:</strong> 收敛速度快 (通常为二次收敛)。<br/><strong>缺点:</strong>
+              需要计算导数；初始猜测值选取不当可能不收敛或收敛到错误的根；导数为零或接近零时可能失败。</p>
+          </div>
+          <div v-else-if="selectedMethod === 'bisection'">
+            <h5>二分法 (Bisection Method):</h5>
+            <p><span
+                v-html="renderHtmlWithInlineKatex('要求初始区间 $[a, b]$ 满足 $f(a) \\cdot f(b) < 0$ (即函数在区间两端点异号)。')"></span>
+            </p>
+            <p><span
+                v-html="renderHtmlWithInlineKatex('每次迭代计算中点 $m_k = (a_k + b_k) / 2$，并根据 $f(m_k)$ 的符号缩小区间：')"></span>
+            </p>
+            <ul>
+              <li><span
+                  v-html="renderHtmlWithInlineKatex('若 $f(a_k) \\cdot f(m_k) < 0$，则新区间为 $[a_k, m_k]$。')"></span>
+              </li>
+              <li><span
+                  v-html="renderHtmlWithInlineKatex('若 $f(m_k) \\cdot f(b_k) < 0$，则新区间为 $[m_k, b_k]$。')"></span>
+              </li>
+              <li><span v-html="renderHtmlWithInlineKatex('若 $f(m_k) = 0$，则 $m_k$ 即为根。')"></span></li>
+            </ul>
+            <p class="method-ProsCons"><strong>优点:</strong> 只要初始区间有效，总能保证收敛。<br/><strong>缺点:</strong>
+              收敛速度慢 (线性收敛)；不能用于寻找偶数重根或不变号的根。</p>
+          </div>
+        </div>
+      </transition>
     </div>
-
+    <footer class="demo-footer">
+      <p>调整参数，探索不同数值方法的求解过程与收敛特性。</p>
+    </footer>
   </div>
 </template>
 
 <script setup>
-import {ref, onMounted, watch, nextTick, computed} from 'vue';
+import {ref, onMounted, watch, computed} from 'vue';
 import katex from 'katex';
-import renderMathInElement from 'katex/contrib/auto-render';
-import 'katex/dist/katex.min.css';
+import KatexRenderer from '../../../KatexRenderer.vue'; // 确保路径正确
 
-const transcendentalRootEl = ref(null);
-const controlsPanelEl = ref(null);
-const explanationPanelEl = ref(null);
-const visualizationSectionEl = ref(null);
-const resultsSectionEl = ref(null); // Added ref for results section
 const solverCanvas = ref(null);
 let ctx = null;
 
 const canvasWidth = ref(700);
-const canvasHeight = ref(400);
+const canvasHeight = ref(420);
 
 const selectedEquationKey = ref('cos_x_minus_x');
 const selectedMethod = ref('newton');
 const equationParams = ref({C: 1, A_const: 2, B_const: 1, D_const: 0});
 
-const newtonParams = ref({x0: 0.5});
-const bisectionParams = ref({a: 0, b: 2});
+const newtonParams = ref({x0: 0.7}); // Adjusted initial for cos_x_minus_x
+const bisectionParams = ref({a: 0, b: 1}); // Adjusted initial for cos_x_minus_x
 const solverParams = ref({
   maxIterations: 50,
   tolerance: 1e-7,
   displayPrecision: 8,
 });
 
-const xViewRange = ref({min: -2, max: 3});
-const yViewRange = ref({min: -2, max: 2});
+const xViewRange = ref({min: -1, max: 2}); // Default view range adjusted
+const yViewRange = ref({min: -1.5, max: 1.5}); // Default view range adjusted
 
 const iterationHistory = ref([]);
 const currentRoot = ref(null);
 const isSolving = ref(false);
-const explanationHtml = ref('');
+
+// MODIFICATION START: Add renderHtmlWithInlineKatex function
+function renderHtmlWithInlineKatex(htmlContent) {
+  if (!htmlContent || typeof htmlContent !== 'string') return '';
+  return htmlContent.replace(/\$(.+?)\$/g, (match, capturedTex) => {
+    try {
+      return katex.renderToString(capturedTex.trim(), {
+        throwOnError: false,
+        displayMode: false,
+        output: "htmlAndMathml",
+        strict: (errorCode) => errorCode === 'unicodeTextInMathMode' ? 'ignore' : 'warn',
+      });
+    } catch (e) {
+      console.error('Inline KaTeX rendering error:', capturedTex, e);
+      return `<span class="katex-error-inline">${match}(Error)</span>`;
+    }
+  });
+}
+
+// MODIFICATION END
 
 const equations = {
   'cos_x_minus_x': {
-    label: '$\\cos x - x = 0$',
-    description: '求解方程 $\\cos(x) = x$。等价于寻找 $f(x) = \\cos(x) - x$ 的根。',
+    label: '\\cos x - x = 0',
+    description: '求解方程 $\\cos(x) = x$。等价于寻找 $f(x) = \\cos(x) - x$ 的根。', // This will now be processed by renderHtmlWithInlineKatex
     func: (x, params) => Math.cos(x) - x,
     derivative: (x, params) => -Math.sin(x) - 1,
     g_x_str: '\\cos(x)', g_x_func: (x) => Math.cos(x),
     h_x_str: 'x', h_x_func: (x) => x,
-    initialNewtonX0: 0.7, initialBisectionA: 0, initialBisectionB: 1,
+    initialNewtonX0: 0.739, initialBisectionA: 0, initialBisectionB: 1,
     defaultXView: {min: -1, max: 2}, defaultYView: {min: -1.5, max: 1.5},
     needsConstantC: false, needsConstABD: false,
   },
   'x_exp_x_minus_c': {
-    label: '$x e^x - C = 0$',
+    label: 'x e^x - C = 0',
     description: '求解方程 $x e^x = C$。等价于寻找 $f(x) = x e^x - C$ 的根。',
     func: (x, params) => x * Math.exp(x) - params.C,
     derivative: (x, params) => Math.exp(x) + x * Math.exp(x),
     g_x_str: 'e^x', g_x_func: (x) => Math.exp(x),
     h_x_str: 'C/x', h_x_func: (x, params) => (x !== 0 ? params.C / x : NaN),
-    initialNewtonX0: 0.5, initialBisectionA: 0.1, initialBisectionB: 1,
-    defaultXView: {min: -1, max: 2}, defaultYView: {min: -2, max: 3},
+    initialNewtonX0: 0.5, initialBisectionA: 0.1, initialBisectionB: 1.5, // Adjusted for C=1
+    defaultXView: {min: -1, max: 2}, defaultYView: {min: -2, max: (equationParams.value.C || 1) + 2},
     needsConstantC: true, needsConstABD: false,
   },
   'x_ln_x_minus_c': {
-    label: '$x \\ln x - C = 0 \\quad (x > 0)$',
+    label: 'x \\ln x - C = 0 \\quad (x > 0)',
     description: '求解方程 $x \\ln(x) = C$ ($x > 0$)。等价于寻找 $f(x) = x \\ln(x) - C$ 的根。',
     func: (x, params) => (x > 0 ? x * Math.log(x) - params.C : NaN),
     derivative: (x, params) => (x > 0 ? Math.log(x) + 1 : NaN),
-    g_x_str: '\\ln(x)', g_x_func: (x) => (x > 0 ? Math.log(x) : NaN),
-    h_x_str: 'C/x', h_x_func: (x, params) => (x > 0 ? params.C / x : NaN),
-    initialNewtonX0: 1.5, initialBisectionA: 1.1, initialBisectionB: 2.5,
-    defaultXView: {min: 0.1, max: 4}, defaultYView: {min: -2, max: 2},
-    needsConstantC: true, needsConstABD: false,
+    g_x_str: '\\ln(x)',
+    g_x_func: (x) => (x > 0 ? Math.log(x) : NaN),
+    h_x_str: 'C/x',
+    h_x_func: (x, params) => (x > 0 ? params.C / x : NaN),
+    initialNewtonX0: 1.5,
+    initialBisectionA: 0.1,
+    initialBisectionB: 3, // Adjusted for C=1
+    defaultXView: {min: 0.01, max: 4},
+    defaultYView: {min: -(Math.abs(equationParams.value.C || 1) + 1), max: (Math.abs(equationParams.value.C || 1) + 1)},
+    needsConstantC: true,
+    needsConstABD: false,
   },
   'a_pow_x_minus_bx_minus_d': {
-    label: '$A^x - Bx - D = 0$',
+    label: 'A^x - Bx - D = 0',
     description: '求解方程 $A^x - Bx - D = 0$。等价于寻找 $f(x) = A^x - Bx - D$ 的根。 ($A > 0$)',
     func: (x, params) => (params.A_const > 0 ? Math.pow(params.A_const, x) - params.B_const * x - params.D_const : NaN),
     derivative: (x, params) => (params.A_const > 0 ? Math.pow(params.A_const, x) * Math.log(params.A_const) - params.B_const : NaN),
-    initialNewtonX0: 1, initialBisectionA: 0, initialBisectionB: 2,
+    initialNewtonX0: 1, initialBisectionA: -1, initialBisectionB: 3,
     defaultXView: {min: -2, max: 4}, defaultYView: {min: -5, max: 10},
     needsConstantC: false, needsConstABD: true,
   },
 };
 
-const currentEquation = computed(() => equations[selectedEquationKey.value]);
+const currentEquationDetails = computed(() => equations[selectedEquationKey.value]);
+
 const currentFa = computed(() => {
-  if (selectedMethod.value === 'bisection' && currentEquation.value && bisectionParams.value.a !== null) {
+  if (selectedMethod.value === 'bisection' && currentEquationDetails.value && bisectionParams.value.a !== null) {
     try {
-      return currentEquation.value.func(bisectionParams.value.a, equationParams.value);
+      return currentEquationDetails.value.func(bisectionParams.value.a, equationParams.value);
     } catch {
       return NaN;
     }
@@ -243,69 +375,33 @@ const currentFa = computed(() => {
   return NaN;
 });
 const currentFb = computed(() => {
-  if (selectedMethod.value === 'bisection' && currentEquation.value && bisectionParams.value.b !== null) {
+  if (selectedMethod.value === 'bisection' && currentEquationDetails.value && bisectionParams.value.b !== null) {
     try {
-      return currentEquation.value.func(bisectionParams.value.b, equationParams.value);
+      return currentEquationDetails.value.func(bisectionParams.value.b, equationParams.value);
     } catch {
       return NaN;
     }
   }
   return NaN;
 });
-const isBisectionBracketValid = computed(() => !isNaN(currentFa.value) && !isNaN(currentFb.value) && currentFa.value * currentFb.value < 0);
+const isBisectionBracketValid = computed(() =>
+    currentEquationDetails.value &&
+    typeof currentEquationDetails.value.func === 'function' &&
+    !isNaN(currentFa.value) && !isNaN(currentFb.value) &&
+    currentFa.value * currentFb.value < 0
+);
 
-const visualizationTitleHtml = computed(() => {
-  let title = '函数图像与迭代过程 (<span>$y = f(x)$</span>';
-  const eq = currentEquation.value;
-  if (eq.g_x_str && eq.h_x_str) {
-    title += ` 或 $y=${eq.g_x_str}$ 与 $y=${eq.h_x_str}$`;
-  }
-  title += ')';
-  return title;
-});
-
-function doKatexRender(element) {
-  if (element && typeof renderMathInElement === 'function') {
-    try {
-      renderMathInElement(element, {
-        delimiters: [
-          {left: "$$", right: "$$", display: true}, {left: "$", right: "$", display: false},
-          {left: "\\(", right: "\\)", display: false}, {left: "\\[", right: "\\]", display: true}
-        ],
-        throwOnError: false
-      });
-    } catch (error) {
-      console.error("KaTeX renderMathInElement error:", error);
-    }
-  }
-}
-
-function updateExplanation() {
-  const eq = currentEquation.value;
-  let html = `<h4>当前方程: ${eq.label}</h4>`;
-  html += `<p>${eq.description}</p>`;
-  if (selectedMethod.value === 'newton') {
-    html += `<h5>牛顿-拉弗森法 (Newton-Raphson):</h5>`;
-    html += `<p>迭代公式: $x_{k+1} = x_k - \\frac{f(x_k)}{f'(x_k)}$</p>`;
-    html += `<p>其中 $x_k$ 是第 $k$ 次迭代的近似值，$f(x_k)$ 是函数在 $x_k$ 处的值，$f'(x_k)$ 是函数在 $x_k$ 处的导数值。</p>`;
-  } else if (selectedMethod.value === 'bisection') {
-    html += `<h5>二分法 (Bisection Method):</h5>`;
-    html += `<p>要求初始区间 $[a, b]$ 满足 $f(a) \cdot f(b) < 0$。</p>`;
-    html += `<p>每次迭代计算中点 $m_k = (a_k + b_k) / 2$，并根据 $f(m_k)$ 的符号缩小区间。</p>`;
-  }
-  explanationHtml.value = html;
-}
 
 let plotScaleX, plotScaleY, plotOriginX, plotOriginY;
+const plotMargin = 40;
 
 function setupPlotting() {
-  const margin = 40;
   const xRangeEffective = xViewRange.value.max - xViewRange.value.min;
   const yRangeEffective = yViewRange.value.max - yViewRange.value.min;
-  plotScaleX = (xRangeEffective === 0) ? 1 : (canvasWidth.value - 2 * margin) / xRangeEffective;
-  plotScaleY = (yRangeEffective === 0) ? 1 : (canvasHeight.value - 2 * margin) / yRangeEffective;
-  plotOriginX = margin - xViewRange.value.min * plotScaleX;
-  plotOriginY = margin + yViewRange.value.max * plotScaleY;
+  plotScaleX = (xRangeEffective <= 1e-6) ? (canvasWidth.value - 2 * plotMargin) : (canvasWidth.value - 2 * plotMargin) / xRangeEffective;
+  plotScaleY = (yRangeEffective <= 1e-6) ? (canvasHeight.value - 2 * plotMargin) : (canvasHeight.value - 2 * plotMargin) / yRangeEffective;
+  plotOriginX = plotMargin - xViewRange.value.min * plotScaleX;
+  plotOriginY = plotMargin + yViewRange.value.max * plotScaleY;
 }
 
 function toCanvasX(x_domain) {
@@ -317,57 +413,86 @@ function toCanvasY(y_domain) {
 }
 
 function drawAxes() {
+  // ... (drawAxes implementation remains largely the same as previous version, with minor style tweaks from CSS)
+  // Ensure it uses plotMargin correctly
   if (!ctx) return;
-  setupPlotting();
+  setupPlotting(); // Recalculate scales and origins
   ctx.clearRect(0, 0, canvasWidth.value, canvasHeight.value);
-  ctx.strokeStyle = '#ccc';
+
+  // Grid lines
+  ctx.strokeStyle = '#e9ecef'; // Very light grid
   ctx.lineWidth = 0.5;
-  const tickSize = 5;
-  const xRangeVal = xViewRange.value.max - xViewRange.value.min;
-  const yRangeVal = yViewRange.value.max - yViewRange.value.min;
-  const xStep = xRangeVal > 10 ? 2 : (xRangeVal > 5 ? 1 : (xRangeVal > 2 ? 0.5 : (xRangeVal > 1 ? 0.2 : 0.1)));
-  const yStep = yRangeVal > 10 ? 2 : (yRangeVal > 5 ? 1 : (yRangeVal > 2 ? 0.5 : (yRangeVal > 1 ? 0.2 : 0.1)));
-  for (let x = Math.floor(xViewRange.value.min / xStep) * xStep; x <= Math.ceil(xViewRange.value.max / xStep) * xStep; x += xStep) {
-    if (x > xViewRange.value.max + xStep) break;
-    const cx = toCanvasX(x);
+  const numXGridLines = 10;
+  const numYGridLines = Math.floor((canvasHeight.value - 2 * plotMargin) / 50); // Adjust based on height
+  for (let i = 0; i <= numXGridLines; i++) {
+    const x = plotMargin + i * (canvasWidth.value - 2 * plotMargin) / numXGridLines;
     ctx.beginPath();
-    ctx.moveTo(cx, plotOriginY - tickSize);
-    ctx.lineTo(cx, plotOriginY + tickSize);
+    ctx.moveTo(x, plotMargin);
+    ctx.lineTo(x, canvasHeight.value - plotMargin);
     ctx.stroke();
-    if (Math.abs(x % (xStep * 2)) < 1e-6 || x === 0 || Math.abs(x - xViewRange.value.min) < 1e-6 || Math.abs(x - xViewRange.value.max) < 1e-6) {
-      ctx.fillStyle = '#666';
-      ctx.font = '10px Arial';
-      ctx.textAlign = 'center';
-      ctx.fillText(x.toFixed(Math.abs(x) < 1e-6 && x !== 0 ? 1 : (Math.abs(xStep) < 1 ? 1 : 0)), cx, plotOriginY + 15);
+  }
+  for (let i = 0; i <= numYGridLines; i++) {
+    const y = plotMargin + i * (canvasHeight.value - 2 * plotMargin) / numYGridLines;
+    ctx.beginPath();
+    ctx.moveTo(plotMargin, y);
+    ctx.lineTo(canvasWidth.value - plotMargin, y);
+    ctx.stroke();
+  }
+
+  // Main axes
+  ctx.strokeStyle = '#adb5bd';
+  ctx.lineWidth = 1.5;
+  ctx.beginPath();
+  ctx.moveTo(plotMargin, plotOriginY);
+  ctx.lineTo(canvasWidth.value - plotMargin, plotOriginY);
+  ctx.stroke(); // X-axis
+  ctx.beginPath();
+  ctx.moveTo(plotOriginX, plotMargin);
+  ctx.lineTo(plotOriginX, canvasHeight.value - plotMargin);
+  ctx.stroke(); // Y-axis
+
+  // Ticks and Labels
+  ctx.fillStyle = '#495057';
+  ctx.font = '10px Inter, sans-serif';
+  const tickSize = 6;
+
+  // X-axis Ticks and Labels
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'top';
+  const xTickStep = Math.max(1e-2, (xViewRange.value.max - xViewRange.value.min) / 8);
+  for (let xVal = xViewRange.value.min; xVal <= xViewRange.value.max + xTickStep / 2; xVal += xTickStep) {
+    const cx = toCanvasX(xVal);
+    if (cx >= plotMargin - tickSize && cx <= canvasWidth.value - plotMargin + tickSize) { // Draw if near plottable area
+      ctx.beginPath();
+      ctx.moveTo(cx, plotOriginY - tickSize / 2);
+      ctx.lineTo(cx, plotOriginY + tickSize / 2);
+      ctx.stroke();
+      if (Math.abs(xVal) < 1e-3 || Math.abs(xVal / xTickStep) % 2 < 0.1 || xVal === xViewRange.value.min || xVal === xViewRange.value.max) {
+        ctx.fillText(xVal.toFixed(xTickStep < 0.5 ? 2 : (xTickStep < 1 ? 1 : 0)), cx, plotOriginY + tickSize + 3);
+      }
     }
   }
-  for (let y = Math.floor(yViewRange.value.min / yStep) * yStep; y <= Math.ceil(yViewRange.value.max / yStep) * yStep; y += yStep) {
-    if (y > yViewRange.value.max + yStep) break;
-    const cy = toCanvasY(y);
-    ctx.beginPath();
-    ctx.moveTo(plotOriginX - tickSize, cy);
-    ctx.lineTo(plotOriginX + tickSize, cy);
-    ctx.stroke();
-    if (Math.abs(y % (yStep * 2)) < 1e-6 || y === 0 && Math.abs(plotOriginX) > tickSize * 2) {
-      ctx.fillStyle = '#666';
-      ctx.font = '10px Arial';
-      ctx.textAlign = 'right';
-      ctx.fillText(y.toFixed(Math.abs(y) < 1e-6 && y !== 0 ? 1 : (Math.abs(yStep) < 1 ? 1 : 0)), plotOriginX - 8, cy + 3);
+
+  // Y-axis Ticks and Labels
+  ctx.textAlign = 'right';
+  ctx.textBaseline = 'middle';
+  const yTickStep = Math.max(1e-2, (yViewRange.value.max - yViewRange.value.min) / 6);
+  for (let yVal = yViewRange.value.min; yVal <= yViewRange.value.max + yTickStep / 2; yVal += yTickStep) {
+    const cy = toCanvasY(yVal);
+    if (cy >= plotMargin - tickSize && cy <= canvasHeight.value - plotMargin + tickSize) {
+      ctx.beginPath();
+      ctx.moveTo(plotOriginX - tickSize / 2, cy);
+      ctx.lineTo(plotOriginX + tickSize / 2, cy);
+      ctx.stroke();
+      if (Math.abs(yVal) < 1e-3 && Math.abs(plotOriginX - plotMargin) > 20 || Math.abs(yVal / yTickStep) % 2 < 0.1 || yVal === yViewRange.value.min || yVal === yViewRange.value.max) {
+        ctx.fillText(yVal.toFixed(yTickStep < 0.5 ? 2 : (yTickStep < 1 ? 1 : 0)), plotOriginX - tickSize - 3, cy);
+      }
     }
   }
-  ctx.strokeStyle = '#333';
-  ctx.lineWidth = 1;
-  ctx.beginPath();
-  ctx.moveTo(0, plotOriginY);
-  ctx.lineTo(canvasWidth.value, plotOriginY);
-  ctx.stroke();
-  ctx.beginPath();
-  ctx.moveTo(plotOriginX, 0);
-  ctx.lineTo(plotOriginX, canvasHeight.value);
-  ctx.stroke();
 }
 
-function plotFunction(funcToPlot, color = 'blue', lineWidth = 2, points = 400) {
+function plotEquationFunction(funcToPlot, color = 'blue', lineWidth = 2, points = 400) {
+  // ... (plotEquationFunction implementation remains largely the same as previous version)
   if (!ctx || !funcToPlot) return;
   ctx.beginPath();
   ctx.strokeStyle = color;
@@ -383,7 +508,8 @@ function plotFunction(funcToPlot, color = 'blue', lineWidth = 2, points = 400) {
     }
     const cx = toCanvasX(x_domain);
     const cy = toCanvasY(y_domain);
-    if (cx < -5 || cx > canvasWidth.value + 5 || cy < -5 || cy > canvasHeight.value + 5) {
+
+    if (cx < plotMargin - 1 || cx > canvasWidth.value - plotMargin + 1 || cy < plotMargin - 1 || cy > canvasHeight.value - plotMargin + 1) {
       if (!firstMove) ctx.stroke();
       firstMove = true;
       continue;
@@ -399,66 +525,89 @@ function plotFunction(funcToPlot, color = 'blue', lineWidth = 2, points = 400) {
 }
 
 function drawNewtonStep(xk, fxk, fpxk_val) {
+  // ... (drawNewtonStep implementation remains largely the same)
   if (!ctx || fpxk_val === 0 || isNaN(fpxk_val) || isNaN(xk) || isNaN(fxk)) return;
   const cxk = toCanvasX(xk);
   const cyk = toCanvasY(fxk);
-  ctx.fillStyle = 'red';
+
+  ctx.fillStyle = '#dc3545';
   ctx.beginPath();
   ctx.arc(cxk, cyk, 5, 0, 2 * Math.PI);
   ctx.fill();
-  const x_next = xk - fxk / fpxk_val;
-  const cx_next = toCanvasX(x_next);
-  const cy_next_on_axis = toCanvasY(0);
-  ctx.strokeStyle = 'rgba(255, 165, 0, 0.7)';
-  ctx.lineWidth = 1;
-  ctx.setLineDash([4, 4]);
-  ctx.beginPath();
+
+  const x_next_on_axis = xk - fxk / fpxk_val;
   const y_tangent_at_x_min = fxk + fpxk_val * (xViewRange.value.min - xk);
   const y_tangent_at_x_max = fxk + fpxk_val * (xViewRange.value.max - xk);
+  ctx.strokeStyle = 'rgba(255, 165, 0, 0.8)';
+  ctx.lineWidth = 1.5; // Slightly thicker tangent
+  ctx.setLineDash([4, 2]); // Different dash
+  ctx.beginPath();
   ctx.moveTo(toCanvasX(xViewRange.value.min), toCanvasY(y_tangent_at_x_min));
   ctx.lineTo(toCanvasX(xViewRange.value.max), toCanvasY(y_tangent_at_x_max));
   ctx.stroke();
   ctx.setLineDash([]);
-  ctx.fillStyle = 'purple';
+
+  ctx.fillStyle = '#6f42c1';
   ctx.beginPath();
-  ctx.arc(cx_next, cy_next_on_axis, 6, 0, 2 * Math.PI);
+  ctx.arc(toCanvasX(x_next_on_axis), toCanvasY(0), 6, 0, 2 * Math.PI);
   ctx.fill();
+  // Add small circle for x_k+1, f(x_k+1)
+  const fxk_plus_1 = currentEquationDetails.value.func(x_next_on_axis, equationParams.value);
+  if (!isNaN(fxk_plus_1) && isFinite(fxk_plus_1)) {
+    ctx.fillStyle = 'rgba(111, 66, 193, 0.5)'; // Lighter purple
+    ctx.beginPath();
+    ctx.arc(toCanvasX(x_next_on_axis), toCanvasY(fxk_plus_1), 4, 0, 2 * Math.PI);
+    ctx.fill();
+  }
 }
 
 function drawBisectionStep(ak, bk, mk) {
+  // ... (drawBisectionStep implementation remains largely the same)
   if (!ctx || isNaN(ak) || isNaN(bk) || isNaN(mk)) return;
   const cak = toCanvasX(ak);
   const cbk = toCanvasX(bk);
   const cmk = toCanvasX(mk);
-  const cy_axis = toCanvasY(0);
-  ctx.fillStyle = 'rgba(0, 100, 255, 0.15)';
-  ctx.fillRect(cak, 0, cbk - cak, canvasHeight.value);
-  ctx.strokeStyle = 'rgba(0, 100, 255, 0.5)';
-  ctx.lineWidth = 1;
+
+  ctx.fillStyle = 'rgba(23, 162, 184, 0.1)';
+  ctx.fillRect(Math.min(cak, cbk), plotMargin, Math.abs(cbk - cak), canvasHeight.value - 2 * plotMargin);
+
+  ctx.strokeStyle = 'rgba(23, 162, 184, 0.6)'; // Stronger interval lines
+  ctx.lineWidth = 1.5;
   ctx.beginPath();
-  ctx.moveTo(cak, 0);
-  ctx.lineTo(cak, canvasHeight.value);
+  ctx.moveTo(cak, plotMargin);
+  ctx.lineTo(cak, canvasHeight.value - plotMargin);
   ctx.stroke();
   ctx.beginPath();
-  ctx.moveTo(cbk, 0);
-  ctx.lineTo(cbk, canvasHeight.value);
+  ctx.moveTo(cbk, plotMargin);
+  ctx.lineTo(cbk, canvasHeight.value - plotMargin);
   ctx.stroke();
-  ctx.fillStyle = 'red';
+
+  ctx.fillStyle = '#e74c3c'; // More vibrant red for midpoint
   ctx.beginPath();
-  ctx.arc(cmk, cy_axis, 5, 0, 2 * Math.PI);
+  ctx.arc(cmk, toCanvasY(0), 5, 0, 2 * Math.PI);
   ctx.fill();
+  // Add small circle for m_k, f(m_k)
+  const fmk = currentEquationDetails.value.func(mk, equationParams.value);
+  if (!isNaN(fmk) && isFinite(fmk)) {
+    ctx.fillStyle = 'rgba(231, 76, 60, 0.5)';
+    ctx.beginPath();
+    ctx.arc(cmk, toCanvasY(fmk), 4, 0, 2 * Math.PI);
+    ctx.fill();
+  }
 }
 
 function redrawCanvas() {
-  if (!ctx) return;
+  if (!ctx || !currentEquationDetails.value) return;
   drawAxes();
-  plotFunction(currentEquation.value.func, '#007bff');
-  if (currentEquation.value.g_x_func && currentEquation.value.h_x_func) {
-    plotFunction(currentEquation.value.g_x_func, '#28a745', 1);
-    plotFunction(currentEquation.value.h_x_func, '#6f42c1', 1);
+  plotEquationFunction(currentEquationDetails.value.func, '#0d6efd', 2.5); // Main function f(x)
+
+  if (currentEquationDetails.value.g_x_func && currentEquationDetails.value.h_x_func) {
+    plotEquationFunction(currentEquationDetails.value.g_x_func, '#198754', 1.5); // g(x) green
+    plotEquationFunction(currentEquationDetails.value.h_x_func, '#ffc107', 1.5); // h(x) yellow/orange
   }
+
   const lastIter = iterationHistory.value.length > 0 ? iterationHistory.value[iterationHistory.value.length - 1] : null;
-  if (lastIter) {
+  if (lastIter && !lastIter.status.startsWith("失败")) { // Only draw iteration steps if not failed from start
     if (selectedMethod.value === 'newton' && lastIter.fpxk !== undefined && lastIter.prev_xk !== undefined && lastIter.prev_fxk !== undefined) {
       drawNewtonStep(lastIter.prev_xk, lastIter.prev_fxk, lastIter.fpxk);
     } else if (selectedMethod.value === 'bisection' && lastIter.ak_prev !== undefined && lastIter.bk_prev !== undefined) {
@@ -467,69 +616,84 @@ function redrawCanvas() {
   }
 }
 
+
 function initializeEquation() {
   isSolving.value = false;
   resetSolverInternal(true);
-  const eq = currentEquation.value;
-  newtonParams.value.x0 = eq.initialNewtonX0;
-  bisectionParams.value.a = eq.initialBisectionA;
-  bisectionParams.value.b = eq.initialBisectionB;
-  xViewRange.value = {...eq.defaultXView};
-  yViewRange.value = {...eq.defaultYView};
-  if (!eq.needsConstantC) equationParams.value.C = 1;
-  if (!eq.needsConstABD) {
-    equationParams.value.A_const = 2;
-    equationParams.value.B_const = 1;
-    equationParams.value.D_const = 0;
+  const eq = currentEquationDetails.value;
+  if (eq) {
+    newtonParams.value.x0 = eq.initialNewtonX0;
+    bisectionParams.value.a = eq.initialBisectionA;
+    bisectionParams.value.b = eq.initialBisectionB;
+    xViewRange.value = {...eq.defaultXView};
+    yViewRange.value = {...eq.defaultYView};
+    if (!eq.needsConstantC) equationParams.value.C = 1;
+    if (!eq.needsConstABD) {
+      equationParams.value.A_const = 2;
+      equationParams.value.B_const = 1;
+      equationParams.value.D_const = 0;
+    }
   }
-  updateExplanation();
   redrawCanvas();
 }
 
 function resetSolverInternal(fullResetParams = true) {
   iterationHistory.value = [];
   currentRoot.value = null;
-  if (fullResetParams) {
-    const eq = currentEquation.value;
-    if (eq) {
-      newtonParams.value.x0 = eq.initialNewtonX0;
-      bisectionParams.value.a = eq.initialBisectionA;
-      bisectionParams.value.b = eq.initialBisectionB;
-    }
+  if (fullResetParams && currentEquationDetails.value) {
+    newtonParams.value.x0 = currentEquationDetails.value.initialNewtonX0;
+    bisectionParams.value.a = currentEquationDetails.value.initialBisectionA;
+    bisectionParams.value.b = currentEquationDetails.value.initialBisectionB;
   }
 }
 
 function resetSolver() {
   isSolving.value = false;
   initializeEquation();
-  nextTick(() => {
-    if (transcendentalRootEl.value) doKatexRender(transcendentalRootEl.value);
-  });
 }
 
+
 async function iterateNewton() {
+  // ... (Newton iteration logic remains largely same, ensure robust return for convergedOrMaxIter)
   let xk = newtonParams.value.x0;
   if (iterationHistory.value.length > 0) {
-    const lastValidXk = iterationHistory.value.slice().reverse().find(item => !isNaN(item.xk));
-    xk = lastValidXk ? lastValidXk.xk : newtonParams.value.x0;
+    const lastValidXkItem = iterationHistory.value.slice().reverse().find(item => !isNaN(item.xk) && Number.isFinite(item.xk));
+    xk = lastValidXkItem ? lastValidXkItem.xk : newtonParams.value.x0;
   }
-  const fxk = currentEquation.value.func(xk, equationParams.value);
-  const fpxk_val = currentEquation.value.derivative(xk, equationParams.value);
+  if (isNaN(xk) || !Number.isFinite(xk)) {
+    xk = currentEquationDetails.value.initialNewtonX0; // Fallback if xk became invalid
+  }
+
+  const fxk = currentEquationDetails.value.func(xk, equationParams.value);
+  const fpxk_val = currentEquationDetails.value.derivative(xk, equationParams.value);
+
   let status = "迭代中";
   let converged = false;
   let maxIterReached = false;
-  if (isNaN(fxk) || isNaN(fpxk_val)) {
-    status = "失败: 函数或导数在点 " + xk.toFixed(4) + " 未定义";
+  let xk_plus_1 = xk;
+
+  if (isNaN(fxk) || !Number.isFinite(fxk)) {
+    status = `失败: f(x_k) 在 x_k=${xk.toFixed(4)} 无效`;
     converged = true;
-    maxIterReached = true;
+  } else if (isNaN(fpxk_val) || !Number.isFinite(fpxk_val)) {
+    status = `失败: f'(x_k) 在 x_k=${xk.toFixed(4)} 无效`;
+    converged = true;
   } else if (Math.abs(fpxk_val) < 1e-12) {
     status = "失败: 导数接近零";
     converged = true;
-    maxIterReached = true;
   }
-  let xk_plus_1 = xk;
-  if (!converged) xk_plus_1 = xk - fxk / fpxk_val;
+
+  if (!converged) {
+    xk_plus_1 = xk - fxk / fpxk_val;
+    if (isNaN(xk_plus_1) || !Number.isFinite(xk_plus_1)) {
+      status = "失败: 下一个迭代值无效";
+      converged = true;
+      xk_plus_1 = xk; // Keep previous xk
+    }
+  }
+
   const error = Math.abs(xk_plus_1 - xk);
+
   if (!converged && (error < solverParams.value.tolerance || Math.abs(fxk) < solverParams.value.tolerance)) {
     status = "收敛";
     converged = true;
@@ -541,94 +705,77 @@ async function iterateNewton() {
     converged = true;
     currentRoot.value = xk_plus_1;
   }
+
   iterationHistory.value.push({
-    iter: iterationHistory.value.length + 1,
-    xk: xk_plus_1,
-    prev_xk: xk,
-    fxk: currentEquation.value.func(xk_plus_1, equationParams.value),
-    prev_fxk: fxk,
-    fpxk: fpxk_val,
-    error: error,
-    status: status,
-    converged: converged,
-    maxIterReached: maxIterReached
+    iter: iterationHistory.value.length + 1, xk: xk_plus_1, prev_xk: xk,
+    fxk: (isNaN(xk_plus_1) || !Number.isFinite(xk_plus_1)) ? NaN : currentEquationDetails.value.func(xk_plus_1, equationParams.value),
+    prev_fxk: fxk, fpxk: fpxk_val, error: error, status: status, converged: converged, maxIterReached: maxIterReached
   });
+
   if (!maxIterReached && !status.startsWith("失败")) newtonParams.value.x0 = xk_plus_1;
   redrawCanvas();
   return converged || maxIterReached;
 }
 
 async function iterateBisection() {
+  // ... (Bisection iteration logic remains largely same, ensure robust return for convergedOrMaxIter)
   let ak = bisectionParams.value.a;
   let bk = bisectionParams.value.b;
+
   if (iterationHistory.value.length > 0) {
     const last = iterationHistory.value[iterationHistory.value.length - 1];
     ak = last.next_ak !== undefined ? last.next_ak : ak;
     bk = last.next_bk !== undefined ? last.next_bk : bk;
   }
-  const fak = currentEquation.value.func(ak, equationParams.value);
-  const fbk = currentEquation.value.func(bk, equationParams.value);
+  if (isNaN(ak) || !Number.isFinite(ak) || isNaN(bk) || !Number.isFinite(bk)) {
+    ak = currentEquationDetails.value.initialBisectionA; // Fallback
+    bk = currentEquationDetails.value.initialBisectionB;
+  }
+
+  const fak = currentEquationDetails.value.func(ak, equationParams.value);
+  const fbk = currentEquationDetails.value.func(bk, equationParams.value);
   let status = "迭代中";
   let converged = false;
   let maxIterReached = false;
-  if ((isNaN(fak) || isNaN(fbk) || fak * fbk >= 0) && iterationHistory.value.length === 0) {
+  let mk = (ak + bk) / 2; // Calculate mk early for all paths
+
+  if ((isNaN(fak) || !Number.isFinite(fak) || isNaN(fbk) || !Number.isFinite(fbk) || fak * fbk >= 0) && iterationHistory.value.length === 0) {
     status = "失败: f(a)·f(b) < 0 未满足";
-    iterationHistory.value.push({
-      iter: 1,
-      xk: (ak + bk) / 2,
-      ak_prev: ak,
-      bk_prev: bk,
-      ak,
-      bk,
-      fak,
-      fbk,
-      fxk: NaN,
-      error: Math.abs(bk - ak) / 2,
-      status,
-      converged: true,
-      maxIterReached
-    });
-    redrawCanvas();
-    return true;
+    converged = true;
   }
-  const mk = (ak + bk) / 2;
-  const fmk = currentEquation.value.func(mk, equationParams.value);
+
+  const fmk = converged ? NaN : currentEquationDetails.value.func(mk, equationParams.value);
   const error = Math.abs(bk - ak) / 2;
   let next_ak = ak, next_bk = bk;
-  if (isNaN(fmk)) {
-    status = "失败: f(m) 未定义";
-    converged = true;
-    maxIterReached = true;
-  } else if (Math.abs(fmk) < solverParams.value.tolerance || error < solverParams.value.tolerance) {
-    status = "收敛";
-    converged = true;
-    currentRoot.value = mk;
-  } else if (fak * fmk < 0) {
-    next_bk = mk;
-  } else {
-    next_ak = mk;
+
+  if (!converged) {
+    if (isNaN(fmk) || !Number.isFinite(fmk)) {
+      status = `失败: f(m) 在 m=${mk.toFixed(4)} 无效`;
+      converged = true;
+    } else if (Math.abs(fmk) < solverParams.value.tolerance || error < solverParams.value.tolerance) {
+      status = "收敛";
+      converged = true;
+      currentRoot.value = mk;
+    } else if (fak * fmk < 0) {
+      next_bk = mk;
+    } else {
+      next_ak = mk;
+    } // Includes fbk * fmk < 0 or cases where one is zero
   }
+
   if (!converged && iterationHistory.value.length + 1 >= solverParams.value.maxIterations) {
     status = "达到最大迭代次数";
     maxIterReached = true;
     converged = true;
     currentRoot.value = mk;
   }
+
   iterationHistory.value.push({
-    iter: iterationHistory.value.length + 1,
-    xk: mk,
-    ak_prev: ak,
-    bk_prev: bk,
-    fak,
-    fbk,
-    fxk: fmk,
-    next_ak,
-    next_bk,
-    error: error,
-    status: status,
-    converged: converged,
-    maxIterReached: maxIterReached
+    iter: iterationHistory.value.length + 1, xk: mk, ak_prev: ak, bk_prev: bk, fxk: fmk, error: error,
+    status: status, converged: converged, maxIterReached: maxIterReached,
+    ak: ak, bk: bk, next_ak: next_ak, next_bk: next_bk
   });
+
   if (!maxIterReached && !status.startsWith("失败")) {
     bisectionParams.value.a = next_ak;
     bisectionParams.value.b = next_bk;
@@ -637,26 +784,29 @@ async function iterateBisection() {
   return converged || maxIterReached;
 }
 
+
 async function startFullIteration() {
+  // ... (startFullIteration logic remains largely the same)
   if (isSolving.value) return;
   isSolving.value = true;
   resetSolverInternal(false);
-  let convergedOrMaxIter = false;
+
   if (selectedMethod.value === 'bisection' && !isBisectionBracketValid.value) {
     alert("二分法初始区间无效: f(a) 和 f(b) 必须异号。请调整区间 a, b。");
     isSolving.value = false;
     return;
   }
   try {
-    iterationLoop: for (let i = 0; i < solverParams.value.maxIterations; i++) {
-      if (!isSolving.value) break iterationLoop;
+    for (let i = 0; i < solverParams.value.maxIterations; i++) {
+      if (!isSolving.value) break;
+      let convergedOrMaxIter = false;
       if (selectedMethod.value === 'newton') {
         convergedOrMaxIter = await iterateNewton();
       } else if (selectedMethod.value === 'bisection') {
         convergedOrMaxIter = await iterateBisection();
       }
-      if (convergedOrMaxIter) break iterationLoop;
-      await new Promise(r => setTimeout(r, 60));
+      if (convergedOrMaxIter) break;
+      await new Promise(r => setTimeout(r, 80));
     }
   } finally {
     isSolving.value = false;
@@ -664,6 +814,7 @@ async function startFullIteration() {
 }
 
 async function stepIteration() {
+  // ... (stepIteration logic remains largely the same)
   if (isSolving.value) return;
   if (iterationHistory.value.length > 0 && iterationHistory.value[iterationHistory.value.length - 1].converged) return;
   if (selectedMethod.value === 'bisection' && iterationHistory.value.length === 0 && !isBisectionBracketValid.value) {
@@ -671,191 +822,206 @@ async function stepIteration() {
     return;
   }
   isSolving.value = true;
-  const method = selectedMethod.value === 'newton' ? iterateNewton : iterateBisection;
+  const methodFunc = selectedMethod.value === 'newton' ? iterateNewton : iterateBisection;
   try {
-    await method();
+    await methodFunc();
   } finally {
     isSolving.value = false;
   }
 }
 
-function onEquationSelectChange() {
-  initializeEquation();
-  nextTick(() => {
-    if (transcendentalRootEl.value) {
-      doKatexRender(transcendentalRootEl.value);
-    }
-  });
-}
 
 onMounted(() => {
   if (solverCanvas.value) {
     ctx = solverCanvas.value.getContext('2d');
+    if (!ctx) console.error("获取2D上下文失败。");
+  } else {
+    console.error("Canvas元素在挂载时未找到。");
   }
   initializeEquation();
-
-  nextTick(() => {
-    if (transcendentalRootEl.value) {
-      doKatexRender(transcendentalRootEl.value);
-    }
-  });
 });
 
-watch([selectedEquationKey, selectedMethod, equationParams], () => {
+watch([selectedEquationKey, selectedMethod], () => {
   if (!isSolving.value) initializeEquation();
-  nextTick(() => {
-    if (transcendentalRootEl.value) doKatexRender(transcendentalRootEl.value);
-  });
+}, {deep: false}); // Params change will be handled by the one below
+
+watch(equationParams, () => {
+  if (!isSolving.value) initializeEquation();
 }, {deep: true});
 
-watch([xViewRange, yViewRange], redrawCanvas, {deep: true});
 
-watch(explanationHtml, async (newHtml) => {
-  if (newHtml && explanationPanelEl.value) {
-    await nextTick();
-    doKatexRender(explanationPanelEl.value);
-  }
-}, {flush: 'post'});
-
-watch(visualizationTitleHtml, async () => {
-  await nextTick();
-  if (visualizationSectionEl.value) {
-    doKatexRender(visualizationSectionEl.value);
-  }
-}, {flush: 'post'});
+watch([xViewRange, yViewRange], () => {
+  if (!isSolving.value) redrawCanvas();
+}, {deep: true});
 
 </script>
 
 <style scoped>
-.math-example-container {
+.transcendental-solver-page {
   padding: 20px;
-  max-width: 950px;
-  margin: auto;
-  font-family: system-ui, sans-serif;
-  background-color: #fdfdff;
+  max-width: 1000px;
+  margin: 20px auto;
+  font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+  background-color: #f4f8fb;
+  border-radius: 12px;
 }
 
 .card {
   background-color: #ffffff;
-  border: 1px solid #e9ecef;
-  border-radius: 8px;
-  padding: 20px;
-  margin-top: 20px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+  border: 1px solid #e3e8ef;
+  border-radius: 10px;
+  padding: 25px;
+  margin-top: 25px;
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.06);
 }
 
-h3 {
+.demo-header h3 {
   margin-top: 0;
-  color: #0056b3;
-  border-bottom: 2px solid #cfe2ff;
-  padding-bottom: 10px;
-  margin-bottom: 20px;
-  font-size: 1.8em;
-  font-weight: 600;
+  color: #1a5276;
+  border-bottom: 2px solid #a0cff3;
+  padding-bottom: 15px;
+  margin-bottom: 25px;
+  font-size: 2em;
+  font-weight: 700;
   text-align: center;
 }
 
-h4 {
-  font-size: 1.25rem;
-  margin-top: 0;
-  margin-bottom: 18px;
-  color: #343a40;
-  font-weight: 600;
+.demo-header .header-icon {
+  margin-right: 12px;
+  color: #207dbb;
 }
 
 .controls-panel {
   display: grid;
-  grid-template-columns: 1fr;
-  gap: 20px;
+  grid-template-columns: repeat(auto-fit, minmax(380px, 1fr)); /* Adjusted for more space */
+  gap: 30px;
 }
 
 .control-section h4 {
-  border-bottom: 1px solid #dee2e6;
-  padding-bottom: 10px;
+  font-size: 1.2rem;
+  margin-top: 0;
+  margin-bottom: 20px;
+  color: #2c3e50;
+  font-weight: 600;
+  border-bottom: 1px solid #e0e6ed;
+  padding-bottom: 12px;
 }
 
 .form-item {
-  margin-bottom: 15px;
+  margin-bottom: 18px;
   display: flex;
   align-items: center;
-  flex-wrap: wrap;
-  gap: 10px;
+  flex-wrap: nowrap;
+  gap: 12px;
+}
+
+.form-item-columns {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); /* Finer control for columns */
+  gap: 15px;
+  align-items: flex-end; /* Consistent baseline for inputs */
+}
+
+.form-item-columns .form-item {
+  margin-bottom: 0;
+}
+
+.form-item-full-width {
+  grid-column: 1 / -1;
+  margin-top: 10px;
 }
 
 .form-item label {
-  font-size: 0.9em;
-  color: #495057;
-  min-width: 160px;
+  font-size: 0.95em;
+  color: #4a5568;
+  min-width: 120px; /* Default min-width */
   font-weight: 500;
+  white-space: nowrap;
+  padding-right: 5px; /* Add some padding after label */
 }
 
-.form-item select {
-  padding: 8px 10px;
-  border: 1px solid #ced4da;
-  border-radius: 5px;
-  font-size: 0.9em;
+/* Specific label width for grouped params */
+.param-input-group .form-item label {
+  min-width: 80px;
+}
+
+.form-item label :deep(.katex) {
+  font-size: 1em !important;
+}
+
+
+.control-select,
+.control-input-number {
+  padding: 10px 14px;
+  border: 1px solid #cbd5e0;
+  border-radius: 6px;
+  font-size: 0.95em;
   box-sizing: border-box;
-  min-width: 280px;
+  background-color: #fff;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
   flex-grow: 1;
-  font-family: 'KaTeX_Main', 'Times New Roman', serif;
+  min-width: 80px; /* Smallest input size */
 }
 
-.form-item select option {
-  font-family: 'KaTeX_Main', 'Times New Roman', serif;
-  font-size: 1.05em;
-  padding: 3px 5px;
+.control-select {
+  min-width: 220px;
 }
 
-.form-item input[type="number"] {
-  padding: 8px 10px;
-  border: 1px solid #ced4da;
-  border-radius: 5px;
-  font-size: 0.9em;
-  box-sizing: border-box;
-  width: 120px;
+.control-input-number.short {
+  width: 90px;
+  flex-grow: 0;
 }
 
-.form-item input[type="number"]:focus, .form-item select:focus {
-  border-color: #80bdff;
-  outline: 0;
-  box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, .25);
+
+.control-select:focus,
+.control-input-number:focus {
+  border-color: #3498db;
+  box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.15);
+  outline: none;
 }
 
-.form-item-group {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  padding: 10px;
-  border: 1px solid #eee;
-  border-radius: 4px;
-  margin-top: 5px;
-}
-
-.form-item-group .form-item {
-  margin-bottom: 5px;
+.param-input-group {
+  padding: 15px;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  margin-top: 10px;
+  background-color: #f8fafc;
 }
 
 .simulation-actions {
   display: flex;
-  gap: 10px;
+  gap: 12px;
   justify-content: center;
-  margin-top: 15px;
+  margin-top: 25px;
   flex-wrap: wrap;
 }
 
 .button {
-  padding: 9px 18px;
+  padding: 10px 22px;
   font-size: 0.95rem;
-  font-weight: 500;
-  border-radius: 5px;
+  font-weight: 600;
+  border-radius: 6px;
   cursor: pointer;
-  transition: all 0.15s ease-in-out;
+  transition: all 0.2s ease;
   border: 1px solid transparent;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+.button .button-icon {
+  font-size: 1.1em;
 }
 
 .button:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+}
+
+.button:active:not(:disabled) {
   transform: translateY(-1px);
-  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.08);
 }
 
 .button:disabled {
@@ -863,6 +1029,8 @@ h4 {
   border-color: #ced4da !important;
   color: #6c757d !important;
   cursor: not-allowed;
+  box-shadow: none;
+  transform: none;
 }
 
 .button-primary {
@@ -872,7 +1040,8 @@ h4 {
 }
 
 .button-primary:hover:not(:disabled) {
-  background-color: #0056b3;
+  background-color: #0069d9;
+  border-color: #0062cc;
 }
 
 .button-info {
@@ -882,7 +1051,8 @@ h4 {
 }
 
 .button-info:hover:not(:disabled) {
-  background-color: #117a8b;
+  background-color: #138496;
+  border-color: #117a8b;
 }
 
 .button-secondary {
@@ -892,99 +1062,229 @@ h4 {
 }
 
 .button-secondary:hover:not(:disabled) {
-  background-color: #545b62;
+  background-color: #5a6268;
+  border-color: #545b62;
+}
+
+
+.visualization-section h4 {
+  text-align: center;
+  font-size: 1.2rem;
+  color: #2c3e50;
+}
+
+.visualization-section .subtitle-katex {
+  font-size: 0.95em;
+  color: #555e68;
+  font-weight: normal;
+}
+
+.visualization-section .subtitle-katex :deep(.katex) {
+  font-size: 1em !important;
 }
 
 .visualization-section canvas {
-  border: 1px solid #dee2e6;
+  border: 1px solid #d1d8e0;
   width: 100%;
   background-color: #fff;
-  border-radius: 4px;
-  margin-bottom: 10px;
+  border-radius: 6px;
+  margin-bottom: 15px;
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.05);
 }
 
 .view-range-controls {
-  margin-top: 10px;
-  gap: 5px;
-  justify-content: flex-start;
+  margin-top: 15px;
+  gap: 8px;
+  justify-content: center;
   flex-wrap: wrap;
-}
-
-.view-range-controls input[type="number"] {
-  width: 70px;
-  margin-right: 5px;
+  padding: 12px;
+  background-color: #f8fafc;
+  border-radius: 6px;
+  border: 1px solid #e2e8f0;
 }
 
 .view-range-controls label {
   min-width: auto;
   margin-right: 5px;
+  font-size: 0.9em;
+}
+
+.view-range-controls .range-label-y {
+  margin-left: 20px;
 }
 
 .results-section table {
   width: 100%;
-  border-collapse: collapse;
-  font-size: 0.85em;
-  margin-top: 10px;
+  border-collapse: separate;
+  border-spacing: 0;
+  font-size: 0.9em;
+  margin-top: 15px;
+  border: 1px solid #e3e8ef;
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.03);
 }
 
 .results-section th, .results-section td {
-  border: 1px solid #dee2e6;
-  padding: 8px;
+  border-bottom: 1px solid #e3e8ef;
+  padding: 10px 12px;
   text-align: left;
+  white-space: nowrap;
 }
 
 .results-section th {
-  background-color: #f8f9fa;
+  background-color: #f1f5f9;
   font-weight: 600;
+  color: #1e293b;
+}
+
+.results-section td {
+  background-color: #fff;
+}
+
+.results-section tr:last-child td {
+  border-bottom: none;
+}
+
+.results-section tr:hover td {
+  background-color: #f8fafc;
 }
 
 .results-section tr.highlighted td {
-  background-color: #e7f3ff;
+  background-color: #dbeafe;
+  font-weight: 500;
+  color: #1e40af;
+}
+
+.results-section tr.final-converged td {
+  background-color: #d1fae5;
+  font-weight: bold;
+  color: #065f46;
+}
+
+.status-converged {
+  color: #16a34a;
   font-weight: bold;
 }
 
-.results-section td.converged {
-  color: green;
+.status-max-iter {
+  color: #f59e0b;
 }
 
-.results-section td.max-iter {
-  color: orange;
+.status-failed {
+  color: #ef4444;
+  font-weight: bold;
+}
+
+.final-root-display {
+  margin-top: 20px;
+  font-size: 1.1em;
+  text-align: center;
+  padding: 12px;
+  background-color: #e6ffed;
+  border: 1px solid #bbf7d0;
+  color: #15803d;
+  border-radius: 6px;
+}
+
+.final-root-display strong :deep(.katex) {
+  font-size: 1.1em !important;
+  font-weight: bold;
 }
 
 .explanation-panel {
-  line-height: 1.7;
-  font-size: 0.95em;
+  line-height: 1.75;
+  font-size: 1em;
 }
 
 .explanation-panel :deep(h4), .explanation-panel :deep(h5) {
-  margin-top: 1em;
-  margin-bottom: 0.5em;
-  color: #0056b3;
+  margin-top: 1.2em;
+  margin-bottom: 0.6em;
+  color: #1a5276;
+  font-weight: 600;
+}
+
+.explanation-panel :deep(h5) {
+  font-size: 1.15em;
 }
 
 .explanation-panel :deep(p) {
-  margin-bottom: 0.8em;
+  margin-bottom: 1em;
+  color: #374151;
+}
+
+.explanation-panel :deep(ul) {
+  padding-left: 25px;
+  margin-bottom: 1em;
+  list-style-type: disc;
+}
+
+.explanation-panel :deep(li) {
+  margin-bottom: 0.6em;
+}
+
+.explanation-panel :deep(.katex-display) {
+  margin: 1em auto !important;
+  padding: 0.8em;
+  background-color: #f9fafb;
+  border-radius: 4px;
+  border: 1px solid #f3f4f6;
+}
+
+.method-ProsCons {
+  font-size: 0.95em;
+  padding: 12px 15px;
+  border-left: 4px solid #3b82f6;
+  background-color: #eff6ff;
+  margin-top: 12px;
+  border-radius: 0 4px 4px 0;
+}
+
+.method-ProsCons strong {
+  color: #1e40af;
 }
 
 .error-text {
-  color: #dc3545;
-  font-size: 0.85em;
-  margin-left: 10px;
+  color: #ef4444;
+  font-size: 0.9em;
+  margin-left: 0; /* Adjusted for full width */
   width: 100%;
+  padding: 10px;
+  background-color: #fee2e2;
+  border: 1px solid #fca5a5;
+  border-radius: 6px;
+  text-align: left; /* Changed alignment */
 }
 
-:deep(.katex) {
+.error-text :deep(.katex) {
   font-size: 1em !important;
 }
 
-:deep(.katex-display) {
-  display: block;
-  margin: 1em auto;
-  text-align: center;
+/* Ensure Katex in error is normal size */
+
+
+/* Vue Transition Styles */
+.fade-fast-enter-active, .fade-fast-leave-active {
+  transition: opacity 0.25s ease, transform 0.25s ease;
 }
 
-:deep(.katex-display > .katex) {
-  text-align: center !important;
-  display: inline-block !important;
+.fade-fast-enter-from, .fade-fast-leave-to {
+  opacity: 0;
+  transform: translateY(5px);
+}
+
+.fade-slow-enter-active, .fade-slow-leave-active {
+  transition: opacity 0.5s ease;
+}
+
+.fade-slow-enter-from, .fade-slow-leave-to {
+  opacity: 0;
+}
+
+:deep(.katex-error-inline) { /* For errors from renderHtmlWithInlineKatex */
+  color: #ef4444;
+  font-family: monospace;
+  border: 1px dashed #ef4444;
+  padding: 1px 3px;
 }
 </style>
