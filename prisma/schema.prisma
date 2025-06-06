@@ -1,14 +1,17 @@
 generator client {
   provider = "prisma-client-js"
-  // 考虑为 Vercel Serverless Functions 使用 Prisma Accelerate 或 Edge client
-  // previewFeatures = ["driverAdapters"] // 如果使用 Accelerate 和标准 JS client
-  // binaryTargets = ["native", "rhel-openssl-1.0.x"] // 如果部署到 Vercel，可能需要指定 Linux targets
 }
+
+// datasource db {
+//   provider = "postgresql"
+//   url      = env("DATABASE_URL")
+//   shadowDatabaseUrl = env("SHADOW_DATABASE_URL") // 对于 Neon 等，通常不需要，可以移除或注释
+// }
 
 datasource db {
   provider = "postgresql"
-  url      = env("DATABASE_URL")
-  // shadowDatabaseUrl = env("SHADOW_DATABASE_URL") // 对于 Neon 等，通常不需要，可以移除或注释
+  url      = env("DATABASE_URL") // 应用程序运行时使用
+  // directUrl = env("DIRECT_URL") // Prisma Migrate 命令使用
 }
 
 model User {

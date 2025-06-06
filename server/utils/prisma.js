@@ -1,13 +1,15 @@
-import {PrismaClient} from '@prisma/client';
-// eslint-disable-next-line import/no-mutable-exports
+const {PrismaClient} = require('@prisma/client/edge');
+const {withAccelerate} = require('@prisma/extension-accelerate');
+
 let prisma;
+
 if (process.env.NODE_ENV === 'production') {
-    prisma = new PrismaClient();
+    prisma = new PrismaClient().$extends(withAccelerate());
 } else {
     if (!global.__prisma) {
-        global.__prisma = new PrismaClient();
+        global.__prisma = new PrismaClient().$extends(withAccelerate());
     }
     prisma = global.__prisma;
 }
 
-export default prisma;
+module.exports = prisma;

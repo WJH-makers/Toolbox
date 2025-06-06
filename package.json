@@ -24,6 +24,7 @@
     "@nuxt/eslint": "^1.4.0",
     "@nuxt/ui": "^3.1.2",
     "@prisma/client": "^6.9.0",
+    "@prisma/extension-accelerate": "^2.0.1",
     "@vueuse/head": "^2.0.0",
     "axios": "^1.9.0",
     "bcryptjs": "^3.0.2",
