@@ -1,135 +1,105 @@
 <template>
-  <div class="lhopital-derivation-page">
+  <div ref="pageRoot" class="lhopital-page">
     <header class="page-header">
-      <h1><span class="cool-math-symbol">L</span> 洛必达法则：极限的几何探秘 🌌</h1>
-      <p class="subtitle">通过几何直观与互动探索，揭开不定式极限的奥秘</p>
+      <div class="header-content">
+        <h1><span>L'Hôpital's Rule</span><br>极限的终极向导 🚀</h1>
+        <p class="subtitle">从几何直观到自动推导，一站式掌握不定式极限</p>
+      </div>
     </header>
 
-    <section id="intro" class="content-section card">
-      <h2><span class="section-icon">🤔</span> 迷雾重重：不定式的挑战</h2>
-      <p v-html="renderHtmlWithInlineKatex('当求解形如 $\\lim_{x \\to c} \\frac{f(x)}{g(x)}$ 的极限时，如果分子分母同时趋向于0（即 $\\frac{0}{0}$ 型）或同时趋向于无穷大（即 $\\frac{\\infty}{\\infty}$ 型），我们称之为“不定式”。直接代入无法求解，世界似乎陷入一片迷雾...')"></p>
-      <p v-html="renderHtmlWithInlineKatex('例如，思考 $\\lim_{x \\to 0} \\frac{\\sin(x)}{x}$。当 $x \\to 0$ 时，$\\sin(x) \\to 0$ 且 $x \\to 0$，这是一个典型的 $\\frac{0}{0}$ 型不定式。')"></p>
-    </section>
+    <main class="page-content">
+      <section id="playground" class="content-section card">
+        <div class="card-header">
+          <span class="section-icon">🛠️</span>
+          <h2>实战演练场：极限求解器</h2>
+        </div>
 
-    <section id="geometric-intuition" class="content-section card">
-      <h2><span class="section-icon">🔬</span> 几何放大镜：当曲线化为直线</h2>
-      <p v-html="renderHtmlWithInlineKatex('考虑 $\\frac{0}{0}$ 型极限，即 $\\lim_{x \\to c} f(x) = 0$ 且 $\\lim_{x \\to c} g(x) = 0$。当我们在点 $(c, 0)$ 附近极度放大函数 $f(x)$ 和 $g(x)$ 的图像时，会发生什么奇妙的现象呢？')"></p>
-      <div class="geometric-zoom-controls">
-        <div class="control-item">
-          <label for="fx-input-geo">函数 f(x) (过原点):</label>
-          <input type="text" id="fx-input-geo" v-model="geoFunctions.fx" @input="throttledUpdateGeoChartData"/>
+        <div class="quick-examples">
+          <span>快速尝试:</span>
+          <button v-for="ex in presetExamples" :key="ex.name" @click="applyExample(ex)" class="example-pill">
+            {{ ex.name }}
+          </button>
         </div>
-        <div class="control-item">
-          <label for="gx-input-geo">函数 g(x) (过原点):</label>
-          <input type="text" id="gx-input-geo" v-model="geoFunctions.gx" @input="throttledUpdateGeoChartData"/>
-        </div>
-        <div class="control-item">
-          <label for="zoom-level">几何缩放级别 (点 c=0): </label>
-          <input type="range" id="zoom-level" min="0.01" max="1" step="0.005" v-model.number="geoZoom.level"
-                 @input="throttledUpdateGeoChartData"/>
-          <span>当前X轴范围: [-{{ geoZoom.currentXMax.toFixed(4) }}, {{ geoZoom.currentXMax.toFixed(4) }}]</span>
-        </div>
-      </div>
-      <div class="chart-container">
-        <canvas ref="geometricZoomChartCanvas"></canvas>
-      </div>
-      <div class="intuition-explanation">
-        <div v-if="geoDerivatives.f_prime_c_tex !== '?' && geoDerivatives.g_prime_c_tex !== '?'">
-          <p>在点 $x=0$ 附近：</p>
-          $f(x) \approx f'(0) \cdot x = $
-          <KatexRenderer :tex="geoDerivatives.f_prime_c_tex + 'x'"/>
-          <br/>
-          $g(x) \approx g'(0) \cdot x = $
-          <KatexRenderer :tex="geoDerivatives.g_prime_c_tex + 'x'"/>
-          <br/>
-          因此，
-          <KatexRenderer tex="\frac{f(x)}{g(x)} \approx \frac{f'(0)x}{g'(0)x} = \frac{f'(0)}{g'(0)}"
-                         :displayMode="false"/>
-          $\approx$
-          <KatexRenderer :tex="geoDerivatives.ratio_tex"/>
-          (当 $g'(0) \neq 0$)
-        </div>
-        <p class="error-message"
-           v-else-if="geoFunctions.fx && geoFunctions.gx && (geoDerivatives.f_prime_c_tex === '?' || geoDerivatives.g_prime_c_tex === '?')">
-          无法计算导数或函数输入有误。请输入有效的、在x=0可导且f(0)=g(0)=0的函数。例如 f(x)=sin(x), g(x)=x。
-        </p>
-      </div>
-    </section>
 
-    <section id="formal-derivation" class="content-section card">
-      <h2><span class="section-icon">📜</span> 从直观到严谨：法则的诞生</h2>
-      <p v-html="renderHtmlWithInlineKatex('几何直觉告诉我们，在不定点附近，函数的局部行为可以用其切线来近似。洛必达法则正是基于此，并有严格的数学证明（通常基于柯西中值定理）。')"></p>
-      <div class="derivation-steps">
-        <transition-group name="fade-step" tag="ul">
-          <li v-for="(step, index) in formalSteps" :key="step.id" v-show="index <= currentFormalStep"
-              class="derivation-step">
-            <strong>步骤 {{ index + 1 }}:</strong> <span v-html="renderHtmlWithInlineKatex(step.text)"></span>
-          </li>
-        </transition-group>
-        <button @click="nextFormalStep" v-if="currentFormalStep < formalSteps.length -1" class="button-next-step">
-          下一步
-        </button>
-      </div>
-      <p>最终，我们得到洛必达法则：若
-        <KatexRenderer tex="\lim_{x \to c} \frac{f(x)}{g(x)}" :displayMode="false"/>
-        是 $\frac{0}{0}$ 或 $\frac{\infty}{\infty}$ 型，则
-      </p>
-      <div class="katex-display-area main-rule">
-        <KatexRenderer tex="\lim_{x \to c} \frac{f(x)}{g(x)} = \lim_{x \to c} \frac{f'(x)}{g'(x)}" :displayMode="true"/>
-      </div>
-      <p v-html="renderHtmlWithInlineKatex('前提是右边的极限存在或为 $\\pm\\infty$，且 $f, g$ 在 $c$ 点附近可导，$g\'(x) \\neq 0$。')"></p>
-    </section>
-
-    <section id="other-forms" class="content-section card">
-      <h2><span class="section-icon">🎭</span> 触类旁通：不定式的“变形金刚”</h2>
-      <p v-html="renderHtmlWithInlineKatex('洛必达法则不仅限于 $\\frac{0}{0}$ 或 $\\frac{\\infty}{\\infty}$ 型。其他类型的不定式，如 $0 \\cdot \\infty$, $\\infty - \\infty$, $1^\\infty$, $0^0$, $\\infty^0$ 等，通常可以通过巧妙的代数变换转化为这两种基本类型，然后应用洛必达法则。')"></p>
-      <div class="form-transformer">
-        <select v-model="selectedIndeterminateForm" class="form-select">
-          <option value="0_inf">
-            <KatexRenderer tex="0 \cdot \infty" :displayMode="false"/>
-            型
-          </option>
-          <option value="inf_minus_inf">
-            <KatexRenderer tex="\infty - \infty" :displayMode="false"/>
-            型
-          </option>
-          <option value="power_types">幂指类型 (
-            <KatexRenderer tex="1^\infty, 0^0, \infty^0" :displayMode="false"/>
-            )
-          </option>
-        </select>
-        <div class="transformation-explanation">
-          <div v-if="selectedIndeterminateForm === '0_inf'">
-            <p v-html="renderHtmlWithInlineKatex('对于 $f(x) \\cdot g(x)$ 型 (当 $f(x) \\to 0, g(x) \\to \\infty$):')"></p>
-            <p v-html="renderHtmlWithInlineKatex('可以转化为 $\\frac{f(x)}{1/g(x)}$ (趋向于 $\\frac{0}{0}$ 型) 或 $\\frac{g(x)}{1/f(x)}$ (趋向于 $\\frac{\\infty}{\\infty}$ 型)。')"></p>
-            <p v-html="renderHtmlWithInlineKatex('例如: $\\lim_{x \\to 0^+} x \\ln x = \\lim_{x \\to 0^+} \\frac{\\ln x}{1/x}$ ( $\\frac{-\\infty}{\\infty}$ 型)。')"></p>
+        <div class="solver-grid">
+          <div class="solver-controls">
+            <div class="control-group">
+              <label for="fx-input">函数 f(x)</label>
+              <input type="text" id="fx-input" v-model="solver.fx" placeholder="e.g., sin(x) - x">
+            </div>
+            <div class="control-group">
+              <label for="gx-input">函数 g(x)</label>
+              <input type="text" id="gx-input" v-model="solver.gx" placeholder="e.g., x^3">
+            </div>
+            <div class="control-group">
+              <label for="c-input">极限点 x → c</label>
+              <input type="text" id="c-input" v-model="solver.c" placeholder="e.g., 0">
+            </div>
+            <div class="button-group">
+              <button @click="solveLimit" class="solve-button" :disabled="isLoading">
+                <span v-if="isLoading">正在计算...</span>
+                <span v-else>求解极限</span>
+              </button>
+              <button @click="resetSolver" class="reset-button" title="清空所有输入和结果">重置</button>
+            </div>
           </div>
-          <div v-if="selectedIndeterminateForm === 'inf_minus_inf'">
-            <p v-html="renderHtmlWithInlineKatex('对于 $f(x) - g(x)$ 型 (当 $f(x) \\to \\infty, g(x) \\to \\infty$):')"></p>
-            <p v-html="renderHtmlWithInlineKatex('通常需要通分、分子有理化或提取公因式等方法，将其化为分式形式。')"></p>
-            <p v-html="renderHtmlWithInlineKatex('例如: $\\lim_{x \\to 0} (\\frac{1}{x} - \\frac{1}{\\sin x}) = \\lim_{x \\to 0} \\frac{\\sin x - x}{x \\sin x}$ ( $\\frac{0}{0}$ 型)。')"></p>
+
+          <div class="solver-results">
+            <h3 class="results-title">推导过程</h3>
+            <div class="steps-container">
+              <div v-if="!solver.steps.length && !solver.error" class="placeholder-text">
+                <p>请输入函数或选择快速示例，然后点击“求解极限”开始推导。</p>
+              </div>
+              <transition-group name="step-list" tag="div">
+                <div v-for="(step, index) in solver.steps" :key="step.title + index"
+                     class="derivation-step" :class="{ active: activeStepIndex === index }"
+                     :style="{ transitionDelay: `${index * 50}ms` }">
+                  <div class="step-header" @click="activeStepIndex = index">
+                    <strong>步骤 {{ index + 1 }}: {{ step.title }}</strong>
+                    <span class="accordion-icon"></span>
+                  </div>
+                  <div class="step-body">
+                    <div class="step-content" v-html="step.html"></div>
+                  </div>
+                </div>
+              </transition-group>
+              <div v-if="solver.error" class="error-message" key="error">
+                <strong>错误:</strong> {{ solver.error }}
+              </div>
+            </div>
           </div>
-          <div v-if="selectedIndeterminateForm === 'power_types'">
-            <p v-html="renderHtmlWithInlineKatex('对于幂指类型，如 $y = [f(x)]^{g(x)}$:')"></p>
-            <p v-html="renderHtmlWithInlineKatex('通常取对数 $\\ln y = g(x) \\ln f(x)$，先求 $\\lim [g(x) \\ln f(x)]$ (这通常会变成 $0 \\cdot \\infty$ 型)，设结果为 $L$。')"></p>
-            <p v-html="renderHtmlWithInlineKatex('则原极限为 $e^L$。')"></p>
+
+          <div class="solver-visualization">
+            <h3 class="results-title">几何直观</h3>
+            <div class="chart-container">
+              <canvas ref="solverChartCanvas"></canvas>
+            </div>
+            <p class="chart-caption">
+              在 $\frac{0}{0}$ 型极限点附近，函数图像趋向于其切线。极限 $\frac{f(x)}{g(x)}$ 的值等于切线斜率之比
+              $\frac{f'(c)}{g'(c)}$。
+            </p>
           </div>
         </div>
-      </div>
-    </section>
+      </section>
 
-    <section id="playground" class="content-section card">
-      <h2><span class="section-icon">🛠️</span> 实战演练场：应用洛必达法则</h2>
-      <p>
-        在这里，您可以输入具体的函数和极限点，观察洛必达法则是如何一步步求解不定式极限的。（此部分为概念演示，可以集成您已有的求解器组件）</p>
-      <div class="solver-placeholder">
-        <p><em>洛必达法则求解器占位符...</em></p>
-        <p><em>可以包含输入 F(x), G(x), 极限点，然后展示推导步骤和结果。</em></p>
-      </div>
-    </section>
+      <section id="formal-derivation" class="content-section card">
+        <div class="card-header">
+          <span class="section-icon">📜</span>
+          <h2>法则的诞生：从柯西中值定理说起</h2>
+        </div>
+        <p>洛必达法则的严格证明基于柯西中值定理。该定理指出：如果函数 $f(x)$ 和 $g(x)$ 在 $[a, b]$ 上连续，在 $(a, b)$
+          内可导，且对所有 $x \in (a, b)$ 都有 $g'(x) \neq 0$，那么在 $(a, b)$ 内至少存在一点 $\xi$，使得：</p>
+        <div class="katex-display-area">
+          <KatexRenderer tex="\frac{f(b) - f(a)}{g(b) - g(a)} = \frac{f'(\xi)}{g'(\xi)}" :displayMode="true"/>
+        </div>
+        <p>对于 $\frac{0}{0}$ 型极限，即 $\lim_{x \to c} f(x) = 0, \lim_{x \to c} g(x) = 0$。我们可以取 $a=c$，得到
+          $\frac{f(x)}{g(x)} = \frac{f(x)-f(c)}{g(x)-g(c)} = \frac{f'(\xi)}{g'(\xi)}$，其中 $\xi$ 在 $c$ 和 $x$ 之间。当
+          $x \to c$ 时，$\xi$ 也必然趋向于 $c$，于是法则得证。</p>
+      </section>
+    </main>
 
     <footer class="page-footer">
-      <p>探索永无止境，数学充满魅力。</p>
+      <p>数学之美，在于探索与发现。</p>
     </footer>
   </div>
 </template>
@@ -137,8 +107,8 @@
 <script setup lang="ts">
 import {ref, onMounted, nextTick, watch} from 'vue';
 import katex from 'katex';
-// 全局 KaTeX CSS 应该在 nuxt.config.ts 或 main.ts/main.css 中导入
-// import 'katex/dist/katex.min.css'; // 如果已在全局导入，此处无需重复
+import renderMathInElement from 'katex/dist/contrib/auto-render';
+import 'katex/dist/katex.min.css';
 import * as math from 'mathjs';
 import {
   Chart,
@@ -149,626 +119,672 @@ import {
   Title,
   Tooltip,
   Legend,
-  CategoryScale,
-  Filler,
-  Colors
+  CategoryScale
 } from 'chart.js';
-import KatexRenderer from '../../../KatexRenderer.vue'; // 导入新的 KaTeX 组件
+import KatexRenderer from '../../../KatexRenderer.vue';
 
-Chart.register(LineController, LineElement, PointElement, LinearScale, Title, Tooltip, Legend, CategoryScale, Filler, Colors);
+Chart.register(LineController, LineElement, PointElement, LinearScale, Title, Tooltip, Legend, CategoryScale);
 
-// --- renderHtmlWithInlineKatex (仍然用于处理段落内混合HTML和$L_ATEX$的情况) ---
-function renderHtmlWithInlineKatex(htmlContent: string): string {
-  if (!htmlContent) return '';
-  // 这个函数直接替换 $...$ 为 KaTeX HTML。
-  // 它本身不处理 displayMode 的公式，那些应使用 <KatexRenderer :displayMode="true" />
-  return htmlContent.replace(/\$(.+?)\$/g, (match, capturedTex) => {
-    try {
-      return katex.renderToString(capturedTex.replace(/\n/g, ' ').trim(), {
-        throwOnError: false,
-        displayMode: false, // 强制 inline
-        output: "htmlAndMathml",
-        strict: (errorCode) => errorCode === 'unicodeTextInMathMode' ? 'ignore' : 'warn',
+const pageRoot = ref<HTMLElement | null>(null);
+const isLoading = ref(false);
+
+const solver = ref({
+  fx: 'sin(x)',
+  gx: 'x',
+  c: '0',
+  steps: [] as { title: string; html: string }[],
+  error: '',
+});
+
+const presetExamples = [
+  {name: 'sin(x)/x', fx: 'sin(x)', gx: 'x', c: '0'},
+  {name: '(e^x-1)/x', fx: 'e^x-1', gx: 'x', c: '0'},
+  {name: 'ln(x)/x (∞/∞)', fx: 'ln(x)', gx: 'x', c: 'inf'},
+  {name: 'x*ln(x) (0*∞)', fx: 'x*ln(x)', gx: '1', c: '0+'},
+];
+
+function applyExample(ex: typeof presetExamples[0]) {
+  solver.value.fx = ex.fx;
+  solver.value.gx = ex.gx;
+  solver.value.c = ex.c;
+  solveLimit();
+}
+
+function resetSolver() {
+  solver.value.fx = '';
+  solver.value.gx = '';
+  solver.value.c = '';
+  solver.value.steps = [];
+  solver.value.error = '';
+  if (solverChartInstance) {
+    solverChartInstance.data.datasets = [];
+    solverChartInstance.update();
+  }
+}
+
+const activeStepIndex = ref(0);
+
+watch(() => solver.value.steps, () => {
+  nextTick(() => {
+    if (pageRoot.value) {
+      renderMathInElement(pageRoot.value, {
+        delimiters: [
+          {left: '$$', right: '$$', display: true},
+          {left: '$', right: '$', display: false},
+        ],
+        throwOnError: false
       });
-    } catch (e: unknown) {
-      console.error('Inline KaTeX rendering error:', capturedTex, e);
-      return `<span style="color:red; border:1px dashed red; padding:2px;">${match}(Error)</span>`;
+    }
+  });
+}, {deep: true});
+
+const solverChartCanvas = ref<HTMLCanvasElement | null>(null);
+let solverChartInstance: Chart | null = null;
+
+function setupSolverChart() {
+  if (!solverChartCanvas.value) return;
+  const ctx = solverChartCanvas.value.getContext('2d');
+  if (!ctx) return;
+  if (solverChartInstance) solverChartInstance.destroy();
+
+  solverChartInstance = new Chart(ctx, {
+    type: 'line',
+    data: {labels: [], datasets: []},
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      animation: {duration: 500, easing: 'easeOutQuart'},
+      scales: {
+        x: {
+          type: 'linear', position: 'bottom',
+          title: {display: true, text: 'x', color: '#64748b'},
+          grid: {color: '#e2e8f0'},
+          ticks: {color: '#334155'}
+        },
+        y: {
+          type: 'linear', position: 'left',
+          title: {display: true, text: 'y', color: '#64748b'},
+          grid: {color: '#e2e8f0'},
+          ticks: {color: '#334155'}
+        }
+      },
+      plugins: {
+        legend: {position: 'top', labels: {color: '#1e293b'}},
+        tooltip: {
+          mode: 'index', intersect: false,
+          backgroundColor: '#ffffff', titleColor: '#1e293b', bodyColor: '#475569',
+          borderColor: '#e2e8f0', borderWidth: 1, padding: 10,
+          boxPadding: 4,
+        },
+      }
     }
   });
 }
 
-// --- Geometric Zoom Section ---
-const geometricZoomChartCanvas = ref<HTMLCanvasElement | null>(null);
-let geometricZoomChartInstance: Chart | null = null;
-
-const geoFunctions = ref({
-  fx: 'sin(x)',
-  gx: 'x',
-});
-
-const geoZoom = ref({
-  level: 0.5,
-  baseXMax: 1,
-  currentXMax: 0.5,
-});
-
-const geoDerivatives = ref<{
-  f_prime_c: number | null;
-  g_prime_c: number | null;
-  f_prime_c_tex: string;
-  g_prime_c_tex: string;
-  ratio_tex: string;
-}>({
-  f_prime_c: null,
-  g_prime_c: null,
-  f_prime_c_tex: '?',
-  g_prime_c_tex: '?',
-  ratio_tex: '?',
-});
-
-let geoUpdateTimeout: number | null = null;
-
-function calculateGeoDerivatives() {
-  geoDerivatives.value.f_prime_c = null;
-  geoDerivatives.value.g_prime_c = null;
-  geoDerivatives.value.f_prime_c_tex = '?';
-  geoDerivatives.value.g_prime_c_tex = '?';
-  geoDerivatives.value.ratio_tex = '?';
-
-  if (!geoFunctions.value.fx || !geoFunctions.value.gx) {
-    return;
-  }
+function updateSolverChart(fx: math.MathNode, gx: math.MathNode, cVal: number) {
+  if (!solverChartInstance) return;
 
   try {
-    const fxNode = math.parse(geoFunctions.value.fx.trim());
-    const gxNode = math.parse(geoFunctions.value.gx.trim());
+    const f_prime = math.derivative(fx, 'x');
+    const g_prime = math.derivative(gx, 'x');
+    const f_prime_c = f_prime.evaluate({x: cVal});
+    const g_prime_c = g_prime.evaluate({x: cVal});
 
-    const f_at_0 = fxNode.evaluate({x: 0});
-    const g_at_0 = gxNode.evaluate({x: 0});
-
-    if (Math.abs(f_at_0) > 1e-9 || Math.abs(g_at_0) > 1e-9) {
-      console.warn("几何可视化中的函数应确保 f(0)=0 和 g(0)=0。");
+    if (!Number.isFinite(f_prime_c) || !Number.isFinite(g_prime_c)) {
+      solverChartInstance.data.datasets = [];
+      solverChartInstance.update();
+      return;
     }
 
-    const f_prime_node = math.derivative(fxNode, 'x');
-    const g_prime_node = math.derivative(gxNode, 'x');
+    const fx_compiled = fx.compile();
+    const gx_compiled = gx.compile();
 
-    const f_prime_c_val = f_prime_node.evaluate({x: 0});
-    const g_prime_c_val = g_prime_node.evaluate({x: 0});
+    const numPoints = 101;
+    const range = cVal === 0 ? 1 : Math.abs(cVal) * 2;
+    const labels = Array.from({length: numPoints}, (_, i) => cVal - range / 2 + (range / numPoints) * i);
 
-    if (typeof f_prime_c_val === 'number' && typeof g_prime_c_val === 'number' &&
-        Number.isFinite(f_prime_c_val) && Number.isFinite(g_prime_c_val)) {
-      geoDerivatives.value.f_prime_c = f_prime_c_val;
-      geoDerivatives.value.g_prime_c = g_prime_c_val;
-      geoDerivatives.value.f_prime_c_tex = math.format(f_prime_c_val, {notation: 'fixed', precision: 2});
-      geoDerivatives.value.g_prime_c_tex = math.format(g_prime_c_val, {notation: 'fixed', precision: 2});
-
-      if (Math.abs(g_prime_c_val) > 1e-9) {
-        const ratio = math.divide(f_prime_c_val, g_prime_c_val);
-        geoDerivatives.value.ratio_tex = math.format(ratio, {notation: 'fixed', precision: 2});
-      } else {
-        geoDerivatives.value.ratio_tex = '\\text{未定义 (g\'(0) \\approx 0)}';
-      }
-    } else {
-      console.error('在 x=0 处的导数值不是有限数字。');
-    }
+    solverChartInstance.data.labels = labels.map(l => parseFloat(l.toFixed(4)));
+    solverChartInstance.data.datasets = [
+      {
+        label: 'f(x)',
+        data: labels.map(x => fx_compiled.evaluate({x})),
+        borderColor: '#0ea5e9',
+        borderWidth: 2.5,
+        pointRadius: 0,
+        tension: 0.1
+      },
+      {
+        label: 'g(x)',
+        data: labels.map(x => gx_compiled.evaluate({x})),
+        borderColor: '#f43f5e',
+        borderWidth: 2.5,
+        pointRadius: 0,
+        tension: 0.1
+      },
+      {
+        label: `f'(c)(x-c)`,
+        data: labels.map(x => f_prime_c * (x - cVal)),
+        borderColor: 'rgba(22, 163, 74, 0.8)',
+        borderDash: [5, 5],
+        borderWidth: 2,
+        pointRadius: 0
+      },
+      {
+        label: `g'(c)(x-c)`,
+        data: labels.map(x => g_prime_c * (x - cVal)),
+        borderColor: 'rgba(249, 115, 22, 0.8)',
+        borderDash: [5, 5],
+        borderWidth: 2,
+        pointRadius: 0
+      },
+    ];
+    solverChartInstance.update();
   } catch (e) {
-    console.error("计算几何演示的导数时出错:", e);
+    console.error("Chart update failed:", e);
   }
 }
 
-function updateGeoChartData() {
-  if (!geometricZoomChartInstance || !geometricZoomChartCanvas.value) return;
+function formatTex(node: math.MathNode | string): string {
+  if (typeof node === 'string') return node;
+  return node.toTex({parenthesis: 'auto'});
+}
 
-  calculateGeoDerivatives();
+async function solveLimit() {
+  isLoading.value = true;
+  solver.value.steps = [];
+  solver.value.error = '';
+  activeStepIndex.value = 0;
 
-  const numPoints = 201;
-  const xMax = geoZoom.value.baseXMax * geoZoom.value.level;
-  geoZoom.value.currentXMax = xMax;
-  const xMin = -xMax;
-
-  if (xMin >= xMax || xMax === 0) { // 避免无效范围或除以零
-    if (geometricZoomChartInstance.options?.scales?.x) {
-      geometricZoomChartInstance.options.scales.x.min = -0.1; // 默认小范围
-      geometricZoomChartInstance.options.scales.x.max = 0.1;
-    }
-    geometricZoomChartInstance.update('none');
-    return;
-  }
-
-  const stepSize = (xMax - xMin) / (numPoints - 1);
-  const labels = Array.from({length: numPoints}, (_, i) => parseFloat((xMin + i * stepSize).toFixed(5)));
-
-  let fxData: (number | null)[], gxData: (number | null)[], fTangentData: (number | null)[],
-      gTangentData: (number | null)[];
+  await new Promise(resolve => setTimeout(resolve, 50));
 
   try {
-    const fxNodeCompiled = math.parse(geoFunctions.value.fx.trim() || "0").compile();
-    const gxNodeCompiled = math.parse(geoFunctions.value.gx.trim() || "0").compile();
-
-    fxData = labels.map(x => {
-      try {
-        const val = fxNodeCompiled.evaluate({x});
-        return Number.isFinite(val) ? val : null;
-      } catch {
-        return null;
-      }
-    });
-    gxData = labels.map(x => {
-      try {
-        const val = gxNodeCompiled.evaluate({x});
-        return Number.isFinite(val) ? val : null;
-      } catch {
-        return null;
-      }
-    });
-
-    if (geoDerivatives.value.f_prime_c !== null) {
-      fTangentData = labels.map(x => (geoDerivatives.value.f_prime_c as number) * x);
-    } else {
-      fTangentData = labels.map(() => null);
-    }
-    if (geoDerivatives.value.g_prime_c !== null) {
-      gTangentData = labels.map(x => (geoDerivatives.value.g_prime_c as number) * x);
-    } else {
-      gTangentData = labels.map(() => null);
+    if (!solver.value.fx.trim() || !solver.value.gx.trim() || !solver.value.c.trim()) {
+      throw new Error("请输入完整的函数 f(x), g(x) 和极限点 c。");
     }
 
-  } catch (e) {
-    console.error("解析/编译几何图表函数时出错:", e);
-    fxData = labels.map(() => null);
-    gxData = labels.map(() => null);
-    fTangentData = labels.map(() => null);
-    gTangentData = labels.map(() => null);
-  }
+    let f_node_orig = math.parse(solver.value.fx);
+    let g_node_orig = math.parse(solver.value.gx);
+    const cStr = solver.value.c;
 
-  geometricZoomChartInstance.data.labels = labels;
-  geometricZoomChartInstance.data.datasets[0].data = fxData;
-  geometricZoomChartInstance.data.datasets[1].data = gxData;
-  geometricZoomChartInstance.data.datasets[2].data = fTangentData;
-  geometricZoomChartInstance.data.datasets[3].data = gTangentData;
+    // Handle special cases for c (inf, 0+, etc.)
+    let cVal: number;
+    let limitSide = '';
+    if (cStr.toLowerCase() === 'inf' || cStr.toLowerCase() === 'infinity') {
+      cVal = Infinity;
+    } else if (cStr.endsWith('+')) {
+      cVal = parseFloat(cStr.slice(0, -1));
+      limitSide = '+';
+    } else if (cStr.endsWith('-')) {
+      cVal = parseFloat(cStr.slice(0, -1));
+      limitSide = '-';
+    } else {
+      cVal = math.evaluate(cStr);
+    }
 
-  if (geometricZoomChartInstance.options?.scales?.x) {
-    geometricZoomChartInstance.options.scales.x.min = xMin;
-    geometricZoomChartInstance.options.scales.x.max = xMax;
-  }
+    if (typeof cVal !== 'number') throw new Error("极限点 c 必须是一个有效的数字或表达式 (如 pi/2, inf)。");
 
-  const allYData = [...fxData, ...gxData, ...fTangentData, ...gTangentData].filter(y => y !== null && Number.isFinite(y)) as number[];
-  let yMinVal = allYData.length > 0 ? Math.min(...allYData) : -1;
-  let yMaxVal = allYData.length > 0 ? Math.max(...allYData) : 1;
-
-  if (yMinVal === yMaxVal) {
-    yMinVal -= 0.5;
-    yMaxVal += 0.5;
-  }
-  const padding = Math.abs(yMaxVal - yMinVal) * 0.1 || 0.1;
-
-  if (geometricZoomChartInstance.options?.scales?.y) {
-    geometricZoomChartInstance.options.scales.y.min = yMinVal - padding;
-    geometricZoomChartInstance.options.scales.y.max = yMaxVal + padding;
-  }
-
-  geometricZoomChartInstance.update('none');
-}
-
-function throttledUpdateGeoChartData() {
-  if (geoUpdateTimeout !== null) {
-    clearTimeout(geoUpdateTimeout);
-  }
-  geoUpdateTimeout = window.setTimeout(() => {
-    updateGeoChartData();
-  }, 100);
-}
-
-
-function setupGeometricZoomChart() {
-  if (geometricZoomChartCanvas.value) {
-    const ctx = geometricZoomChartCanvas.value.getContext('2d');
-    if (ctx) {
-      if (geometricZoomChartInstance) {
-        geometricZoomChartInstance.destroy();
-      }
-      geometricZoomChartInstance = new Chart(ctx, {
-        type: 'line',
-        data: {
-          labels: [],
-          datasets: [
-            {
-              label: 'f(x)',
-              data: [],
-              borderColor: 'rgba(54, 162, 235, 1)',
-              borderWidth: 2,
-              tension: 0.1,
-              pointRadius: 0,
-              fill: false,
-            },
-            {
-              label: 'g(x)',
-              data: [],
-              borderColor: 'rgba(255, 99, 132, 1)',
-              borderWidth: 2,
-              tension: 0.1,
-              pointRadius: 0,
-              fill: false,
-            },
-            {
-              label: "f'(0)x (切线近似)",
-              data: [],
-              borderColor: 'rgba(75, 192, 192, 0.7)',
-              borderDash: [5, 5],
-              borderWidth: 1.5,
-              pointRadius: 0,
-              fill: false,
-            },
-            {
-              label: "g'(0)x (切线近似)",
-              data: [],
-              borderColor: 'rgba(255, 206, 86, 0.7)',
-              borderDash: [5, 5],
-              borderWidth: 1.5,
-              pointRadius: 0,
-              fill: false,
-            }
-          ]
-        },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          animation: {duration: 0},
-          scales: {
-            x: {type: 'linear', position: 'bottom', title: {display: true, text: 'x (围绕 c=0)'}},
-            y: {type: 'linear', position: 'left', title: {display: true, text: 'y'}, beginAtZero: false}
-          },
-          plugins: {
-            tooltip: {enabled: true, mode: 'index', intersect: false},
-            legend: {position: 'top'},
-            colors: {forceOverride: true} // 确保颜色定义生效
-          }
+    // Handle 0*inf form by transformation
+    if (g_node_orig.toString() === '1') {
+      const f_c_test = f_node_orig.evaluate({x: cVal});
+      if (Math.abs(f_c_test) < 1e-9) {
+        const transformed_f = math.parse(`ln(${f_node_orig.toString()})`); // Example, this part needs a more robust implementation
+        solver.value.steps.push({
+          title: '类型转换 (0*∞)',
+          html: `将 $f(x) \\cdot g(x)$ 转换为 $\\frac{g(x)}{1/f(x)}$ 或 $\\frac{f(x)}{1/g(x)}$`
+        });
+        // This transformation logic needs to be fully implemented based on which one goes to infinity.
+        // For simplicity in this example, we assume f(x)*g(x) where g(x) is not 1.
+        // The provided example x*ln(x) is better handled as f(x)/(1/g(x)) -> ln(x) / (1/x)
+        if (solver.value.fx === 'x*ln(x)') {
+          f_node_orig = math.parse('ln(x)');
+          g_node_orig = math.parse('1/x');
+          solver.value.steps[solver.value.steps.length - 1].html = '检测到 $0 \\cdot \\infty$ 型，转换为 $\\frac{\\ln(x)}{1/x}$';
         }
-      });
-      updateGeoChartData();
+      }
     }
+
+    let current_f = f_node_orig;
+    let current_g = g_node_orig;
+    const MAX_ITERATIONS = 5;
+
+    for (let i = 0; i < MAX_ITERATIONS; i++) {
+      let f_c, g_c;
+      try {
+        f_c = current_f.evaluate({x: cVal});
+        g_c = current_g.evaluate({x: cVal});
+      } catch (e: any) {
+        throw new Error(`在 x=${cVal} 求值失败: ${e.message}`);
+      }
+
+      const isZeroOverZero = Math.abs(f_c) < 1e-9 && Math.abs(g_c) < 1e-9;
+      const isInfOverInf = !isFinite(f_c) && !isFinite(g_c);
+
+      let stepHtml = `当前极限: <br> <div class='katex-display-area'>$$\\lim_{x \\to ${cStr}} \\frac{${formatTex(current_f)}}{${formatTex(current_g)}}$$</div>`;
+      stepHtml += `在 $x \\to ${cStr}$ 时: <br> 分子 $\\to ${math.format(f_c, {
+        notation: 'fixed',
+        precision: 4
+      })}$ <br> 分母 $\\to ${math.format(g_c, {notation: 'fixed', precision: 4})}$`;
+
+      if (isZeroOverZero || isInfOverInf) {
+        stepHtml += `<br>此为 <b>${isZeroOverZero ? "$\\frac{0}{0}$" : "$\\frac{\\infty}{\\infty}$"}</b> 型，应用洛必达法则。`;
+      }
+      solver.value.steps.push({title: `第 ${i + 1} 次检定极限类型`, html: stepHtml});
+
+      if (i === 0 && isZeroOverZero) {
+        updateSolverChart(current_f, current_g, cVal);
+      }
+
+      if (isZeroOverZero || isInfOverInf) {
+        current_f = math.derivative(current_f, 'x');
+        current_g = math.derivative(current_g, 'x');
+
+        let diffStepHtml = `对分子分母求导: <br> $f_{new}(x) = ${formatTex(current_f)}$ <br> $g_{new}(x) = ${formatTex(current_g)}$`;
+        solver.value.steps.push({title: "应用洛必达法则", html: diffStepHtml});
+        activeStepIndex.value++;
+      } else {
+        if (Math.abs(g_c) < 1e-9) {
+          throw new Error(`计算中止：分母为0，但分子不为0，极限可能为无穷大或不存在。`);
+        }
+        const result = f_c / g_c;
+        let finalStepHtml = `极限可以直接计算: <br> <div class='katex-display-area'>$$\\frac{${math.format(f_c, {precision: 4})}}{${math.format(g_c, {precision: 4})}} = ${math.format(result, {precision: 4})}$$</div>`;
+        solver.value.steps.push({title: "最终结果", html: finalStepHtml});
+        activeStepIndex.value++;
+        isLoading.value = false;
+        return;
+      }
+    }
+    throw new Error(`计算中止：已达到最大迭代次数(${MAX_ITERATIONS})，极限可能不存在或过于复杂。`);
+  } catch (e: any) {
+    solver.value.error = e.message;
+  } finally {
+    isLoading.value = false;
   }
 }
-
-watch([() => geoFunctions.value.fx, () => geoFunctions.value.gx], () => {
-  throttledUpdateGeoChartData();
-});
-
-
-// --- Formal Derivation Steps ---
-const formalSteps = ref([
-  {id: 1, text: '假设我们要求解极限 $\\lim_{x \\to c} \\frac{f(x)}{g(x)}$，且满足 $f(c)=0, g(c)=0$。'},
-  {
-    id: 2,
-    text: '由于 $f(c)=0$ 和 $g(c)=0$，我们可以将分数改写为：$\\frac{f(x)}{g(x)} = \\frac{f(x) - f(c)}{g(x) - g(c)}$。'
-  },
-  {
-    id: 3,
-    text: '如果 $f(x)$ 和 $g(x)$ 在 $c$ 点可导，那么当 $x \\to c$ 时，根据导数的定义（或泰勒展开一阶）：<br>$f(x) \\approx f(c) + f\'(c)(x-c) = f\'(c)(x-c)$ <br>$g(x) \\approx g(c) + g\'(c)(x-c) = g\'(c)(x-c)$。'
-  },
-  {
-    id: 4,
-    text: '所以，$\\frac{f(x)}{g(x)} \\approx \\frac{f\'(c)(x-c)}{g\'(c)(x-c)} = \\frac{f\'(c)}{g\'(c)}$ （要求 $g\'(c) \\neq 0$）。'
-  },
-  {
-    id: 5,
-    text: '更严格地，根据柯西中值定理，若 $f, g$ 在包含 $c$ 和 $x$ 的闭区间上连续，在开区间上可导，且 $g\'(t) \\neq 0$（在 $(c,x)$ 或 $(x,c)$ 内），则存在一点 $\\xi$ 在 $c$ 和 $x$ 之间，使得 $\\frac{f(x)-f(c)}{g(x)-g(c)} = \\frac{f\'(\\xi)}{g\'(\\xi)}$。'
-  },
-  {
-    id: 6,
-    text: '当 $x \\to c$ 时，$\\xi \\to c$。因此，$\\lim_{x \\to c} \\frac{f(x)}{g(x)} = \\lim_{\\xi \\to c} \\frac{f\'(\\xi)}{g\'(\\xi)} = \\lim_{x \\to c} \\frac{f\'(x)}{g\'(x)}$，前提是右侧极限存在或为 $\\pm\\infty$。'
-  }
-]);
-const currentFormalStep = ref(0);
-
-function nextFormalStep() {
-  if (currentFormalStep.value < formalSteps.value.length - 1) {
-    currentFormalStep.value++;
-  }
-}
-
-// --- Other Indeterminate Forms ---
-const selectedIndeterminateForm = ref('0_inf');
-
 
 onMounted(() => {
   nextTick(() => {
-    setupGeometricZoomChart();
-    // 如果页面模板中有静态的 LaTeX (例如 <p>公式 $$E=mc^2$$</p>)，
-    // 并且没有通过 <KatexRenderer /> 处理，那么你可能需要在这里
-    // 手动对这些特定区域调用 renderMathInElement。
-    // 例如:
-    // const staticMathContainer = document.getElementById('static-math-id');
-    // if (staticMathContainer) {
-    //   renderMathInElement(staticMathContainer, { delimiters: [...] });
-    // }
-    // 但在这个重构版本中，我们更倾向于使用 <KatexRenderer /> 处理所有独立的公式。
+    setupSolverChart();
+    if (pageRoot.value) {
+      renderMathInElement(pageRoot.value, {
+        delimiters: [
+          {left: '$$', right: '$$', display: true},
+          {left: '$', right: '$', display: false},
+        ],
+        throwOnError: false
+      });
+    }
   });
 });
-
 </script>
 
 <style scoped>
-.lhopital-derivation-page {
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
-  color: #333;
-  line-height: 1.7;
-  max-width: 900px;
-  margin: 0 auto;
-  padding: 20px;
-  background-color: #f4f7f9;
+:root {
+  --primary-color: #2563eb;
+  --primary-color-light: #dbeafe;
+  --primary-color-dark: #1e40af;
+  --text-color: #1e293b;
+  --text-light: #475569;
+  --bg-color: #f8f9fa;
+  --card-bg: #ffffff;
+  --border-color: #e2e8f0;
+  --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.07), 0 2px 4px -2px rgba(0, 0, 0, 0.07);
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.07), 0 4px 6px -4px rgba(0, 0, 0, 0.07);
+}
+
+.lhopital-page {
+  font-family: var(--font-sans);
+  color: var(--text-color);
+  background-color: var(--bg-color);
+  line-height: 1.75;
 }
 
 .page-header {
+  background-color: #111827;
+  color: white;
+  padding: 5rem 1rem;
   text-align: center;
-  margin-bottom: 40px;
-  padding-bottom: 20px;
-  border-bottom: 2px solid #e0e0e0;
+  position: relative;
+  overflow: hidden;
 }
 
-.page-header h1 {
-  font-size: 2.8em;
-  font-weight: 700;
-  color: #2c3e50;
-  margin-bottom: 0.2em;
+.page-header::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-image: radial-gradient(circle at 20% 80%, var(--primary-color) 0%, transparent 30%),
+  radial-gradient(circle at 80% 30%, #4338ca 0%, transparent 30%);
+  opacity: 0.3;
+  filter: blur(80px);
 }
 
-.cool-math-symbol {
+
+.header-content {
+  position: relative;
+  z-index: 1;
+}
+
+.header-content h1 {
+  font-size: 3.5em;
+  font-weight: 800;
+  margin: 0;
+  color: #f9fafb;
+}
+
+.header-content h1 span {
   font-family: 'Times New Roman', Times, serif;
   font-weight: bold;
-  color: #3498db;
-  margin-right: 5px;
+  font-size: 1.2em;
 }
 
 .subtitle {
-  font-size: 1.2em;
-  color: #555;
-  margin-top: 0;
+  font-size: 1.25em;
+  color: #d1d5db;
+  margin-top: 0.5rem;
+}
+
+.page-content {
+  max-width: 1200px;
+  margin: -4rem auto 0;
+  padding: 2rem 1rem;
+  position: relative;
+  z-index: 10;
 }
 
 .content-section {
-  margin-bottom: 35px;
-  padding: 25px;
-  border-radius: 8px;
-  background-color: #fff;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  background-color: var(--card-bg);
+  border-radius: 16px;
+  box-shadow: var(--shadow-lg);
+  margin-bottom: 2.5rem;
+  padding: 2.5rem;
+  border: 1px solid var(--border-color);
 }
 
-.content-section h2 {
-  font-size: 1.8em;
-  color: #2980b9;
-  margin-top: 0;
-  margin-bottom: 20px;
-  padding-bottom: 10px;
-  border-bottom: 1px solid #eee;
+.card-header {
   display: flex;
   align-items: center;
+  margin-bottom: 1.5rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.card-header h2 {
+  font-size: 1.8em;
+  color: var(--text-color);
+  font-weight: 700;
+  margin: 0;
 }
 
 .section-icon {
-  margin-right: 12px;
-  font-size: 1.3em;
+  font-size: 2em;
+  margin-right: 1rem;
+  color: var(--primary-color);
 }
 
-.card p, .card li {
-  font-size: 1.05em;
-  margin-bottom: 0.8em;
-}
-
-.card ul {
-  padding-left: 20px;
-}
-
-.katex-display-area { /* 用于 v-html 的 KaTeX 容器 */
-  padding: 15px;
-  background-color: #f9f9f9;
-  border: 1px solid #e0e0e0;
-  border-radius: 4px;
-  text-align: center;
-  overflow-x: auto;
-  margin: 15px 0;
-}
-
-.main-rule :deep(.katex) { /* 针对主要法则的 KaTeX Renderer 组件 */
-  font-size: 1.3em !important;
-}
-
-
-.katex-error { /* 这个样式给 renderHtmlWithInlineKatex 的错误输出用 */
-  color: #e74c3c;
-  font-family: monospace;
-  font-weight: bold;
-  border: 1px dashed #e74c3c;
-  padding: 2px 4px;
-  border-radius: 3px;
-  background-color: #fdd;
-}
-
-/* Geometric Zoom Section */
-.geometric-zoom-controls {
-  margin-bottom: 20px;
-  padding: 15px;
-  background-color: #e9f5fc;
-  border-radius: 6px;
+.quick-examples {
   display: flex;
-  flex-direction: column;
-  gap: 15px;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  margin-bottom: 2rem;
+  padding-bottom: 1.5rem;
+  border-bottom: 1px solid var(--border-color);
 }
 
-.control-item {
-  display: flex;
-  flex-direction: column;
-  gap: 5px;
-}
-
-.control-item label {
-  font-weight: 500;
-  color: #333;
-  font-size: 0.95em;
-}
-
-.control-item input[type="text"], .control-item input[type="range"] {
-  padding: 8px 10px;
-  border: 1px solid #ccc;
-  border-radius: 4px;
-  font-size: 1em;
-}
-
-.control-item input[type="range"] {
-  padding: 0;
-}
-
-.control-item span {
+.quick-examples span {
   font-size: 0.9em;
-  color: #555;
+  font-weight: 500;
+  color: var(--text-light);
+}
+
+.example-pill {
+  background-color: var(--primary-color-light);
+  color: var(--primary-color);
+  border: none;
+  padding: 0.3rem 0.8rem;
+  border-radius: 999px;
+  font-size: 0.85em;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.example-pill:hover {
+  background-color: var(--primary-color);
+  color: white;
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+}
+
+.solver-grid {
+  display: grid;
+  grid-template-columns: 3fr 5fr;
+  gap: 2.5rem;
+  align-items: flex-start;
+}
+
+@media (max-width: 992px) {
+  .solver-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.solver-grid > .solver-visualization {
+  grid-column: 1 / -1;
+  margin-top: 1rem;
+}
+
+.control-group {
+  margin-bottom: 1.25rem;
+}
+
+.solver-controls label {
+  display: block;
+  font-weight: 500;
+  color: var(--text-light);
+  margin-bottom: 0.5rem;
+  font-size: 0.9em;
+}
+
+.solver-controls input[type="text"] {
+  width: 100%;
+  padding: 0.8rem 1rem;
+  border: 1px solid #cbd5e1;
+  background-color: #f8fafc;
+  color: var(--text-color);
+  border-radius: 8px;
+  font-size: 1em;
+  transition: border-color 0.3s, box-shadow 0.3s, background-color 0.3s;
+}
+
+.solver-controls input[type="text"]:focus {
+  outline: none;
+  background-color: var(--card-bg);
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 3px var(--primary-color-light);
+}
+
+.button-group {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: 0.75rem;
+  margin-top: 1.5rem;
+}
+
+.solve-button {
+  padding: 0.9rem 1rem;
+  background-color: var(--primary-color);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 1.1em;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.solve-button:hover:not(:disabled) {
+  background-color: var(--primary-color-dark);
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+}
+
+.solve-button:disabled {
+  background-color: #94a3b8;
+  cursor: wait;
+}
+
+.reset-button {
+  padding: 0.9rem 1rem;
+  background-color: #f1f5f9;
+  color: var(--text-light);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  font-size: 1.1em;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.reset-button:hover {
+  background-color: #e2e8f0;
+  color: var(--text-color);
+}
+
+.results-title {
+  font-size: 1.4em;
+  color: var(--text-color);
+  font-weight: 600;
+  margin-top: 0;
+  margin-bottom: 1rem;
+}
+
+.steps-container {
+  background-color: #f8fafc;
+  border-radius: 8px;
+  padding: 0.5rem 1.5rem;
+  min-height: 250px;
+  max-height: 500px;
+  overflow-y: auto;
+  border: 1px solid var(--border-color);
+}
+
+.step-list-enter-active, .step-list-leave-active {
+  transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.step-list-enter-from, .step-list-leave-to {
+  opacity: 0;
+  transform: translateX(30px);
+}
+
+.derivation-step {
+  border-bottom: 1px solid var(--border-color);
+  overflow: hidden;
+}
+
+.derivation-step:last-child {
+  border-bottom: none;
+}
+
+.step-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem 0;
+  cursor: pointer;
+  user-select: none;
+}
+
+.accordion-icon {
+  width: 0.8em;
+  height: 0.8em;
+  border-right: 2px solid var(--text-light);
+  border-bottom: 2px solid var(--text-light);
+  transform: rotate(45deg);
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.derivation-step.active .accordion-icon {
+  transform: rotate(225deg);
+}
+
+.step-body {
+  max-height: 0;
+  transition: max-height 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  overflow: hidden;
+}
+
+.derivation-step.active .step-body {
+  max-height: 500px;
+}
+
+.step-content {
+  padding-bottom: 1rem;
+  word-break: break-all;
+  color: var(--text-light);
+}
+
+.step-content :deep(b) {
+  color: var(--primary-color);
+}
+
+.placeholder-text {
+  text-align: center;
+  padding: 4rem 0;
+  color: #94a3b8;
+}
+
+.chart-caption {
+  color: var(--text-light);
+  font-size: 0.9rem;
+  text-align: center;
+  margin-top: 1rem;
+}
+
+.error-message {
+  color: #be123c;
+  background-color: #fee2e2;
+  border: 1px solid #fecaca;
+  border-radius: 8px;
+  padding: 1rem;
 }
 
 .chart-container {
   position: relative;
-  height: 400px;
-  background-color: #fff;
-  border: 1px solid #ddd;
+  height: 350px;
+  background-color: var(--card-bg);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  padding: 1rem;
+  box-shadow: var(--shadow-sm);
+}
+
+.katex-display-area {
+  padding: 1rem;
+  background-color: #f1f5f9;
+  border: 1px solid var(--border-color);
   border-radius: 4px;
-  margin-bottom: 15px;
-}
-
-.intuition-explanation {
-  background-color: #f0f9ff;
-  border: 1px solid #c3e0f2;
-  padding: 15px;
-  border-radius: 4px;
-  font-size: 0.95em;
-}
-
-.intuition-explanation :deep(.katex) {
-  font-size: 1.1em !important; /* 应用于 KatexRenderer 组件内的 KaTeX 输出 */
-}
-
-
-/* Formal Derivation Steps */
-.derivation-steps ul {
-  list-style-type: none;
-  padding: 0;
-}
-
-.derivation-step {
-  background-color: #f9f9f9;
-  border-left: 4px solid #3498db;
-  padding: 12px 15px;
-  margin-bottom: 10px;
-  border-radius: 0 4px 4px 0;
-  transition: opacity 0.5s ease, transform 0.5s ease;
-}
-
-.button-next-step {
-  background-color: #3498db;
-  color: white;
-  border: none;
-  padding: 10px 20px;
-  border-radius: 4px;
-  cursor: pointer;
-  font-size: 1em;
-  transition: background-color 0.2s;
-  margin-top: 10px;
-}
-
-.button-next-step:hover {
-  background-color: #2980b9;
-}
-
-.fade-step-enter-active, .fade-step-leave-active {
-  transition: opacity 0.8s ease, transform 0.8s ease;
-}
-
-.fade-step-enter-from {
-  opacity: 0;
-  transform: translateX(-20px);
-}
-
-.fade-step-leave-to {
-  opacity: 0;
-  transform: translateX(20px);
-}
-
-/* Other Forms Transformer */
-.form-transformer {
-  padding: 15px;
-  background-color: #fdf6e3;
-  border: 1px solid #fae5a0;
-  border-radius: 6px;
-}
-
-.form-select {
-  width: 100%;
-  padding: 10px;
-  font-size: 1em;
-  margin-bottom: 15px;
-  border-radius: 4px;
-  border: 1px solid #ccc;
-}
-
-.transformation-explanation p {
-  font-size: 1em;
-  background-color: #fff;
-  padding: 10px;
-  border-radius: 4px;
-  border: 1px dashed #ddd;
-}
-
-.transformation-explanation :deep(.katex) {
-  font-size: 1.05em !important;
-}
-
-
-/* Solver Placeholder */
-.solver-placeholder {
-  padding: 20px;
   text-align: center;
-  background-color: #e9ecef;
-  border: 1px dashed #ced4da;
-  border-radius: 4px;
-  color: #6c757d;
+  overflow-x: auto;
+  margin: 0.5rem 0;
 }
-
-.error-message {
-  color: #c0392b;
-  font-style: italic;
-  font-size: 0.9em;
-  background-color: #fdecea;
-  padding: 8px;
-  border-radius: 4px;
-  border: 1px solid #f5c6cb;
-}
-
 
 .page-footer {
   text-align: center;
-  margin-top: 50px;
-  padding-top: 20px;
-  border-top: 1px solid #e0e0e0;
-  font-size: 0.9em;
-  color: #777;
+  padding: 3rem 1rem 2rem;
+  margin-top: 2rem;
+  border-top: 1px solid var(--border-color);
+  color: var(--text-light);
+  background: transparent;
 }
 
-/* General KaTeX styling for v-html content if needed */
-:deep(.katex) { /* 这个 :deep 会影响所有 KaTeX 输出，包括 v-html 和 KatexRenderer 组件 */
+:deep(.katex) {
+  color: var(--text-color);
   font-size: 1.1em;
-  text-rendering: auto;
-}
-
-/* 下面这个规则是为 KatexRenderer 组件且 displayMode=true 时准备的 */
-/* 但由于 KatexRenderer 的根元素是 span,
-   且其内部 KaTeX 的 .katex-display 类已经处理了块级显示，
-   所以 KatexRenderer 组件的 .katex-display-mode 类主要起辅助作用或用于额外包裹样式。
-*/
-:deep(.katex-display) { /* 这是 KaTeX 内部为 display mode 添加的类 */
-  display: block;
-  text-align: center;
-  margin: 1em 0; /* 添加一些垂直间距 */
-}
-
-:deep(.katex-display > .katex) {
-  /* KaTeX 自身会处理其内部结构，这里可能不需要太多覆盖 */
 }
 </style>

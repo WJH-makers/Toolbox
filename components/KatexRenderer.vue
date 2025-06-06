@@ -1,10 +1,12 @@
 <template>
-  <span ref="katexOutputElement" :class="{ 'katex-display-mode': displayMode }"></span>
+  <span :class="{ 'katex-display-mode': displayMode }" v-html="renderedTex"></span>
 </template>
 
 <script setup lang="ts">
-import {ref, watch, onMounted, toRefs, nextTick} from 'vue';
+import {computed, toRefs} from 'vue';
 import katex from 'katex';
+
+const RENDER_CACHE = new Map<string, string>();
 
 const props = defineProps({
   tex: {
@@ -23,49 +25,44 @@ const props = defineProps({
 });
 
 const {tex, displayMode, options} = toRefs(props);
-const katexOutputElement = ref<HTMLElement | null>(null);
 
-const render = async () => {
-  if (katexOutputElement.value) {
-    const currentTex = String(tex.value).trim();
-    if (currentTex) {
-      try {
-        katex.render(currentTex, katexOutputElement.value, {
-          throwOnError: false, // 在生产中可以设置为 true 以捕获错误
-          displayMode: displayMode.value,
-          output: "htmlAndMathml", // 推荐，为了可访问性
-          strict: (errorCode) => { // 更灵活的 strict 模式处理
-            if (errorCode === 'unicodeTextInMathMode') {
-              return 'ignore'; // 忽略特定类型的 "错误" (例如，在数学模式中使用普通文本)
-            }
-            return 'warn';
-          },
-          ...options.value,
-        });
-      } catch (e) {
-        console.error('KaTeX rendering error in KatexRenderer component:', e, 'for tex:', currentTex);
-        katexOutputElement.value.textContent = `[KaTeX Error]`;
-        if (katexOutputElement.value.style) {
-          katexOutputElement.value.style.color = 'red';
-          katexOutputElement.value.style.border = '1px dashed red';
-          katexOutputElement.value.style.padding = '2px';
-        }
-      }
-    } else {
-      katexOutputElement.value.innerHTML = '';
-    }
+// 使用 computed 属性代替 watch 和 onMounted，代码更简洁且符合 Vue 的理念
+const renderedTex = computed(() => {
+  const currentTex = String(tex.value).trim();
+  if (!currentTex) {
+    return '';
   }
-};
 
-onMounted(async () => {
-  await nextTick(); // 确保 DOM 元素已准备好
-  render();
+  // 使用 props 生成唯一的缓存键
+  const cacheKey = currentTex + (displayMode.value ? '_display' : '_inline');
+
+  // 1. 检查缓存
+  if (RENDER_CACHE.has(cacheKey)) {
+    return RENDER_CACHE.get(cacheKey);
+  }
+
+  // 2. 如果缓存未命中，则渲染并存入缓存
+  try {
+    const finalOptions = {
+      throwOnError: false,
+      displayMode: displayMode.value,
+      output: "htmlAndMathml",
+      strict: (errorCode: string) => (errorCode === 'unicodeTextInMathMode' ? 'ignore' : 'warn'),
+      ...options.value,
+    };
+
+    const renderedHtml = katex.renderToString(currentTex, finalOptions);
+    RENDER_CACHE.set(cacheKey, renderedHtml); // 存入缓存
+    return renderedHtml;
+
+  } catch (e: any) {
+    console.error('KaTeX rendering error:', e);
+    const errorHtml = `<span class="katex-error" title="${e.message}">渲染出错: ${currentTex}</span>`;
+    // 错误结果也缓存起来，避免对错误的表达式反复尝试渲染
+    RENDER_CACHE.set(cacheKey, errorHtml);
+    return errorHtml;
+  }
 });
-
-watch([tex, displayMode, options], async () => {
-  await nextTick(); // 确保在 props 更新后 DOM 也准备好
-  render();
-}, {deep: true}); // deep: true 用于监视 options 对象的深度变化
 </script>
 
 <style scoped>
@@ -73,9 +70,17 @@ watch([tex, displayMode, options], async () => {
   display: block;
   width: 100%;
   text-align: center;
+  padding: 1em 0;
 }
 
-span:empty {
-  display: none;
+/* 使用 :deep() 以便样式能应用到 v-html 内部的 .katex-error */
+:deep(.katex-error) {
+  color: #cc0000;
+  font-family: monospace;
+  border: 1px dashed #cc0000;
+  padding: 4px 6px;
+  border-radius: 4px;
+  background-color: #fcebeb;
+  cursor: help;
 }
 </style>
