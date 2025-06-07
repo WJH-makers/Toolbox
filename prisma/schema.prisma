@@ -11,7 +11,6 @@ generator client {
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL") // 应用程序运行时使用
-  // directUrl = env("DIRECT_URL") // Prisma Migrate 命令使用
 }
 
 model User {
