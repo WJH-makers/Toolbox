@@ -49,6 +49,7 @@
     "ofetch": "^1.4.1",
     "openai": "^4.103.0",
     "prettier": "^3.5.3",
+    "socket.io-client": "^4.8.1",
     "tencentcloud-sdk-nodejs": "^4.1.49",
     "tsparticles-engine": "^2.12.0",
     "typescript": "^5.8.3",
