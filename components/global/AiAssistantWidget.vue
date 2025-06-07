@@ -3,14 +3,10 @@
     <div v-if="isOpen" class="widget-overlay" @click="closeWidget"/>
 
     <button class="widget-toggle-button" title="AI万能助手" @click="toggleWidget">
-      <transition name="icon-fade" mode="out-in">
-        <span v-if="isOpen" class="icon-close">✕</span>
-        <svg v-else class="icon-new-chat" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="28"
-             height="28">
-          <path fill="black"
-                d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-3 9h-2v2h-2v-2H9V9h2V7h2v2h2v2z"/>
-        </svg>
-      </transition>
+      <svg class="icon-new-chat" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="28" height="28">
+        <path fill="black"
+              d="M21 6h-2v9H6v2c0 .55.45 1 1 1h11l4 4V7c0-.55-.45-1-1-1zm-4 6V3c0-.55-.45-1-1-1H3c-.55 0-1 .45-1 1v14l4-4h10c.55 0 1-.45 1-1z"/>
+      </svg>
     </button>
 
     <transition name="widget-fade">
@@ -66,12 +62,18 @@
               <p>点击“新建对话”或选择历史会话开始</p>
             </div>
             <div v-else ref="chatMessagesContainer" class="chat-messages" @scroll="handleScroll">
-              <div v-for="(msg, index) in messages" :key="msg.id" :class="[`message-role-${msg.role}`]" class="message">
-                <div class="message-bubble"
-                     :class="{'first-in-group': index === 0 || messages[index - 1].role !== msg.role}">
-                  <MessageRenderer :content="msg.content"/>
-                </div>
+              <div v-if="isLoadingMessages" class="chat-loading">
+                <span>正在加载消息...</span>
               </div>
+              <template v-else>
+                <div v-for="(msg, index) in messages" :key="msg.id" :class="[`message-role-${msg.role}`]"
+                     class="message">
+                  <div class="message-bubble"
+                       :class="{'first-in-group': index === 0 || messages[index - 1].role !== msg.role}">
+                    <MessageRenderer :content="msg.content"/>
+                  </div>
+                </div>
+              </template>
             </div>
           </div>
           <footer class="chat-input-area">
@@ -87,7 +89,7 @@
                   @keydown.enter.shift.exact.prevent="newMessage += '\n'"/>
               <button
                   :disabled="isLoadingReply || !currentSessionId || !newMessage.trim()"
-                  class="action-button send-button"
+                  class="send-button"
                   type="submit">
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="22" height="22">
                   <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/>
@@ -102,7 +104,7 @@
 </template>
 
 <script setup>
-import {ref, nextTick, watch, computed} from 'vue';
+import {ref, onMounted, nextTick, watch, computed} from 'vue';
 import {debounce} from 'lodash-es';
 import {formatDistanceToNowStrict} from 'date-fns';
 import {zhCN} from 'date-fns/locale';
@@ -123,6 +125,7 @@ const userHasScrolledUp = ref(false);
 
 const historySessions = ref([]);
 const isLoadingSessions = ref(false);
+const isLoadingMessages = ref(false);
 const sessionsError = ref('');
 const isDeletingSession = ref(null);
 const chatError = ref('');
@@ -179,10 +182,13 @@ async function fetchSessions() {
   isLoadingSessions.value = true;
   sessionsError.value = '';
   try {
-    const response = await $fetch('/api/ai/sessions');
-    historySessions.value = response.data.sort((a, b) => new Date(b.updatedAt) - new Date(a.updatedAt)) || [];
+    const response = await fetch('/api/ai/sessions');
+    if (!response.ok) throw new Error('网络响应错误');
+    const responseData = await response.json();
+    historySessions.value = responseData.data.sort((a, b) => new Date(b.updatedAt) - new Date(a.updatedAt)) || [];
   } catch (error) {
-    sessionsError.value = error.data?.message || "无法加载历史会话。";
+    sessionsError.value = "无法加载历史会话。";
+    console.error(error);
   } finally {
     isLoadingSessions.value = false;
   }
@@ -194,11 +200,15 @@ async function handleSelectSession(sessionId, focus = true) {
   currentSessionId.value = sessionId;
   isLoadingMessages.value = true;
   chatError.value = '';
+  messages.value = [];
   try {
-    const response = await $fetch(`/api/ai/sessions/${sessionId}`);
-    messages.value = (response.data || []).map(msg => ({...msg, id: msg.id || Date.now()}));
+    const response = await fetch(`/api/ai/sessions/${sessionId}`);
+    if (!response.ok) throw new Error('网络响应错误');
+    const responseData = await response.json();
+    messages.value = (responseData.data || []).map(msg => ({...msg, id: msg.id || Date.now()}));
   } catch (error) {
-    chatError.value = `加载会话失败: ${error.data?.message || error.message}`;
+    chatError.value = `加载会话失败: ${error.message}`;
+    console.error(error);
   } finally {
     isLoadingMessages.value = false;
     userHasScrolledUp.value = false;
@@ -212,8 +222,14 @@ async function createNewSessionInternal({title, initialMessage = null}) {
   isCreatingSession.value = true;
   chatError.value = '';
   try {
-    const response = await $fetch('/api/ai/sessions', {method: 'POST', body: {title}});
-    const newSession = response.data;
+    const response = await fetch('/api/ai/sessions', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({title})
+    });
+    if (!response.ok) throw new Error('网络响应错误');
+    const responseData = await response.json();
+    const newSession = responseData.data;
     if (!newSession) throw new Error("创建会话失败");
 
     historySessions.value.unshift(newSession);
@@ -223,7 +239,8 @@ async function createNewSessionInternal({title, initialMessage = null}) {
       await sendMessage(initialMessage);
     }
   } catch (error) {
-    sessionsError.value = `创建失败: ${error.data?.message || error.message}`;
+    sessionsError.value = `创建失败: ${error.message}`;
+    console.error(error);
   } finally {
     isCreatingSession.value = false;
     if (!initialMessage) nextTick(() => messageInput.value?.focus());
@@ -234,19 +251,15 @@ function handleCreateNewSession() {
   createNewSessionInternal({title: '新对话'});
 }
 
-// This function is kept for potential future use but is not called from the UI anymore.
-function handleSelectTool(tool) {
-  createNewSessionInternal({title: tool.name, initialMessage: tool.prompt, focus: false});
-}
-
 async function handleDeleteSession(sessionId) {
   if (!sessionId || isDeletingSession.value === sessionId) return;
-  const confirmed = window.confirm(`确定要删除对话 "${historySessions.value.find(s => s.id === sessionId)?.title}" 吗？`);
+  const sessionToDelete = historySessions.value.find(s => s.id === sessionId);
+  const confirmed = window.confirm(`确定要删除对话 "${sessionToDelete?.title || '此对话'}" 吗？`);
   if (!confirmed) return;
 
   isDeletingSession.value = sessionId;
   try {
-    await $fetch(`/api/ai/sessions/${sessionId}`, {method: 'DELETE'});
+    await fetch(`/api/ai/sessions/${sessionId}`, {method: 'DELETE'});
     const deletedIndex = historySessions.value.findIndex(s => s.id === sessionId);
     if (deletedIndex > -1) historySessions.value.splice(deletedIndex, 1);
     if (currentSessionId.value === sessionId) {
@@ -254,7 +267,8 @@ async function handleDeleteSession(sessionId) {
       messages.value = [];
     }
   } catch (error) {
-    sessionsError.value = `删除会话失败: ${error.data?.message || error.message}`;
+    sessionsError.value = `删除会话失败: ${error.message}`;
+    console.error(error);
   } finally {
     isDeletingSession.value = null;
   }
@@ -280,14 +294,14 @@ async function sendMessage(presetMessage = null) {
     autoResizeTextarea();
   }
 
-  messages.value.push({id: Date.now(), role: 'user', content: contentToSend});
+  messages.value.push({id: `user-${Date.now()}`, role: 'user', content: contentToSend});
   isLoadingReply.value = true;
   chatError.value = '';
   userHasScrolledUp.value = false;
   scrollToBottom();
 
   const finalApiMessages = messages.value.slice(-10).map(m => ({role: m.role, content: m.content}));
-  const assistantMessageObject = {id: Date.now() + 1, role: 'assistant', content: ''};
+  const assistantMessageObject = {id: `asst-${Date.now()}`, role: 'assistant', content: ''};
   messages.value.push(assistantMessageObject);
 
   try {
@@ -324,7 +338,11 @@ async function sendMessage(presetMessage = null) {
 }
 
 onMounted(() => {
-  if (isOpen.value) {
+  // 移除了自动获取会话的逻辑，改为在打开时获取
+});
+
+watch(isOpen, (newValue) => {
+  if (newValue && historySessions.value.length === 0 && !isLoadingSessions.value) {
     fetchSessions();
   }
 });
@@ -344,9 +362,9 @@ watch(messages, () => {
   --bg-secondary: rgba(245, 245, 247, 0.5);
   --bg-tertiary-hover: rgba(0, 0, 0, 0.04);
   --border-color: rgba(0, 0, 0, 0.08);
-  --text-primary: #ffffff;
+  --text-primary: #1F2937;
   --text-secondary: #000000;
-  --text-tertiary: #9CA3AF;
+  --text-tertiary: #6B7280;
   --accent-gradient: linear-gradient(135deg, #3B82F6, #8B5CF6);
   --accent-gradient-hover: linear-gradient(135deg, #60A5FA, #A78BFA);
   --accent-active-bg: rgba(59, 130, 246, 0.1);
@@ -362,6 +380,7 @@ watch(messages, () => {
   right: 30px;
   z-index: 2000;
   font-family: var(--font-primary);
+  color: var(--text-primary);
 }
 
 .widget-toggle-button {
@@ -375,13 +394,18 @@ watch(messages, () => {
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: all 0.25s cubic-bezier(0.4, 0.0, 0.2, 1);
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
   box-shadow: var(--shadow-lg);
 }
 
 .widget-toggle-button:hover {
   transform: translateY(-4px) scale(1.05);
   box-shadow: 0 15px 25px -5px rgba(59, 130, 246, 0.3);
+}
+
+.icon-close {
+  font-size: 24px;
+  font-weight: bold;
 }
 
 .widget-overlay {
@@ -442,9 +466,14 @@ watch(messages, () => {
   transition: all 0.2s ease;
 }
 
-.new-session-button:hover {
+.new-session-button:hover:not(:disabled) {
   background: var(--accent-gradient-hover);
   box-shadow: var(--shadow-md);
+}
+
+.new-session-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.7;
 }
 
 .model-selector-container select {
@@ -471,27 +500,32 @@ watch(messages, () => {
   letter-spacing: 0.05em;
 }
 
-.tool-list, .sessions-list {
+.sessions-list {
   list-style: none;
   padding: 0;
   margin: 0;
 }
 
-.tool-item, .session-item {
+.session-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
   padding: 0.75rem;
   margin-bottom: 0.25rem;
   border-radius: 8px;
   cursor: pointer;
-  transition: all 0.2s cubic-bezier(0.4, 0.0, 0.2, 1);
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  overflow: hidden;
 }
 
-.tool-item:hover, .session-item:hover {
+.session-item:hover {
   background-color: var(--bg-tertiary-hover);
-  transform: translateX(4px);
 }
 
 .session-item.active {
   background-color: var(--accent-active-bg);
+  font-weight: 600;
 }
 
 .session-item.active::before {
@@ -505,15 +539,11 @@ watch(messages, () => {
   border-radius: 0 4px 4px 0;
 }
 
-.tool-name, .session-title {
-  font-weight: 500;
-  color: var(--text-primary);
-}
-
-.tool-description {
-  font-size: 0.8rem;
-  color: var(--text-secondary);
-  margin-top: 4px;
+.session-title {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin-right: 8px;
 }
 
 .delete-session-button {
@@ -523,16 +553,28 @@ watch(messages, () => {
   color: var(--text-tertiary);
   opacity: 0;
   transition: opacity 0.2s;
+  padding: 4px;
+  flex-shrink: 0;
 }
 
 .session-item:hover .delete-session-button {
   opacity: 1;
 }
 
+.delete-session-button:hover {
+  color: var(--text-primary);
+}
+
 .delete-icon {
   width: 16px;
   height: 16px;
   fill: currentColor;
+}
+
+.sidebar-loading, .no-sessions {
+  padding: 1rem;
+  text-align: center;
+  color: var(--text-tertiary);
 }
 
 .chat-main-area {
@@ -549,6 +591,7 @@ watch(messages, () => {
   justify-content: space-between;
   align-items: center;
   border-bottom: 1px solid var(--border-color);
+  flex-shrink: 0;
 }
 
 .header-title {
@@ -566,6 +609,15 @@ watch(messages, () => {
   height: 100%;
   overflow-y: auto;
   padding: 1.5rem;
+}
+
+.chat-loading {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100%;
+  color: var(--text-tertiary);
+  font-size: 1rem;
 }
 
 .empty-chat-area {
@@ -599,18 +651,18 @@ watch(messages, () => {
 }
 
 .message-bubble.first-in-group {
-  border-top-left-radius: 20px;
-  border-top-right-radius: 20px;
+  margin-top: 1rem;
 }
 
 .message-role-assistant .message-bubble {
   background-color: #FFFFFF;
+  color: var(--text-primary);
   border-bottom-left-radius: 5px;
 }
 
 .message-role-user .message-bubble {
-  background: var(--accent-gradient);
-  color: white;
+  background-color: var(--accent-active-bg);
+  color: var(--text-secondary);
   border-bottom-right-radius: 5px;
 }
 
@@ -622,10 +674,12 @@ watch(messages, () => {
 }
 
 .chat-input-form {
-  position: relative;
+  display: flex;
+  align-items: flex-end;
   background-color: #FFFFFF;
   border-radius: 12px;
   border: 1px solid var(--border-color);
+  transition: all 0.2s ease;
 }
 
 .chat-input-form:focus-within {
@@ -635,38 +689,60 @@ watch(messages, () => {
 
 .chat-input-form textarea {
   width: 100%;
-  padding: 12px 60px 12px 16px;
+  padding: 12px 16px;
   background-color: transparent;
   border: none;
   resize: none;
   font-size: 1rem;
-}
-
-.form-actions {
-  position: absolute;
-  right: 8px;
-  bottom: 6px;
+  line-height: 1.5;
+  color: var(--text-primary);
+  outline: none;
+  max-height: 120px;
 }
 
 .send-button {
   background: var(--accent-gradient);
   border: none;
   border-radius: 8px;
-  padding: 6px;
+  width: 36px;
+  height: 36px;
   cursor: pointer;
   display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 8px;
+  flex-shrink: 0;
+  transition: all 0.2s ease;
 }
 
 .send-button svg {
   fill: white;
 }
 
+.send-button:hover:not(:disabled) {
+  background: var(--accent-gradient-hover);
+  transform: scale(1.05);
+}
+
+.send-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
 .widget-fade-enter-active, .widget-fade-leave-active {
-  transition: all 0.3s cubic-bezier(0.4, 0.0, 0.2, 1);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .widget-fade-enter-from, .widget-fade-leave-to {
   opacity: 0;
   transform: translate(-50%, -49%) scale(0.97);
+}
+
+.icon-fade-enter-active, .icon-fade-leave-active {
+  transition: opacity 0.15s ease-in-out;
+}
+
+.icon-fade-enter-from, .icon-fade-leave-to {
+  opacity: 0;
 }
 </style>
