@@ -8,7 +8,7 @@
 
 您可以直接访问我们已经部署好的在线应用，无需任何本地安装和配置。
 
-* **访问地址**: [https://toolbox-8l1op8gog-wjh-makers-projects.vercel.app/toolbox](https://toolbox-8l1op8gog-wjh-makers-projects.vercel.app/toolbox)
+* **访问地址**: 见右侧的最新部署地址
 * **所需条件**:
     * 一个现代的网页浏览器 (如 Chrome, Firefox, Edge, Safari)
     * 稳定的网络连接

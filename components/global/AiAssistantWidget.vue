@@ -344,8 +344,8 @@ watch(messages, () => {
   --bg-secondary: rgba(245, 245, 247, 0.5);
   --bg-tertiary-hover: rgba(0, 0, 0, 0.04);
   --border-color: rgba(0, 0, 0, 0.08);
-  --text-primary: #111827;
-  --text-secondary: #4B5563;
+  --text-primary: #ffffff;
+  --text-secondary: #000000;
   --text-tertiary: #9CA3AF;
   --accent-gradient: linear-gradient(135deg, #3B82F6, #8B5CF6);
   --accent-gradient-hover: linear-gradient(135deg, #60A5FA, #A78BFA);
