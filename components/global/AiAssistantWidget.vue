@@ -456,7 +456,7 @@ watch(messages, () => {
   width: 100%;
   padding: 10px;
   background: var(--accent-gradient);
-  color: white;
+  color: #000000;
   border: none;
   border-radius: 8px;
   font-size: 0.9rem;
