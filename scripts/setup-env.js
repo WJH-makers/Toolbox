@@ -151,7 +151,7 @@ async function getScriptMasterPassword() {
         try {
             const smp = fs.readFileSync(SCRIPT_MASTER_PASSWORD_FILE, 'utf8').trim();
             if (smp) {
-                console.log(`\n\x1b[32mINFO:\x1b[0m 已从文件 ${SCRIPT_MASTER_PASSWORD_FILE} 加载脚本主密码。`);
+                console.log(`\n\x1b[32mINFO:\x1b[0m 脚本主密码已成功加载。`);
                 return smp;
             } else {
                 console.warn(`\n\x1b[33m警告:\x1b[0m 文件 ${SCRIPT_MASTER_PASSWORD_FILE} 为空。将提示您手动输入。`);
