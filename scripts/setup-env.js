@@ -4,9 +4,7 @@ import crypto from 'crypto';
 import readline from 'readline';
 import {fileURLToPath} from 'url';
 import os from 'os';
-import mysql from 'mysql2/promise'; // 导入 mysql2 客户端
 
-// 替代 __dirname
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
@@ -17,18 +15,10 @@ const SCRIPT_MASTER_PASSWORD_FILE = path.resolve(__dirname, '.setup_master_passw
 const ALGORITHM = 'aes-256-gcm';
 const SCRIPT_INTERNAL_SALT = 'WJH-makers';
 
-// ==================================================================================
-// == 用户需要预先加密自己的密钥，并替换以下占位符。                            ==
-// == 使用 encrypt_util.js (之前提供) 和您选择的“脚本主密码”进行加密。       ==
-// ==================================================================================
-const PRESET_DB_USER = "user";
-const PRESET_DB_NAME = "toolbox";
-const PRESET_DB_PASSWORD = "password";
-const PRESET_DB_HOST = "localhost";
-const PRESET_DB_PORT = "3306";
+const PRESET_DATABASE_URL = "prisma+postgres://accelerate.prisma-data.net/?api_key=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhcGlfa2V5IjoiMDFKWDJRRzA0QzQ1M1I0NEEzNTFIRVE1QjUiLCJ0ZW5hbnRfaWQiOiIxOWFlNThmNzVmOGEzMjM1MmRlZWNkYmZiOGI1YTdiYmRkMTNlN2QzZGFlMzM5YzhhM2U1NTU5NGY1MjUxNzc2IiwiaW50ZXJuYWxfc2VjcmV0IjoiNjM0ZDhjMDUtZTBjYy00M2Y2LWFlMDYtYmJiY2RkNDJlZGFmIn0.lCwJC9vmzIwI1XLbNofDHi8ZZkb1_kwgryt1_ercaDk";
 
 const EMBEDDED_JWT_SECRET = "35abf104b5ebcae6b48a7233:6cd9f33df9821fd325e90c1cd02659ac:0cdb4e607ae7f9bc5cae9065bad1f126e72c039a6f5ccdfe7d21263b1cb82898f22d9e308a04a3df1c371f2e0ef1a6579af14f7169318df28e24c9c6b5e7c8b6";
-const EMBEDDED_TENCENT_SECRET_ID = "381d5ea74b81cbbf7788a0be:1f2440900a043fa8987a7ed1136f9e2e:265784a27fd358c96b7ce0243a2ada2014c9e313143a1fefd0dca57a1a11f38584212597";
+const EMBEDDED_TENCENT_SECRET_ID = "381d5ea74b81cbbf7788a0be:1f2440900a043fa8987a7ed1136f9e2e:265784a27fd358c96b7ce0243a2ada2014c9e313143a1f38584212597";
 const EMBEDDED_TENCENT_SECRET_KEY = "31bbe2f2980ff822d54a7716:74ac8716951b2e18969b357538908a49:6c8f1cb26c0737be06f1e481d3e99535ddc069cec76c12d44c353d201e23a44a";
 const PRESET_TENCENT_TRANSLATE_REGION = "ap-guangzhou";
 const EMBEDDED_DEEPSEEK_API_KEY = "2b8f9467cdace3bf91959968:772451bd0525394c3392ee8e80005882:298c5877a7b456b9a05cbfb424eb1ab482db8842488f9051fd7c4aa860fd15475a9124";
@@ -110,7 +100,6 @@ function askQuestion(query, defaultValue = null, isPassword = false) {
                         if (!originalRawMode) { // 仅在之前设置了原始模式时恢复
                             process.stdin.setRawMode(false);
                         }
-                        // process.stdin.pause(); // 让 readline 全局实例管理 pause/resume
                         process.stdout.write(EOL);
                         cb(buffer);
                         break;
@@ -122,10 +111,6 @@ function askQuestion(query, defaultValue = null, isPassword = false) {
                     case "\b":
                         if (buffer.length > 0) {
                             buffer = buffer.slice(0, -1);
-                            // process.stdout.clearLine(0); // readline.Interface 不导出此方法
-                            // process.stdout.cursorTo(0);
-                            // process.stdout.write(q + '*'.repeat(buffer.length));
-                            // 更兼容的退格处理方式
                             process.stdout.write('\b \b');
                         }
                         break;
@@ -202,106 +187,20 @@ async function setupEnv() {
     }
     let envContent = fs.readFileSync(exampleEnvPath, 'utf8');
 
-    let appDbUser, appDbPassword, appDbName, appDbHost, appDbPort, appShadowDbName;
     let jwtSecretPlain;
     let deepseekApiKeyPlain, deepseekBaseUrl;
     let tencentSecretIdPlain, tencentSecretKeyPlain, tencentRegion;
     let mairuiApiLicencePlain, mairuiBaseUrl;
 
-    console.log('\n--- 1. 应用程序数据库信息配置 ---');
-    if (configMode === '1') {
-        console.log('将使用脚本内嵌的预设值配置应用程序数据库信息。');
-        appDbUser = PRESET_DB_USER;
-        appDbPassword = PRESET_DB_PASSWORD;
-        appDbName = PRESET_DB_NAME;
-        appDbHost = PRESET_DB_HOST;
-        appDbPort = PRESET_DB_PORT;
-        appShadowDbName = `${appDbName}_shadow`;
-        if (appDbPassword === PRESET_DB_PASSWORD) {
-            console.warn("\x1b[33m警告:\x1b[0m 数据库密码未能从脚本内嵌的加密值中解密，已使用固定预设明文值。请确认此密码是否正确，或检查脚本主密码及内嵌加密值。");
-        }
-    } else {
-        console.log('请输入您希望应用程序使用的数据库信息:');
-        appDbName = await askQuestion('应用主数据库名称', PRESET_DB_NAME);
-        appDbUser = await askQuestion('应用数据库用户名', PRESET_DB_USER);
-        const defaultAppDbPassword = PRESET_DB_PASSWORD;
-        appDbPassword = await askQuestion('应用数据库密码', defaultAppDbPassword, true);
-        appDbHost = await askQuestion('应用连接MySQL的主机名', PRESET_DB_HOST);
-        appDbPort = await askQuestion('应用连接MySQL的端口号', PRESET_DB_PORT);
-        appShadowDbName = await askQuestion('应用影子数据库名称', `${appDbName}_shadow`);
-    }
-
-    const attemptDbCreation = await askQuestion(`\n脚本是否尝试使用MySQL管理员权限为您创建数据库 '${appDbName}', '${appShadowDbName}' 和用户 '${appDbUser}'@'${appDbHost}' (如果它们不存在) 并授予权限? (Y/N)`, 'Y');
-
-    if (attemptDbCreation.toLowerCase() === 'y') {
-        console.log('\n\x1b[33m警告: 接下来将要求您提供MySQL的管理员凭据 (例如root用户)。\x1b[0m');
-        console.log('这些管理员凭据仅用于执行建库、建用户和授权操作，不会以任何形式存储。');
-        const adminDbHost = await askQuestion('请输入您的MySQL服务器主机名 (用于管理员连接)', appDbHost);
-        const adminDbPortInput = await askQuestion('请输入您的MySQL服务器端口号 (用于管理员连接)', appDbPort);
-        const adminDbPortValidated = parseInt(adminDbPortInput, 10);
-        const adminUser = await askQuestion('请输入您的MySQL管理员用户名 (例如 root)');
-        const adminPassword = await askQuestion('请输入您的MySQL管理员密码', null, true);
-
-        let adminConn;
-        try {
-            adminConn = await mysql.createConnection({
-                host: adminDbHost, port: adminDbPortValidated, user: adminUser, password: adminPassword,
-            });
-            console.log('\x1b[32m成功连接到MySQL (作为管理员)。\x1b[0m');
-
-            console.log(`  正在尝试创建数据库 \`${appDbName}\` (如果不存在)...`);
-            await adminConn.execute(`CREATE DATABASE IF NOT EXISTS \`${appDbName}\` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;`);
-            console.log(`  数据库 \`${appDbName}\` 已确保存在。`);
-
-            console.log(`  正在尝试创建影子数据库 \`${appShadowDbName}\` (如果不存在)...`);
-            await adminConn.execute(`CREATE DATABASE IF NOT EXISTS \`${appShadowDbName}\` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;`);
-            console.log(`  影子数据库 \`${appShadowDbName}\` 已确保存在。`);
-
-            console.log(`  正在尝试创建/更新用户 '${appDbUser}'@'${appDbHost}' 并设置密码...`);
-            // @ts-ignore
-            try {
-                await adminConn.execute(`CREATE USER '${appDbUser}'@'${appDbHost}' IDENTIFIED BY '${appDbPassword}';`);
-                console.log(`  用户 '${appDbUser}'@'${appDbHost}' 已成功创建。`);
-            } catch (createUserError) {
-                if (createUserError.code === 'ER_CANNOT_USER' || createUserError.message.includes('already exists') || createUserError.code === 'ER_USER_ALREADY_EXISTS') {
-                    console.log(`  用户 '${appDbUser}'@'${appDbHost}' 可能已存在，尝试更新密码...`);
-                    await adminConn.execute(`ALTER USER '${appDbUser}'@'${appDbHost}' IDENTIFIED BY '${appDbPassword}';`);
-                    console.log(`  用户 '${appDbUser}'@'${appDbHost}' 密码已更新。`);
-                } else {
-                    throw createUserError;
-                }
-            }
-
-            console.log(`  正在为用户 '${appDbUser}'@'${appDbHost}' 授予对 \`${appDbName}\` 的所有权限...`);
-            await adminConn.execute(`GRANT ALL PRIVILEGES ON \`${appDbName}\`.* TO '${appDbUser}'@'${appDbHost}';`);
-            console.log('  主数据库权限已授予。');
-
-            console.log(`  正在为用户 '${appDbUser}'@'${appDbHost}' 授予对 \`${appShadowDbName}\` 的所有权限...`);
-            await adminConn.execute(`GRANT ALL PRIVILEGES ON \`${appShadowDbName}\`.* TO '${appDbUser}'@'${appDbHost}';`);
-            console.log('  影子数据库权限已授予。');
-
-            await adminConn.execute('FLUSH PRIVILEGES;');
-            console.log('\x1b[32m数据库、用户创建和授权操作已成功执行。\x1b[0m');
-
-        } catch (err) {
-            console.error('\n\x1b[31m错误：在尝试自动创建数据库/用户时发生错误。\x1b[0m');
-            console.error(`  错误信息: ${err.message}`);
-            console.log('  请检查您提供的MySQL管理员凭据、MySQL服务器状态及网络访问，以及管理员权限。');
-            console.log('  您可能需要参照脚本之前提供的SQL示例，手动执行数据库创建和用户授权操作。');
-            await askQuestion('按 Enter键 继续配置.env文件 (数据库连接可能仍然失败)...');
-        } finally {
-            if (adminConn) {
-                await adminConn.end();
-                console.log('与MySQL的管理员连接已关闭。');
-            }
-        }
-    } else {
-        console.log('\n脚本将不会尝试自动创建数据库或用户。');
-        console.log(`请确保您已手动创建数据库 '${appDbName}', '${appShadowDbName}' 及用户 '${appDbUser}'@'${appDbHost}' 并授予了相应权限。`);
-    }
+    console.log('\n--- 1. 应用程序数据库信息配置 (Prisma Accelerate) ---');
+    console.log('将直接使用预设的 Prisma Accelerate 数据库 URL。');
+    const databaseUrlFinal = PRESET_DATABASE_URL;
+    console.log(`主数据库 URL: \x1b[36m${databaseUrlFinal.substring(0, 50)}...\x1b[0m`);
+    console.log('\n\x1b[32mINFO:\x1b[0m 数据库 URL 已配置。请确保这些 URL 指向正确的 Prisma Accelerate 实例。\x1b[0m');
+    console.log('注意：此脚本不会为您创建云数据库。您需要确保 Prisma Accelerate 实例已在云端设置并正常工作。');
 
     if (configMode === '1' && !scriptPassword) {
-        console.warn("\x1b[33m警告:\x1b[0m 由于未提供脚本主密码，默认模式下部分敏感预设值（如数据库密码、API密钥等）可能为空或使用了固定明文，除非它们有非加密的固定预设。");
+        console.warn("\x1b[33m警告:\x1b[0m 由于未提供脚本主密码，默认模式下部分敏感预设值（如 API密钥等）可能为空或使用了固定明文，除非它们有非加密的固定预设。");
     }
 
     // --- 后续的 JWT, API密钥等配置 ---
@@ -345,10 +244,8 @@ async function setupEnv() {
         mairuiBaseUrl = await askQuestion('请输入 Mairui API Base URL', PRESET_MAIRUI_BASE_URL);
     }
 
-    const dbUrlFinal = `mysql://${appDbUser}:${encodeURIComponent(appDbPassword || '')}@${appDbHost}:${appDbPort}/${appDbName}`;
-    const shadowDbUrlFinal = `mysql://${appDbUser}:${encodeURIComponent(appDbPassword || '')}@${appDbHost}:${appDbPort}/${appShadowDbName}`;
-    envContent = envContent.replace(/^DATABASE_URL=".*?"/m, `DATABASE_URL="${dbUrlFinal}"`);
-    envContent = envContent.replace(/^SHADOW_DATABASE_URL=".*?"/m, `SHADOW_DATABASE_URL="${shadowDbUrlFinal}"`);
+    // 替换 .env 文件中的 DATABASE_URL 和 SHADOW_DATABASE_URL
+    envContent = envContent.replace(/^DATABASE_URL=".*?"/m, `DATABASE_URL="${databaseUrlFinal}"`);
 
     console.log('\n--- 6. .env 文件敏感信息加密选项 ---');
     const encryptEnvChoice = await askQuestion(`是否使用 APP_MASTER_KEY 加密 .env 文件中的 API 密钥和 JWT Secret? (Y/N)`, 'N');
@@ -367,11 +264,13 @@ async function setupEnv() {
         secretKeysConfig.forEach(secret => {
             const valueToEncrypt = secret.value || "";
             envContent = envContent.replace(new RegExp(`^${secret.encrypted}=".*?"`, "m"), `${secret.encrypted}="${encryptForEnv(valueToEncrypt, appMasterKey)}"`);
+            // 确保移除明文变量，只保留加密变量
             envContent = envContent.replace(new RegExp(`^${secret.plain}=".*?"\r?\n?`, "gm"), '');
         });
     } else {
         console.log('敏感信息将以明文形式存入 .env 文件。');
         secretKeysConfig.forEach(secret => {
+            // 确保移除加密变量，只保留明文变量
             envContent = envContent.replace(new RegExp(`^${secret.plain}=".*?"`, "m"), `${secret.plain}="${secret.value || ''}"`);
             envContent = envContent.replace(new RegExp(`^${secret.encrypted}=".*?"\r?\n?`, "gm"), '');
         });
@@ -381,6 +280,7 @@ async function setupEnv() {
     envContent = envContent.replace(/^TENCENT_TRANSLATE_REGION=".*?"/m, `TENCENT_TRANSLATE_REGION="${tencentRegion || PRESET_TENCENT_TRANSLATE_REGION}"`);
     envContent = envContent.replace(/^MAIRUI_BASE_URL=".*?"/m, `MAIRUI_BASE_URL="${mairuiBaseUrl || PRESET_MAIRUI_BASE_URL}"`);
 
+    // 移除多余的空行，并确保文件末尾有一个换行符
     envContent = envContent.replace(/(\r?\n){2,}/g, '\n\n').trim();
     fs.writeFileSync(envPath, envContent + '\n', 'utf8');
 
@@ -392,8 +292,7 @@ async function setupEnv() {
         console.log('\n提示：您的敏感密钥已以明文形式保存在 .env 文件中。请确保此文件不会提交到版本控制系统。');
     }
     console.log('\n下一步操作建议:');
-    console.log('1. \x1b[1m请再次确认\x1b[0m 您在MySQL中实际创建/配置的数据库、用户、密码以及主机设置，与刚刚配置到 `.env` 文件中的信息完全一致。');
-    console.log(`   特别是用户 \x1b[36m'${appDbUser || '未配置'}'@'${appDbHost || '未配置'}'\x1b[0m 是否有权访问数据库 \x1b[36m'${appDbName || '未配置'}'\x1b[0m 和 \x1b[36m'${appShadowDbName || '未配置'}'\x1b[0m。`);
+    console.log('1. \x1b[1m请确保\x1b[0m 您的 Prisma Accelerate 实例已在云端设置并正常工作，并且您提供的 URL 是正确的。');
     console.log('2. 运行数据库迁移: \x1b[32mnpx prisma migrate dev --name init\x1b[0m (如果是首次)');
     console.log(`3. \x1b[1m首先设置好 \x1b[33mAPP_MASTER_KEY\x1b[0m 环境变量 (如果选择了加密.env文件)\x1b[0m, 然后启动开发服务器: \x1b[32mnpm run dev\x1b[0m`);
 
