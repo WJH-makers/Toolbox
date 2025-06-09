@@ -154,10 +154,10 @@ async function getScriptMasterPassword() {
                 console.log(`\n\x1b[32mINFO:\x1b[0m 已从文件 ${SCRIPT_MASTER_PASSWORD_FILE} 加载脚本主密码。`);
                 return smp;
             } else {
-                console.warn(`\n\x1b[33m警告:\x1b[0m 文件 ${SCRIPT_MASTER_PASSWORD_FILE} 为空。将提示您手动输入。`);
+                console.warn(`\n\x1b[33m警告:\x1b[0m 脚本主密码文件为空。将提示您手动输入。`);
             }
         } catch (err) {
-            console.warn(`\n\x1b[33m警告:\x1b[0m 读取文件 ${SCRIPT_MASTER_PASSWORD_FILE} 失败: ${err.message}。将提示您手动输入。`);
+            console.warn(`\n\x1b[33m警告:\x1b[0m 读取脚本主密码文件失败: ${err.message}。将提示您手动输入。`);
         }
     }
     console.log(`\n提示: 您可以将脚本主密码存储在与此脚本同目录下的名为 \x1b[36m.setup_master_password.key\x1b[0m 的文件中`);
