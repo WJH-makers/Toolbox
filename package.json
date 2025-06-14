@@ -2,13 +2,16 @@
   "name": "nuxt-app",
   "private": true,
   "type": "module",
+  "version": "0.0.0",
   "scripts": {
     "setup": "node scripts/setup-env.js",
     "build": "nuxt build",
     "dev": "nuxt dev",
     "generate": "nuxt generate",
     "preview": "nuxt preview",
-    "postinstall": "nuxt prepare"
+    "postinstall": "nuxt prepare",
+    "prepare": "npx husky",
+    "release": "npx standard-version"
   },
   "dependencies": {
     "@codemirror/commands": "^6.8.1",
