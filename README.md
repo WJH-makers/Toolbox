@@ -176,7 +176,7 @@ npx prisma migrate dev
 Prisma Client 是一个类型安全的数据库查询构建器，允许您的应用程序与数据库交互。虽然上一步的 `prisma migrate dev` **通常会自动触发 Prisma Client 的生成**，但如果需要手动更新或确保它是最新的，可以运行：
 
 ```bash
-npx prisma generate
+npx prisma generate --no-engine
 
 ```
 
