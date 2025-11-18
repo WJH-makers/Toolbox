@@ -76,14 +76,14 @@ function onDrop(e) {
       @drop.prevent="onDrop"
     >
       <input 
-        type="file"
         id="qrInput"
+        type="file"
         accept="image/*"
-        @change="onFileChange"
         hidden
-      />
+        @change="onFileChange"
+      >
       <label for="qrInput" class="upload-label">
-        <div v-if="isLoading" class="loading-spinner"></div>
+        <div v-if="isLoading" class="loading-spinner"/>
         <template v-else>
           <svg class="upload-icon" viewBox="0 0 24 24">
             <path d="M19 13v6a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2v-6M12 3v14m0 0 4-4m-4 4-4-4"/>
@@ -97,8 +97,8 @@ function onDrop(e) {
     </div>
 
     <div v-if="imagePreview" class="preview-section">
-      <img :src="imagePreview" class="preview-image" alt="二维码预览"/>
-      <button @click="imagePreview = null" class="close-button">
+      <img :src="imagePreview" class="preview-image" alt="二维码预览">
+      <button class="close-button" @click="imagePreview = null">
         <svg viewBox="0 0 24 24" width="16" height="16">
           <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
         </svg>
@@ -107,13 +107,13 @@ function onDrop(e) {
 
     <div v-if="errorMessage" class="error-message">
       {{ errorMessage }}
-      <button @click="errorMessage = ''" class="dismiss-button">×</button>
+      <button class="dismiss-button" @click="errorMessage = ''">×</button>
     </div>
 
     <div v-if="codeVal" class="result-section">
       <h3>识别结果：</h3>
       <div class="result-content">{{ codeVal }}</div>
-      <button @click="codeVal = ''" class="clear-button">清空结果</button>
+      <button class="clear-button" @click="codeVal = ''">清空结果</button>
     </div>
   </div>
 </template>

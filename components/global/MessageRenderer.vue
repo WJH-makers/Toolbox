@@ -1,7 +1,8 @@
 <template>
   <div class="doc-viewer relative w-full">
     <transition name="fade">
-      <div v-if="isProcessing"
+      <div
+v-if="isProcessing"
            class="absolute top-0 right-0 bg-white/90 px-2 py-1 rounded text-xs text-blue-500 z-10 border border-blue-100">
         渲染中...
       </div>
@@ -11,7 +12,7 @@
         ref="containerRef"
         class="markdown-body prose prose-slate max-w-none break-words mjx-container"
         v-html="renderedHtml"
-    ></div>
+    />
   </div>
 </template>
 
@@ -53,6 +54,7 @@ const executeRender = async () => {
     // 3. MathJax 排版
     // 这是一个异步操作，会寻找 .mjx-process 类的元素进行渲染
     if (containerRef.value) {
+      mathJaxService.clear(containerRef.value);
       await mathJaxService.typeset(containerRef.value);
     }
   } catch (error) {
@@ -67,6 +69,7 @@ const executeRender = async () => {
 // 避免在流式输出时过于频繁地触发重排版
 watch(() => props.content, () => {
   clearTimeout(debounceTimer);
+  isProcessing.value = true;
   debounceTimer = setTimeout(executeRender, 150); // 150ms 防抖
 }, { immediate: true });
 

@@ -34,7 +34,7 @@ export function useThemeManager() {
         _currentTheme.value = themeName;
         try {
             localStorage.setItem('theme', themeName);
-        } catch (e) {
+        } catch (e) { // eslint-disable-line no-unused-vars
             console.warn('LocalStorage is not available for saving theme preference.');
         }
     };
@@ -63,7 +63,7 @@ export function useThemeManager() {
                     initialTheme = 'dark';
                 }
             }
-        } catch (e) {
+        } catch (e) { // eslint-disable-line no-unused-vars
             let systemPrefersDarkOnError = false;
             if (typeof window.matchMedia === 'function') {
                 systemPrefersDarkOnError = window.matchMedia('(prefers-color-scheme: dark)').matches;

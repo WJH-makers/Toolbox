@@ -31,7 +31,7 @@ export default defineEventHandler(async (event) => {
 
     try {
         apiResponse = await $fetch(searchUrl, {method: 'GET'});
-    } catch (error) {
+    } catch (error) { // eslint-disable-line no-unused-vars
         throw createError({statusCode: 500, statusMessage: '从 TheMealDB (搜索) 获取食谱失败'});
     }
 

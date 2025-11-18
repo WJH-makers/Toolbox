@@ -7,7 +7,8 @@
         <div class="form-item">
           <label for="mainHeight">📏 身高</label>
           <div class="input-group">
-            <input id="mainHeight" v-model.number="mainHeightValue"
+            <input
+id="mainHeight" v-model.number="mainHeightValue"
                    :disabled="heightUnit === 'ft' || isLoadingSearch"
                    :placeholder="mainHeightPlaceholder"
                    required step="0.1" type="number">
@@ -24,7 +25,8 @@
               <span class="unit-label">英尺</span>
             </div>
             <div class="form-item-inline input-group">
-              <input v-model.number="heightInchesFt" class="inches-input" max="11.9" min="0" placeholder="英寸" step="0.1"
+              <input
+v-model.number="heightInchesFt" class="inches-input" max="11.9" min="0" placeholder="英寸" step="0.1"
                      type="number">
               <span class="unit-label">英寸</span>
             </div>
@@ -71,7 +73,7 @@
             maxlength="50"
             placeholder="记录一些额外信息..."
             rows="3"
-        ></textarea>
+        />
         <div :class="{ 'limit-reached': notesValue.length >= 50 }" class="char-counter">
           {{ notesValue.length }} / 50
         </div>
@@ -79,7 +81,7 @@
 
       <div class="calculate-button-wrapper">
         <button :disabled="isCalculating" class="button calculate-button" type="submit">
-          <span v-if="isCalculating" class="button-spinner"></span>
+          <span v-if="isCalculating" class="button-spinner"/>
           {{ isCalculating ? '计算中...' : '计算 BMI' }}
         </button>
       </div>
@@ -101,7 +103,7 @@
           :disabled="isSavingRecord || !canSaveRecord"
           class="button button-success button-save-record"
           @click="saveCurrentRecord">
-        <span v-if="isSavingRecord" class="button-spinner"></span>
+        <span v-if="isSavingRecord" class="button-spinner"/>
         {{ isSavingRecord ? '保存中...' : '保存本次记录' }}
       </button>
       <p v-if="saveMessage" class="alert alert-success save-message">{{ saveMessage }}</p>
@@ -138,9 +140,10 @@
     <div class="history-section card">
       <h3><span class="icon">📜</span> BMI 历史记录</h3>
       <div class="history-controls">
-        <button :disabled="isLoadingHistory" class="button button-secondary button-refresh-history"
+        <button
+:disabled="isLoadingHistory" class="button button-secondary button-refresh-history"
                 @click="fetchHistory">
-          <span v-if="isLoadingHistory && historicalData.length === 0" class="button-spinner"></span>
+          <span v-if="isLoadingHistory && historicalData.length === 0" class="button-spinner"/>
           {{ isLoadingHistory && historicalData.length === 0 ? '加载中...' : '刷新历史记录' }}
         </button>
       </div>

@@ -9,10 +9,11 @@
         <h4>1. 选择方程和求解方法</h4>
         <div class="form-item">
           <label for="equation-select">选择超越方程
-            <KatexRenderer tex="f(x)=0" :displayMode="false"/>
+            <KatexRenderer tex="f(x)=0" :display-mode="false"/>
             :</label>
-          <select id="equation-select" v-model="selectedEquationKey" @change="initializeEquation"
-                  class="control-select">
+          <select
+id="equation-select" v-model="selectedEquationKey" class="control-select"
+                  @change="initializeEquation">
             <option value="cos_x_minus_x">cos x - x = 0</option>
             <option value="x_exp_x_minus_c">e^x - C = 0</option>
             <option value="x_ln_x_minus_c">x ln(x) - C = 0 (x > 0)</option>
@@ -21,36 +22,43 @@
         </div>
         <div class="form-item">
           <label for="method-select">选择求解方法:</label>
-          <select id="method-select" v-model="selectedMethod" @change="resetSolverInternal(false)"
-                  class="control-select">
+          <select
+id="method-select" v-model="selectedMethod" class="control-select"
+                  @change="resetSolverInternal(false)">
             <option value="newton">牛顿-拉弗森法 (Newton-Raphson)</option>
             <option value="bisection">二分法 (Bisection)</option>
           </select>
         </div>
         <transition name="fade-fast">
-          <div v-if="currentEquationDetails && currentEquationDetails.needsConstantC"
+          <div
+v-if="currentEquationDetails && currentEquationDetails.needsConstantC"
                class="form-item param-input-group">
             <label for="constant-c">常数 C:</label>
-            <input id="constant-c" v-model.number="equationParams.C" type="number" step="0.1"
+            <input
+id="constant-c" v-model.number="equationParams.C" type="number" step="0.1"
                    class="control-input-number">
           </div>
         </transition>
         <transition name="fade-fast">
-          <div v-if="currentEquationDetails && currentEquationDetails.needsConstABD"
+          <div
+v-if="currentEquationDetails && currentEquationDetails.needsConstABD"
                class="param-input-group form-item-columns">
             <div class="form-item">
               <label for="constant-a-eq">常数 A:</label>
-              <input id="constant-a-eq" v-model.number="equationParams.A_const" type="number" step="0.1"
+              <input
+id="constant-a-eq" v-model.number="equationParams.A_const" type="number" step="0.1"
                      class="control-input-number">
             </div>
             <div class="form-item">
               <label for="constant-b-eq">常数 B:</label>
-              <input id="constant-b-eq" v-model.number="equationParams.B_const" type="number" step="0.1"
+              <input
+id="constant-b-eq" v-model.number="equationParams.B_const" type="number" step="0.1"
                      class="control-input-number">
             </div>
             <div class="form-item">
               <label for="constant-d-eq">常数 D:</label>
-              <input id="constant-d-eq" v-model.number="equationParams.D_const" type="number" step="0.1"
+              <input
+id="constant-d-eq" v-model.number="equationParams.D_const" type="number" step="0.1"
                      class="control-input-number">
             </div>
           </div>
@@ -63,62 +71,69 @@
           <div v-if="selectedMethod === 'newton'" :key="'newton-params'">
             <div class="form-item">
               <label for="newton-x0">初始猜测值
-                <KatexRenderer tex="x_0" :displayMode="false"/>
+                <KatexRenderer tex="x_0" :display-mode="false"/>
                 :</label>
-              <input id="newton-x0" v-model.number="newtonParams.x0" type="number" step="0.1"
+              <input
+id="newton-x0" v-model.number="newtonParams.x0" type="number" step="0.1"
                      class="control-input-number">
             </div>
           </div>
           <div v-else-if="selectedMethod === 'bisection'" :key="'bisection-params'" class="form-item-columns">
             <div class="form-item">
               <label for="bisection-a">区间左端点
-                <KatexRenderer tex="a" :displayMode="false"/>
+                <KatexRenderer tex="a" :display-mode="false"/>
                 :</label>
-              <input id="bisection-a" v-model.number="bisectionParams.a" type="number" step="0.1"
+              <input
+id="bisection-a" v-model.number="bisectionParams.a" type="number" step="0.1"
                      class="control-input-number">
             </div>
             <div class="form-item">
               <label for="bisection-b">区间右端点
-                <KatexRenderer tex="b" :displayMode="false"/>
+                <KatexRenderer tex="b" :display-mode="false"/>
                 :</label>
-              <input id="bisection-b" v-model.number="bisectionParams.b" type="number" step="0.1"
+              <input
+id="bisection-b" v-model.number="bisectionParams.b" type="number" step="0.1"
                      class="control-input-number">
             </div>
-            <p v-if="!isBisectionBracketValid && bisectionParams.a !== null && bisectionParams.b !== null"
+            <p
+v-if="!isBisectionBracketValid && bisectionParams.a !== null && bisectionParams.b !== null"
                class="error-text form-item-full-width">
               注意:
-              <KatexRenderer tex="f(a)" :displayMode="false"/>
+              <KatexRenderer tex="f(a)" :display-mode="false"/>
               和
-              <KatexRenderer tex="f(b)" :displayMode="false"/>
+              <KatexRenderer tex="f(b)" :display-mode="false"/>
               必须异号！当前
-              <KatexRenderer :tex="`f(a) \\approx ${currentFa.toFixed(4)}`" :displayMode="false"/>
+              <KatexRenderer :tex="`f(a) \\approx ${currentFa.toFixed(4)}`" :display-mode="false"/>
               ,
-              <KatexRenderer :tex="`f(b) \\approx ${currentFb.toFixed(4)}`" :displayMode="false"/>
+              <KatexRenderer :tex="`f(b) \\approx ${currentFb.toFixed(4)}`" :display-mode="false"/>
             </p>
           </div>
         </transition>
         <div class="form-item-columns">
           <div class="form-item">
             <label for="max-iterations">最大迭代次数:</label>
-            <input id="max-iterations" v-model.number="solverParams.maxIterations" type="number" min="1" max="1000"
+            <input
+id="max-iterations" v-model.number="solverParams.maxIterations" type="number" min="1" max="1000"
                    step="1" class="control-input-number">
           </div>
           <div class="form-item">
             <label for="tolerance">容差 (
-              <KatexRenderer tex="\epsilon" :displayMode="false"/>
+              <KatexRenderer tex="\epsilon" :display-mode="false"/>
               ):</label>
-            <input id="tolerance" v-model.number="solverParams.tolerance" type="number" min="1e-10" max="1e-1"
+            <input
+id="tolerance" v-model.number="solverParams.tolerance" type="number" min="1e-10" max="1e-1"
                    step="1e-5" class="control-input-number">
           </div>
         </div>
       </div>
 
       <div class="simulation-actions">
-        <button class="button button-primary" @click="startFullIteration" :disabled="isSolving">
+        <button class="button button-primary" :disabled="isSolving" @click="startFullIteration">
           <span class="button-icon">▶️</span>开始求解
         </button>
-        <button class="button button-info" @click="stepIteration"
-                :disabled="isSolving || (iterationHistory.length > 0 && iterationHistory[iterationHistory.length-1].converged)">
+        <button
+class="button button-info" :disabled="isSolving || (iterationHistory.length > 0 && iterationHistory[iterationHistory.length-1].converged)"
+                @click="stepIteration">
           <span class="button-icon">➡️</span>单步迭代
         </button>
         <button class="button button-secondary" @click="resetSolver">
@@ -130,26 +145,30 @@
     <div class="visualization-section card">
       <h4>
         函数图像与迭代点
-        <span class="subtitle-katex">(<KatexRenderer tex="y = f(x)" :displayMode="false"/>
+        <span class="subtitle-katex">(<KatexRenderer tex="y = f(x)" :display-mode="false"/>
         <template v-if="currentEquationDetails && currentEquationDetails.g_x_str && currentEquationDetails.h_x_str">
-          或 <KatexRenderer :tex="`y=${currentEquationDetails.g_x_str}`" :displayMode="false"/> 与 <KatexRenderer
-            :tex="`y=${currentEquationDetails.h_x_str}`" :displayMode="false"/>
+          或 <KatexRenderer :tex="`y=${currentEquationDetails.g_x_str}`" :display-mode="false"/> 与 <KatexRenderer
+            :tex="`y=${currentEquationDetails.h_x_str}`" :display-mode="false"/>
         </template>
         )</span>
       </h4>
-      <canvas ref="solverCanvas" :width="canvasWidth" :height="canvasHeight"></canvas>
+      <canvas ref="solverCanvas" :width="canvasWidth" :height="canvasHeight"/>
       <div class="form-item view-range-controls">
         <label for="x-view-min">X轴范围:</label>
-        <input id="x-view-min" v-model.number="xViewRange.min" type="number" step="0.5"
+        <input
+id="x-view-min" v-model.number="xViewRange.min" type="number" step="0.5"
                class="control-input-number short">
         <span>到</span>
-        <input id="x-view-max" v-model.number="xViewRange.max" type="number" step="0.5"
+        <input
+id="x-view-max" v-model.number="xViewRange.max" type="number" step="0.5"
                class="control-input-number short">
         <label for="y-view-min" class="range-label-y">Y轴范围:</label>
-        <input id="y-view-min" v-model.number="yViewRange.min" type="number" step="0.5"
+        <input
+id="y-view-min" v-model.number="yViewRange.min" type="number" step="0.5"
                class="control-input-number short">
         <span>到</span>
-        <input id="y-view-max" v-model.number="yViewRange.max" type="number" step="0.5"
+        <input
+id="y-view-max" v-model.number="yViewRange.max" type="number" step="0.5"
                class="control-input-number short">
       </div>
     </div>
@@ -163,25 +182,26 @@
             <tr>
               <th>步骤</th>
               <th>
-                <KatexRenderer tex="x_k" :displayMode="false"/>
+                <KatexRenderer tex="x_k" :display-mode="false"/>
               </th>
               <th v-if="selectedMethod === 'bisection'">
-                <KatexRenderer tex="a_k" :displayMode="false"/>
+                <KatexRenderer tex="a_k" :display-mode="false"/>
               </th>
               <th v-if="selectedMethod === 'bisection'">
-                <KatexRenderer tex="b_k" :displayMode="false"/>
+                <KatexRenderer tex="b_k" :display-mode="false"/>
               </th>
               <th>
-                <KatexRenderer tex="f(x_k)" :displayMode="false"/>
+                <KatexRenderer tex="f(x_k)" :display-mode="false"/>
               </th>
               <th>
-                <KatexRenderer tex="|x_k - x_{k-1}|" :displayMode="false"/>
+                <KatexRenderer tex="|x_k - x_{k-1}|" :display-mode="false"/>
               </th>
               <th>状态</th>
             </tr>
             </thead>
             <tbody>
-            <tr v-for="(item, index) in iterationHistory" :key="index"
+            <tr
+v-for="(item, index) in iterationHistory" :key="index"
                 :class="{highlighted: index === iterationHistory.length -1 && !item.converged, 'final-converged': item.converged && index === iterationHistory.length -1 }">
               <td>{{ item.iter }}</td>
               <td>{{ item.xk.toFixed(solverParams.displayPrecision) }}</td>
@@ -203,11 +223,13 @@
             </tbody>
           </table>
         </div>
-        <p v-if="currentRoot !== null && iterationHistory.length > 0 && iterationHistory[iterationHistory.length-1].converged && !iterationHistory[iterationHistory.length-1].maxIterReached"
+        <p
+v-if="currentRoot !== null && iterationHistory.length > 0 && iterationHistory[iterationHistory.length-1].converged && !iterationHistory[iterationHistory.length-1].maxIterReached"
            class="final-root-display">
           <strong>最终近似根:
-            <KatexRenderer :tex="`x \\approx ${currentRoot.toFixed(solverParams.displayPrecision)}`"
-                           :displayMode="false"/>
+            <KatexRenderer
+:tex="`x \\approx ${currentRoot.toFixed(solverParams.displayPrecision)}`"
+                           :display-mode="false"/>
           </strong>
           (在 {{ iterationHistory.length }} 次迭代后找到)
         </p>
@@ -219,37 +241,37 @@
         <div :key="selectedEquationKey + selectedMethod">
           <h4>
             当前方程:
-            <KatexRenderer :tex="currentEquationDetails?.label || ''" :displayMode="false"/>
+            <KatexRenderer :tex="currentEquationDetails?.label || ''" :display-mode="false"/>
           </h4>
-          <p v-html="renderHtmlWithInlineKatex(currentEquationDetails?.description || '')"></p>
+          <p v-html="renderHtmlWithInlineKatex(currentEquationDetails?.description || '')"/>
           <div v-if="selectedMethod === 'newton'">
             <h5>牛顿-拉弗森法 (Newton-Raphson):</h5>
             <p>迭代公式:</p>
-            <KatexRenderer tex="x_{k+1} = x_k - \frac{f(x_k)}{f'(x_k)}" :displayMode="true"/>
+            <KatexRenderer tex="x_{k+1} = x_k - \frac{f(x_k)}{f'(x_k)}" :display-mode="true"/>
             <p><span
-                v-html="renderHtmlWithInlineKatex('其中 $x_k$ 是第 $k$ 次迭代的近似值, $f(x_k)$ 是函数在 $x_k$ 处的值, $f\'(x_k)$ 是函数在 $x_k$ 处的导数值。')"></span>
+                v-html="renderHtmlWithInlineKatex('其中 $x_k$ 是第 $k$ 次迭代的近似值, $f(x_k)$ 是函数在 $x_k$ 处的值, $f\'(x_k)$ 是函数在 $x_k$ 处的导数值。')"/>
             </p>
-            <p class="method-ProsCons"><strong>优点:</strong> 收敛速度快 (通常为二次收敛)。<br/><strong>缺点:</strong>
+            <p class="method-ProsCons"><strong>优点:</strong> 收敛速度快 (通常为二次收敛)。<br><strong>缺点:</strong>
               需要计算导数；初始猜测值选取不当可能不收敛或收敛到错误的根；导数为零或接近零时可能失败。</p>
           </div>
           <div v-else-if="selectedMethod === 'bisection'">
             <h5>二分法 (Bisection Method):</h5>
             <p><span
-                v-html="renderHtmlWithInlineKatex('要求初始区间 $[a, b]$ 满足 $f(a) \\cdot f(b) < 0$ (即函数在区间两端点异号)。')"></span>
+                v-html="renderHtmlWithInlineKatex('要求初始区间 $[a, b]$ 满足 $f(a) \\cdot f(b) < 0$ (即函数在区间两端点异号)。')"/>
             </p>
             <p><span
-                v-html="renderHtmlWithInlineKatex('每次迭代计算中点 $m_k = (a_k + b_k) / 2$，并根据 $f(m_k)$ 的符号缩小区间：')"></span>
+                v-html="renderHtmlWithInlineKatex('每次迭代计算中点 $m_k = (a_k + b_k) / 2$，并根据 $f(m_k)$ 的符号缩小区间：')"/>
             </p>
             <ul>
               <li><span
-                  v-html="renderHtmlWithInlineKatex('若 $f(a_k) \\cdot f(m_k) < 0$，则新区间为 $[a_k, m_k]$。')"></span>
+                  v-html="renderHtmlWithInlineKatex('若 $f(a_k) \\cdot f(m_k) < 0$，则新区间为 $[a_k, m_k]$。')"/>
               </li>
               <li><span
-                  v-html="renderHtmlWithInlineKatex('若 $f(m_k) \\cdot f(b_k) < 0$，则新区间为 $[m_k, b_k]$。')"></span>
+                  v-html="renderHtmlWithInlineKatex('若 $f(m_k) \\cdot f(b_k) < 0$，则新区间为 $[m_k, b_k]$。')"/>
               </li>
-              <li><span v-html="renderHtmlWithInlineKatex('若 $f(m_k) = 0$，则 $m_k$ 即为根。')"></span></li>
+              <li><span v-html="renderHtmlWithInlineKatex('若 $f(m_k) = 0$，则 $m_k$ 即为根。')"/></li>
             </ul>
-            <p class="method-ProsCons"><strong>优点:</strong> 只要初始区间有效，总能保证收敛。<br/><strong>缺点:</strong>
+            <p class="method-ProsCons"><strong>优点:</strong> 只要初始区间有效，总能保证收敛。<br><strong>缺点:</strong>
               收敛速度慢 (线性收敛)；不能用于寻找偶数重根或不变号的根。</p>
           </div>
         </div>
@@ -737,7 +759,7 @@ async function iterateBisection() {
   let status = "迭代中";
   let converged = false;
   let maxIterReached = false;
-  let mk = (ak + bk) / 2; // Calculate mk early for all paths
+  const mk = (ak + bk) / 2; // Calculate mk early for all paths
 
   if ((isNaN(fak) || !Number.isFinite(fak) || isNaN(fbk) || !Number.isFinite(fbk) || fak * fbk >= 0) && iterationHistory.value.length === 0) {
     status = "失败: f(a)·f(b) < 0 未满足";

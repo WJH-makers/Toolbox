@@ -11,7 +11,7 @@
             :disabled="isLoading"
             placeholder="给待办事项起个名字..."
             type="text"
-        />
+        >
       </div>
 
       <div class="form-item">
@@ -111,7 +111,8 @@
         </div>
       </li>
     </ul>
-    <div v-if="!isLoading && !activeTodos.length && !expiredTodos.length && !completedTodos.length && !error"
+    <div
+v-if="!isLoading && !activeTodos.length && !expiredTodos.length && !completedTodos.length && !error"
          class="empty-state">
       太棒了，当前没有进行中的待办事项！
     </div>
@@ -192,7 +193,7 @@
 
         <div v-if="renderedContentHtml" class="modal-section">
           <h4>详细内容:</h4>
-          <div class="modal-text-content markdown-body" v-html="renderedContentHtml"></div>
+          <div class="modal-text-content markdown-body" v-html="renderedContentHtml"/>
         </div>
         <div v-else-if="modalItem.content" class="modal-section">
           <h4>详细内容:</h4>
@@ -208,7 +209,8 @@
           <span v-if="modalItem.startDate" class="todo-tag todo-tag-info">
             开始: {{ formatDate(modalItem.startDate, 'yyyy-MM-dd HH:mm') }}
           </span>
-          <span v-if="modalItem.endDate"
+          <span
+v-if="modalItem.endDate"
                 :class="isTodoExpired(modalItem) ? 'todo-tag-error' : 'todo-tag-info'"
                 class="todo-tag">
             结束: {{ formatDate(modalItem.endDate, 'yyyy-MM-dd HH:mm') }}

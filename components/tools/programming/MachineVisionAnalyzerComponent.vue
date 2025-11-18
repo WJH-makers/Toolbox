@@ -7,7 +7,8 @@
 
     <div class="main-layout-five-rows">
       <section class="card config-card">
-        <h3 :class="{ 'collapsible': true, 'collapsed': !sections.config.expanded }" class="section-title"
+        <h3
+:class="{ 'collapsible': true, 'collapsed': !sections.config.expanded }" class="section-title"
             @click="toggleSection('config')">
           1. 定义模型结构
           <span class="collapse-icon">{{ sections.config.expanded ? '−' : '+' }}</span>
@@ -136,7 +137,8 @@
       </section>
 
       <section class="card config-card">
-        <h3 :class="{ 'collapsible': true, 'collapsed': !sections.params.expanded }" class="section-title"
+        <h3
+:class="{ 'collapsible': true, 'collapsed': !sections.params.expanded }" class="section-title"
             @click="toggleSection('params')">
           2. 定义训练参数
           <span class="collapse-icon">{{ sections.params.expanded ? '−' : '+' }}</span>
@@ -177,7 +179,8 @@
       </section>
 
       <section class="card monitor-card">
-        <h3 :class="{ 'collapsible': true, 'collapsed': !sections.monitor.expanded }" class="section-title"
+        <h3
+:class="{ 'collapsible': true, 'collapsed': !sections.monitor.expanded }" class="section-title"
             @click="toggleSection('monitor')">
           3. 实时训练监控
           <span class="collapse-icon">{{ sections.monitor.expanded ? '−' : '+' }}</span>
@@ -201,7 +204,8 @@
       </section>
 
       <section class="card kernels-card">
-        <h3 :class="{ 'collapsible': true, 'collapsed': !sections.kernels.expanded }" class="section-title"
+        <h3
+:class="{ 'collapsible': true, 'collapsed': !sections.kernels.expanded }" class="section-title"
             @click="toggleSection('kernels')">
           4. 卷积核实时可视化 (Conv Layer 1)
           <span class="collapse-icon">{{ sections.kernels.expanded ? '−' : '+' }}</span>
@@ -219,7 +223,8 @@
       </section>
 
       <section class="card architecture-card">
-        <h3 :class="{ 'collapsible': true, 'collapsed': !sections.architecture.expanded }" class="section-title"
+        <h3
+:class="{ 'collapsible': true, 'collapsed': !sections.architecture.expanded }" class="section-title"
             @click="toggleSection('architecture')">
           5. 模型架构
           <span class="collapse-icon">{{ sections.architecture.expanded ? '−' : '+' }}</span>
@@ -817,7 +822,7 @@ function drawNetworkGraph() {
       const nodesToUpdate: Partial<VisNetworkNode>[] = [];
       const edgesToUpdate: Partial<VisNetworkEdge>[] = [];
 
-      let queue: GraphNodeData[] = modelGraphData.value.nodes.filter(node => node.parent_id === parentId);
+      const queue: GraphNodeData[] = modelGraphData.value.nodes.filter(node => node.parent_id === parentId);
       const processedNodes = new Set<string>();
 
       while (queue.length > 0) {

@@ -17,38 +17,40 @@
       </div>
 
       <transition name="fade-controls" mode="out-in">
-        <div v-if="selectedFunctionType === 'square'" class="function-specific-controls" key="square-controls">
+        <div v-if="selectedFunctionType === 'square'" key="square-controls" class="function-specific-controls">
           <div class="control-group">
             <label for="fundamental-freq" class="control-label">基波频率 (f₀): {{ fundamentalFrequency.toFixed(2) }}
               Hz</label>
-            <input id="fundamental-freq" v-model.number="fundamentalFrequency" class="slider" max="5" min="0.5"
+            <input
+id="fundamental-freq" v-model.number="fundamentalFrequency" class="slider" max="5" min="0.5"
                    step="0.1" type="range">
           </div>
           <div class="control-group">
             <label for="amplitudeSQ" class="control-label">方波振幅 (A): {{ amplitudeSquare.toFixed(1) }}</label>
-            <input id="amplitudeSQ" v-model.number="amplitudeSquare" class="slider" max="100" min="10" step="5"
+            <input
+id="amplitudeSQ" v-model.number="amplitudeSquare" class="slider" max="100" min="10" step="5"
                    type="range">
           </div>
         </div>
 
-        <div v-else-if="selectedFunctionType === 'polynomial'" class="function-specific-controls" key="poly-controls">
+        <div v-else-if="selectedFunctionType === 'polynomial'" key="poly-controls" class="function-specific-controls">
           <p class="info-text">
             定义多项式
-            <KatexRenderer tex="f(x) = c x^2 + b x + a" :displayMode="false"/>
+            <KatexRenderer tex="f(x) = c x^2 + b x + a" :display-mode="false"/>
             在区间
-            <KatexRenderer tex="[-L, L]" :displayMode="false"/>
+            <KatexRenderer tex="[-L, L]" :display-mode="false"/>
             上进行拟合。
           </p>
           <div class="poly-coeffs-grid">
             <div class="control-group">
               <label for="poly-c" class="control-label">系数 c (
-                <KatexRenderer tex="x^2" :displayMode="false"/>
+                <KatexRenderer tex="x^2" :display-mode="false"/>
                 项):</label>
               <input id="poly-c" v-model.number="polyCoeffs.c" type="number" step="0.1" class="control-input-number">
             </div>
             <div class="control-group">
               <label for="poly-b" class="control-label">系数 b (
-                <KatexRenderer tex="x" :displayMode="false"/>
+                <KatexRenderer tex="x" :display-mode="false"/>
                 项):</label>
               <input id="poly-b" v-model.number="polyCoeffs.b" type="number" step="0.1" class="control-input-number">
             </div>
@@ -59,7 +61,8 @@
           </div>
           <div class="control-group">
             <label for="display-amplitude" class="control-label">Y轴显示幅度:</label>
-            <input id="display-amplitude" v-model.number="displayAmplitude" class="slider" max="200" min="10" step="10"
+            <input
+id="display-amplitude" v-model.number="displayAmplitude" class="slider" max="200" min="10" step="10"
                    type="range">
             <span class="slider-value-display">({{ displayAmplitude }})</span>
           </div>
@@ -68,13 +71,14 @@
 
       <div class="control-group terms-control">
         <label for="num-terms" class="control-label">级数项数 (N): {{ numTerms }}</label>
-        <input id="num-terms" v-model.number="numTerms" class="slider" :max="maxSeriesTerms" min="1" step="1"
+        <input
+id="num-terms" v-model.number="numTerms" class="slider" :max="maxSeriesTerms" min="1" step="1"
                type="range">
         <span class="info-text">(N越大，拟合越精确)</span>
       </div>
       <div class="control-group info-text-calc">
         <span class="info-text">当前区间 <KatexRenderer
-            :tex="`[-L, L] \\approx [-${analysisL.toFixed(2)}, ${analysisL.toFixed(2)}]`" :displayMode="false"/></span>
+            :tex="`[-L, L] \\approx [-${analysisL.toFixed(2)}, ${analysisL.toFixed(2)}]`" :display-mode="false"/></span>
         <span class="info-text"> (基于画布宽度和时间缩放)</span>
       </div>
     </div>
@@ -90,30 +94,32 @@
           <p>周期为 T，振幅为 A 的理想方波（中心对称，奇函数）傅里叶级数：</p>
           <KatexRenderer
               tex="f(t) = \frac{4A}{\pi} \sum_{k=1,3,5,...}^{N_{\text{terms}}} \frac{1}{k} \sin(2\pi k f_0 t)"
-              :displayMode="true"/>
+              :display-mode="true"/>
           <p>(其中
-            <KatexRenderer tex="f_0 = 1/T" :displayMode="false"/>
+            <KatexRenderer tex="f_0 = 1/T" :display-mode="false"/>
             是基波频率,
-            <KatexRenderer tex="N_{\text{terms}}" :displayMode="false"/>
+            <KatexRenderer tex="N_{\text{terms}}" :display-mode="false"/>
             为当前项数)
           </p>
         </div>
         <div v-else-if="selectedFunctionType === 'polynomial'" key="poly-formula" class="explanation-item">
           <p>函数
-            <KatexRenderer tex="f(x)" :displayMode="false"/>
+            <KatexRenderer tex="f(x)" :display-mode="false"/>
             在区间
-            <KatexRenderer tex="[-L, L]" :displayMode="false"/>
+            <KatexRenderer tex="[-L, L]" :display-mode="false"/>
             上的傅里叶级数逼近：
           </p>
           <KatexRenderer
               tex="S_N(x) = \frac{a_0}{2} + \sum_{n=1}^{N} \left[ a_n \cos\left(\frac{n\pi x}{L}\right) + b_n \sin\left(\frac{n\pi x}{L}\right) \right]"
-              :displayMode="true"/>
+              :display-mode="true"/>
           <p>其中系数通过积分计算：</p>
-          <KatexRenderer tex="a_0 = \frac{1}{L} \int_{-L}^{L} f(x) dx" :displayMode="true"/>
-          <KatexRenderer tex="a_n = \frac{1}{L} \int_{-L}^{L} f(x) \cos\left(\frac{n\pi x}{L}\right) dx"
-                         :displayMode="true"/>
-          <KatexRenderer tex="b_n = \frac{1}{L} \int_{-L}^{L} f(x) \sin\left(\frac{n\pi x}{L}\right) dx"
-                         :displayMode="true"/>
+          <KatexRenderer tex="a_0 = \frac{1}{L} \int_{-L}^{L} f(x) dx" :display-mode="true"/>
+          <KatexRenderer
+tex="a_n = \frac{1}{L} \int_{-L}^{L} f(x) \cos\left(\frac{n\pi x}{L}\right) dx"
+                         :display-mode="true"/>
+          <KatexRenderer
+tex="b_n = \frac{1}{L} \int_{-L}^{L} f(x) \sin\left(\frac{n\pi x}{L}\right) dx"
+                         :display-mode="true"/>
         </div>
       </transition>
     </div>

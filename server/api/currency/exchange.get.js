@@ -1,4 +1,6 @@
 import {defineEventHandler, getQuery, createError} from 'h3';
+import { PrismaClient } from '@prisma/client';
+const prisma = new PrismaClient();
 
 const EXTERNAL_API_URL_EXCHANGE = 'https://v2.xxapi.cn/api/exchange';
 
@@ -17,7 +19,10 @@ export default defineEventHandler(async (event) => {
     const targetUrl = `${EXTERNAL_API_URL_EXCHANGE}?from=${encodeURIComponent(String(from))}&to=${encodeURIComponent(String(to))}&amount=${encodeURIComponent(String(amount))}`;
 
     try {
-        const externalResponse = await $fetch(targetUrl, {method: 'GET', parseResponse: JSON.parse});
+        const externalResponse = await $fetch(targetUrl, {
+            method: 'GET',
+            transform: (response) => JSON.parse(response),
+        });
 
         if (externalResponse && externalResponse.code === 200 && externalResponse.data) {
             if (event.context.auth && event.context.auth.userId) {
@@ -27,13 +32,18 @@ export default defineEventHandler(async (event) => {
                             userId: event.context.auth.userId,
                             fromCurrency: String(from),
                             toCurrency: String(to),
-                            amount: parseFloat(String(amount)),
-                            result: parseFloat(externalResponse.data.result),
-                            rate: parseFloat(externalResponse.data.rate),
+                            amount: Number(amount),
+                            result: Number(externalResponse.data.result),
+                            rate: Number(externalResponse.data.rate),
                         }
                     });
                 } catch (dbError) {
                     console.error("[Currency Exchange Proxy] Failed to save query history:", dbError);
+                    throw createError({
+                        statusCode: 500,
+                        statusMessage: 'Database Error',
+                        message: '无法保存查询历史记录。',
+                    });
                 }
             }
             return {

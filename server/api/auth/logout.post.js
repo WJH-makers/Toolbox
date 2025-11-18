@@ -11,7 +11,7 @@ export default defineEventHandler(async (event) => {
         });
         event.node.res.statusCode = 200;
         return {success: true, message: '成功退出登录'};
-    } catch (error) {
+    } catch (error) { // eslint-disable-line no-unused-vars
         event.node.res.statusCode = 500;
         return {success: false, message: '登出时发生服务器内部错误'};
     }

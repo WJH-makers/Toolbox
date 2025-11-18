@@ -18,10 +18,26 @@ export default defineEventHandler(async (event) => {
         throw createError({statusCode: 400, statusMessage: 'Bad Request', message: '无效的请求数据。'});
     }
 
-    // 确保核心数据存在，例如至少要有身高体重和BMI之一才记录
-    // 这里只是一个简单示例，您可以根据实际计算器情况调整
-    if (body.weightKg === undefined && body.heightCm === undefined && body.bmi === undefined) {
-        throw createError({statusCode: 400, statusMessage: 'Bad Request', message: '至少需要提供一项健康指标数据。'});
+    const {
+        recordedAt, // eslint-disable-line no-unused-vars
+        heightCm,
+        weightKg,
+        ageAtRecording, // eslint-disable-line no-unused-vars
+        gender, // eslint-disable-line no-unused-vars
+        activityLevel, // eslint-disable-line no-unused-vars
+        neckCm, // eslint-disable-line no-unused-vars
+        waistCm, // eslint-disable-line no-unused-vars
+        hipCm, // eslint-disable-line no-unused-vars
+        bmi,
+        bmr, // eslint-disable-line no-unused-vars
+        tdee, // eslint-disable-line no-unused-vars
+        bodyFatPercent, // eslint-disable-line no-unused-vars
+        recommendedWaterMl, // eslint-disable-line no-unused-vars
+        notes, // eslint-disable-line no-unused-vars
+    } = body;
+
+    if (typeof heightCm !== 'number' || typeof weightKg !== 'number' || typeof bmi !== 'number') {
+        throw createError({statusCode: 400, statusMessage: 'Bad Request', message: '身高、体重和BMI必须是数字。'});
     }
 
     try {
@@ -46,7 +62,7 @@ export default defineEventHandler(async (event) => {
             },
         });
         return {success: true, data: newHealthMetric, message: '健康记录已成功保存！'};
-    } catch (error) {
+    } catch (error) { // eslint-disable-line no-unused-vars
         throw createError({
             statusCode: 500,
             statusMessage: 'Internal Server Error',

@@ -7,12 +7,12 @@ export default defineEventHandler(async (event) => {
     }
     const userId = event.context.auth.userId;
     const body = await readBody(event);
-    const title = body.title || `新对话 - ${new Date().toLocaleString('zh-CN', {
+    const title = (body.title || `新对话 - ${new Date().toLocaleString('zh-CN', {
         month: 'short',
         day: 'numeric',
         hour: '2-digit',
         minute: '2-digit'
-    })}`;
+    })}`).replace(/<[^>]*>?/gm, '');
 
     try {
         const newSession = await prisma.aiChatSession.create({
@@ -36,7 +36,7 @@ export default defineEventHandler(async (event) => {
         });
 
         return {success: true, data: sessionWithInitialMessage};
-    } catch (error) {
+    } catch (error) { // eslint-disable-line no-unused-vars
         throw createError({statusCode: 500, statusMessage: 'Internal Server Error'});
     }
 });

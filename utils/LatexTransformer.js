@@ -85,11 +85,25 @@ export class LatexTransformer {
         text = text.replace(envRegex, m => store(m, true));
 
         // C. 行内公式 $...$ (排除转义 \$)
-        text = text.replace(/(?<!\\)\$(?!\$)([^$\n\r]+?)(?<!\\)\$(?!\$)/g, (match, inner) => {
-            if (!inner || !inner.trim()) return match;
-            // 存储时带上 $ 分隔符
-            return store(`$${inner}$`, false);
-        });
+        let newText = '';
+        let lastIndex = 0;
+        let inMath = false;
+        for (let i = 0; i < text.length; i++) {
+            if (text[i] === '$' && (i === 0 || text[i - 1] !== '\\')) {
+                if (!inMath) {
+                    newText += text.substring(lastIndex, i);
+                    lastIndex = i;
+                    inMath = true;
+                } else {
+                    const mathContent = text.substring(lastIndex, i + 1);
+                    newText += store(mathContent, false);
+                    lastIndex = i + 1;
+                    inMath = false;
+                }
+            }
+        }
+        newText += text.substring(lastIndex);
+        text = newText;
 
         // D. 行内 \(...\)
         text = text.replace(/\\\([\s\S]*?\\\)/g, m => store(m, false));
@@ -171,23 +185,22 @@ export class LatexTransformer {
         });
 
         // 修复: 处理列表环境 (简单处理)
-        const processList = (regex, markerGenerator) => {
-            output = output.replace(regex, (match, content) => {
+        const processList = (text, env, markerGenerator, level = 0) => {
+            const regex = new RegExp(`\\\\begin{${env}}([\\s\\S]*?)\\\\end{${env}}`, 'g');
+            return text.replace(regex, (match, content) => {
                 let counter = 1;
-                const items = content.replace(/^\s*\\item\s+/gm, () => markerGenerator(counter++));
-                return `\n${items}\n`;
+                const items = content.replace(/\\item/g, () => markerGenerator(counter++, level));
+                return processList(items, env, markerGenerator, level + 1);
             });
         };
 
         // 枚举 (enumerate) -> 1.
-        processList(/^\s*\\begin\{enumerate\}([\s\S]*?)\\end\{enumerate\}/gm, (i) => `\n${i}. `);
+        output = processList(output, 'enumerate', (i, level) => `\n${' '.repeat(level * 2)}${i}. `);
         // 列表 (itemize) -> -
-        processList(/^\s*\\begin\{itemize\}([\s\S]*?)\\end\{itemize\}/gm, () => `\n- `);
+        output = processList(output, 'itemize', (_, level) => `\n${' '.repeat(level * 2)}- `);
 
         // 清理残留
-        output = output.replace(/^\s*\\item\s+/gm, '- ')
-            .replace(/^\s*\\begin\{(itemize|enumerate)\}/gm, '')
-            .replace(/^\s*\\end\{(itemize|enumerate)\}/gm, '');
+        output = output.replace(/\\begin\{(itemize|enumerate)\}/g, '').replace(/\\end\{(itemize|enumerate)\}/g, '');
 
         return output;
     }
@@ -196,21 +209,11 @@ export class LatexTransformer {
     _restoreMath(html) {
         for (const [token, data] of this.mathTokens.entries()) {
             const { latex, isDisplay } = data;
-            const rawLatex = latex;
+            const rawLatex = this._escapeHtml(latex);
             const tag = isDisplay ? 'div' : 'span';
             const replacement = `<${tag} class="mjx-process mjx-formula">${rawLatex}</${tag}>`;
-            const escapedToken = token.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
-            if (isDisplay) {
-                const blockRegex = new RegExp(`<p>\\s*${escapedToken}\\s*</p>`, 'g');
-                if (blockRegex.test(html)) {
-                    html = html.replace(blockRegex, replacement);
-                } else {
-                    html = html.split(token).join(replacement);
-                }
-            } else {
-                html = html.split(token).join(replacement);
-            }
+            html = html.split(token).join(replacement);
         }
         return html;
     }

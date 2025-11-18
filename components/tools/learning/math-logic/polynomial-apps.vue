@@ -4,13 +4,13 @@
       <h3><span class="header-icon">∑</span>多项式逼近常见函数</h3>
       <p class="description">
         许多复杂函数，如
-        <KatexRenderer tex="\sin(x)" :displayMode="false"/>
+        <KatexRenderer tex="\sin(x)" :display-mode="false"/>
         ,
-        <KatexRenderer tex="\cos(x)" :displayMode="false"/>
+        <KatexRenderer tex="\cos(x)" :display-mode="false"/>
         ,
-        <KatexRenderer tex="e^x" :displayMode="false"/>
+        <KatexRenderer tex="e^x" :display-mode="false"/>
         等，可以通过它们在某一点的泰勒级数展开，用多项式来进行逼近。当展开点为
-        <KatexRenderer tex="x=0" :displayMode="false"/>
+        <KatexRenderer tex="x=0" :display-mode="false"/>
         时，这被称为麦克劳林级数。项数取得越多，多项式对原函数的逼近效果越好。
       </p>
     </header>
@@ -42,33 +42,33 @@
 
     <div class="explanation-panel card-style">
       <h4>常用函数的麦克劳林级数 (在
-        <KatexRenderer tex="x=0" :displayMode="false"/>
+        <KatexRenderer tex="x=0" :display-mode="false"/>
         附近展开):
       </h4>
       <transition name="fade-explanation" mode="out-in">
         <div v-if="selectedFunctionType === 'sin'" key="sin-series" class="series-definition">
           <KatexRenderer
               tex="\sin(x) = x - \frac{x^3}{3!} + \frac{x^5}{5!} - \frac{x^7}{7!} + \dots = \sum_{n=0}^{\infty} \frac{(-1)^n}{(2n+1)!} x^{2n+1}"
-              :displayMode="true"/>
+              :display-mode="true"/>
         </div>
         <div v-else-if="selectedFunctionType === 'cos'" key="cos-series" class="series-definition">
           <KatexRenderer
               tex="\cos(x) = 1 - \frac{x^2}{2!} + \frac{x^4}{4!} - \frac{x^6}{6!} + \dots = \sum_{n=0}^{\infty} \frac{(-1)^n}{(2n)!} x^{2n}"
-              :displayMode="true"/>
+              :display-mode="true"/>
         </div>
         <div v-else-if="selectedFunctionType === 'exp'" key="exp-series" class="series-definition">
           <KatexRenderer
               tex="e^x = 1 + x + \frac{x^2}{2!} + \frac{x^3}{3!} + \dots = \sum_{n=0}^{\infty} \frac{x^n}{n!}"
-              :displayMode="true"/>
+              :display-mode="true"/>
         </div>
         <div v-else-if="selectedFunctionType === 'ln1plusx'" key="ln-series" class="series-definition">
           <KatexRenderer
               tex="\ln(1+x) = x - \frac{x^2}{2} + \frac{x^3}{3} - \frac{x^4}{4} + \dots = \sum_{n=1}^{\infty} \frac{(-1)^{n-1}}{n} x^{n}"
-              :displayMode="true"/>
+              :display-mode="true"/>
           <p class="series-condition">(对于
-            <KatexRenderer tex="|x| < 1" :displayMode="false"/>
+            <KatexRenderer tex="|x| < 1" :display-mode="false"/>
             且
-            <KatexRenderer tex="x=1" :displayMode="false"/>
+            <KatexRenderer tex="x=1" :display-mode="false"/>
             收敛)
           </p>
         </div>

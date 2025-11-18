@@ -19,7 +19,8 @@
         <p class="mb-8 text-lg text-gray-700 dark:text-gray-300">
           您可以免费使用本站提供的所有便捷工具！
         </p>
-        <UButton to="/login" label="登录 / 注册" size="xl" icon="i-heroicons-arrow-right-start-on-rectangle-20-solid"
+        <UButton
+to="/login" label="登录 / 注册" size="xl" icon="i-heroicons-arrow-right-start-on-rectangle-20-solid"
                  trailing/>
       </div>
 

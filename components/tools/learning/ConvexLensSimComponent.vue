@@ -7,43 +7,50 @@
     <div class="controls-panel card">
       <div class="control-group">
         <label for="lens-pos-x">透镜中心 X: {{ lensPositionX.toFixed(0) }} px</label>
-        <input id="lens-pos-x" v-model.number="lensPositionX" :max="canvasWidth * 0.8" :min="canvasWidth * 0.2"
+        <input
+id="lens-pos-x" v-model.number="lensPositionX" :max="canvasWidth * 0.8" :min="canvasWidth * 0.2"
                class="slider" step="5" type="range">
       </div>
       <div class="control-group">
         <label for="lens-aperture-height">透镜半高 (
-          <KatexRenderer tex="a_y" :displayMode="false"/>
+          <KatexRenderer tex="a_y" :display-mode="false"/>
           ): {{ lensApertureHeight.toFixed(0) }} px</label>
-        <input id="lens-aperture-height" v-model.number="lensApertureHeight" min="20" :max="canvasHeight * 0.48"
+        <input
+id="lens-aperture-height" v-model.number="lensApertureHeight" min="20" :max="canvasHeight * 0.48"
                class="slider" step="5" type="range">
       </div>
       <div class="control-group">
         <label for="lens-eccentricity">表面离心率 (
-          <KatexRenderer tex="e" :displayMode="false"/>
+          <KatexRenderer tex="e" :display-mode="false"/>
           ): {{ lensEccentricity.toFixed(3) }}</label>
-        <input id="lens-eccentricity" v-model.number="lensEccentricity" min="0.001" max="0.999" class="slider"
+        <input
+id="lens-eccentricity" v-model.number="lensEccentricity" min="0.001" max="0.999" class="slider"
                step="0.001" type="range">
         <span class="info-text">
-          椭圆表面X向深度 <KatexRenderer tex="b_x = a_y \sqrt{1-e^2}" :displayMode="false"/>
-          <template v-if="!isNaN(lensBx)"> ≈ <KatexRenderer :tex="lensBx.toFixed(2)"
-                                                            :displayMode="false"/> px</template>
+          椭圆表面X向深度 <KatexRenderer tex="b_x = a_y \sqrt{1-e^2}" :display-mode="false"/>
+          <template v-if="!isNaN(lensBx)"> ≈ <KatexRenderer
+:tex="lensBx.toFixed(2)"
+                                                            :display-mode="false"/> px</template>
         </span>
         <span class="info-text">
-          中心厚度 <KatexRenderer tex="d = 2 b_x" :displayMode="false"/>
-          <template v-if="!isNaN(derivedLensThickness)"> ≈ <KatexRenderer :tex="derivedLensThickness.toFixed(2)"
-                                                                          :displayMode="false"/> px</template>
+          中心厚度 <KatexRenderer tex="d = 2 b_x" :display-mode="false"/>
+          <template v-if="!isNaN(derivedLensThickness)"> ≈ <KatexRenderer
+:tex="derivedLensThickness.toFixed(2)"
+                                                                          :display-mode="false"/> px</template>
         </span>
       </div>
       <div class="control-group">
         <label for="refractive-index">透镜折射率 (
-          <KatexRenderer tex="n" :displayMode="false"/>
+          <KatexRenderer tex="n" :display-mode="false"/>
           ): {{ refractiveIndexLens.toFixed(2) }}</label>
-        <input id="refractive-index" v-model.number="refractiveIndexLens" min="1.0" max="2.5" class="slider" step="0.01"
+        <input
+id="refractive-index" v-model.number="refractiveIndexLens" min="1.0" max="2.5" class="slider" step="0.01"
                type="range">
         <span class="info-text">
-          推荐尝试 <KatexRenderer tex="e \approx 1/n" :displayMode="false"/>
-          <template v-if="refractiveIndexLens !== 0"> ≈ <KatexRenderer :tex="(1 / refractiveIndexLens).toFixed(3)"
-                                                                       :displayMode="false"/></template>
+          推荐尝试 <KatexRenderer tex="e \approx 1/n" :display-mode="false"/>
+          <template v-if="refractiveIndexLens !== 0"> ≈ <KatexRenderer
+:tex="(1 / refractiveIndexLens).toFixed(3)"
+                                                                       :display-mode="false"/></template>
         </span>
       </div>
       <div class="control-group">
@@ -52,7 +59,8 @@
       </div>
       <div class="control-group">
         <label for="light-source-distance">光源X位置: {{ lightSourceXPosition.toFixed(0) }} px</label>
-        <input id="light-source-distance" v-model.number="lightSourceXPosition" :max="maxLightSourceXComputed"
+        <input
+id="light-source-distance" v-model.number="lightSourceXPosition" :max="maxLightSourceXComputed"
                min="0" class="slider" step="5" type="range">
       </div>
       <button class="button button-accent reset-defaults-button" @click="resetSimulationDefaults">
@@ -66,13 +74,13 @@
 
     <div class="explanation-panel card">
       <h4>椭圆透镜原理说明:</h4>
-      <div v-html="renderMixedContentWithKatex(explanationTextP1)"></div>
-      <div v-html="renderMixedContentWithKatex(explanationTextP2)"></div>
-      <div v-html="renderMixedContentWithKatex(explanationTextP3)"></div>
+      <div v-html="renderMixedContentWithKatex(explanationTextP1)"/>
+      <div v-html="renderMixedContentWithKatex(explanationTextP2)"/>
+      <div v-html="renderMixedContentWithKatex(explanationTextP3)"/>
     </div>
 
     <div class="proof-section card">
-      <div v-html="renderedMarkdownWithKatex" class="markdown-body"/>
+      <div class="markdown-body" v-html="renderedMarkdownWithKatex"/>
     </div>
 
     <footer class="demo-footer">
@@ -273,8 +281,8 @@ function intersectRayEllipseForLens(rayOrigin, rayDir, ellipseCenter, ay, bx, fi
 function getEllipticalSurfaceNormal(hitPoint, surfaceCenterX, el_ay, el_bx) { /* ... (as before) ... */
   if (el_bx <= 1e-6 || el_ay <= 1e-6) return new Vec2(surfaceCenterX > hitPoint.x ? -1 : 1, 0);
   const ellipseCenterY = opticalAxisY.value;
-  let nx = 2 * (hitPoint.x - surfaceCenterX) / (el_bx * el_bx);
-  let ny = 2 * (hitPoint.y - ellipseCenterY) / (el_ay * el_ay);
+  const nx = 2 * (hitPoint.x - surfaceCenterX) / (el_bx * el_bx);
+  const ny = 2 * (hitPoint.y - ellipseCenterY) / (el_ay * el_ay);
   return new Vec2(nx, ny).normalize();
 }
 
@@ -375,11 +383,11 @@ function drawRays() { /* ... (drawing logic as before, styles from CSS) ... */
   const actualNumRays = Math.max(1, Math.floor(numRays.value / 2) * 2 + 1);
   const rayDrawHeight = ay_lens * 2 * 0.96;
   const raySpacing = actualNumRays > 1 ? rayDrawHeight / (actualNumRays - 1) : 0;
-  let defaultRayColor = 'rgba(255, 100, 0, 0.75)';
-  let tirRayColor = 'rgba(220, 50, 50, 0.65)';
+  const defaultRayColor = 'rgba(255, 100, 0, 0.75)';
+  const tirRayColor = 'rgba(220, 50, 50, 0.65)';
 
   for (let i = 0; i < actualNumRays; i++) {
-    let startY = (actualNumRays === 1) ? y_axis : (y_axis - rayDrawHeight / 2) + (i * raySpacing);
+    const startY = (actualNumRays === 1) ? y_axis : (y_axis - rayDrawHeight / 2) + (i * raySpacing);
     let rayOrigin = new Vec2(lightSourceXPosition.value, startY);
     let rayDir = new Vec2(1, 0);
     ctx.strokeStyle = defaultRayColor;
@@ -387,7 +395,7 @@ function drawRays() { /* ... (drawing logic as before, styles from CSS) ... */
     ctx.beginPath();
     ctx.moveTo(rayOrigin.x, rayOrigin.y);
     let rayPathLengthLimit = canvasWidth.value * 2.5;
-    let maxBounces = 5;
+    const maxBounces = 5;
     let bounces = 0;
 
     while (rayPathLengthLimit > 0 && bounces < maxBounces) {

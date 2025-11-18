@@ -16,7 +16,7 @@
 
         <div class="quick-examples">
           <span>快速尝试:</span>
-          <button v-for="ex in presetExamples" :key="ex.name" @click="applyExample(ex)" class="example-pill">
+          <button v-for="ex in presetExamples" :key="ex.name" class="example-pill" @click="applyExample(ex)">
             {{ ex.name }}
           </button>
         </div>
@@ -25,22 +25,22 @@
           <div class="solver-controls">
             <div class="control-group">
               <label for="fx-input">函数 f(x)</label>
-              <input type="text" id="fx-input" v-model="solver.fx" placeholder="e.g., sin(x) - x">
+              <input id="fx-input" v-model="solver.fx" type="text" placeholder="e.g., sin(x) - x">
             </div>
             <div class="control-group">
               <label for="gx-input">函数 g(x)</label>
-              <input type="text" id="gx-input" v-model="solver.gx" placeholder="e.g., x^3">
+              <input id="gx-input" v-model="solver.gx" type="text" placeholder="e.g., x^3">
             </div>
             <div class="control-group">
               <label for="c-input">极限点 x → c</label>
-              <input type="text" id="c-input" v-model="solver.c" placeholder="e.g., 0">
+              <input id="c-input" v-model="solver.c" type="text" placeholder="e.g., 0">
             </div>
             <div class="button-group">
-              <button @click="solveLimit" class="solve-button" :disabled="isLoading">
+              <button class="solve-button" :disabled="isLoading" @click="solveLimit">
                 <span v-if="isLoading">正在计算...</span>
                 <span v-else>求解极限</span>
               </button>
-              <button @click="resetSolver" class="reset-button" title="清空所有输入和结果">重置</button>
+              <button class="reset-button" title="清空所有输入和结果" @click="resetSolver">重置</button>
             </div>
           </div>
 
@@ -51,19 +51,20 @@
                 <p>请输入函数或选择快速示例，然后点击“求解极限”开始推导。</p>
               </div>
               <transition-group name="step-list" tag="div">
-                <div v-for="(step, index) in solver.steps" :key="step.title + index"
+                <div
+v-for="(step, index) in solver.steps" :key="step.title + index"
                      class="derivation-step" :class="{ active: activeStepIndex === index }"
                      :style="{ transitionDelay: `${index * 50}ms` }">
                   <div class="step-header" @click="activeStepIndex = index">
                     <strong>步骤 {{ index + 1 }}: {{ step.title }}</strong>
-                    <span class="accordion-icon"></span>
+                    <span class="accordion-icon"/>
                   </div>
                   <div class="step-body">
-                    <div class="step-content" v-html="step.html"></div>
+                    <div class="step-content" v-html="step.html"/>
                   </div>
                 </div>
               </transition-group>
-              <div v-if="solver.error" class="error-message" key="error">
+              <div v-if="solver.error" key="error" class="error-message">
                 <strong>错误:</strong> {{ solver.error }}
               </div>
             </div>
@@ -72,7 +73,7 @@
           <div class="solver-visualization">
             <h3 class="results-title">几何直观</h3>
             <div class="chart-container">
-              <canvas ref="solverChartCanvas"></canvas>
+              <canvas ref="solverChartCanvas"/>
             </div>
             <p class="chart-caption">
               在 $\frac{0}{0}$ 型极限点附近，函数图像趋向于其切线。极限 $\frac{f(x)}{g(x)}$ 的值等于切线斜率之比
@@ -90,7 +91,7 @@
         <p>洛必达法则的严格证明基于柯西中值定理。该定理指出：如果函数 $f(x)$ 和 $g(x)$ 在 $[a, b]$ 上连续，在 $(a, b)$
           内可导，且对所有 $x \in (a, b)$ 都有 $g'(x) \neq 0$，那么在 $(a, b)$ 内至少存在一点 $\xi$，使得：</p>
         <div class="katex-display-area">
-          <KatexRenderer tex="\frac{f(b) - f(a)}{g(b) - g(a)} = \frac{f'(\xi)}{g'(\xi)}" :displayMode="true"/>
+          <KatexRenderer tex="\frac{f(b) - f(a)}{g(b) - g(a)} = \frac{f'(\xi)}{g'(\xi)}" :display-mode="true"/>
         </div>
         <p>对于 $\frac{0}{0}$ 型极限，即 $\lim_{x \to c} f(x) = 0, \lim_{x \to c} g(x) = 0$。我们可以取 $a=c$，得到
           $\frac{f(x)}{g(x)} = \frac{f(x)-f(c)}{g(x)-g(c)} = \frac{f'(\xi)}{g'(\xi)}$，其中 $\xi$ 在 $c$ 和 $x$ 之间。当
@@ -378,7 +379,7 @@ async function solveLimit() {
         current_f = math.derivative(current_f, 'x');
         current_g = math.derivative(current_g, 'x');
 
-        let diffStepHtml = `对分子分母求导: <br> $f_{new}(x) = ${formatTex(current_f)}$ <br> $g_{new}(x) = ${formatTex(current_g)}$`;
+        const diffStepHtml = `对分子分母求导: <br> $f_{new}(x) = ${formatTex(current_f)}$ <br> $g_{new}(x) = ${formatTex(current_g)}$`;
         solver.value.steps.push({title: "应用洛必达法则", html: diffStepHtml});
         activeStepIndex.value++;
       } else {
@@ -386,7 +387,7 @@ async function solveLimit() {
           throw new Error(`计算中止：分母为0，但分子不为0，极限可能为无穷大或不存在。`);
         }
         const result = f_c / g_c;
-        let finalStepHtml = `极限可以直接计算: <br> <div class='katex-display-area'>$$\\frac{${math.format(f_c, {precision: 4})}}{${math.format(g_c, {precision: 4})}} = ${math.format(result, {precision: 4})}$$</div>`;
+        const finalStepHtml = `极限可以直接计算: <br> <div class='katex-display-area'>$$\\frac{${math.format(f_c, {precision: 4})}}{${math.format(g_c, {precision: 4})}} = ${math.format(result, {precision: 4})}$$</div>`;
         solver.value.steps.push({title: "最终结果", html: finalStepHtml});
         activeStepIndex.value++;
         isLoading.value = false;

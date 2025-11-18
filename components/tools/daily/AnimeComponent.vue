@@ -13,23 +13,23 @@
       >
         <div v-if="!uploadedImage">
           <input 
-            type="file" 
             ref="fileInput" 
-            @change="onFileSelected" 
+            type="file"
             accept="image/*" 
             class="file-input"
-          />
-          <button @click="triggerFileInput" class="upload-btn">选择图片</button>
+            @change="onFileSelected"
+          >
+          <button class="upload-btn" @click="triggerFileInput">选择图片</button>
           <p>或将动漫截图拖放到此处</p>
         </div>
         <div v-else class="preview-container">
-          <img :src="uploadedImage" class="preview-image" alt="上传的图片" />
+          <img :src="uploadedImage" class="preview-image" alt="上传的图片" >
           <div class="button-group">
-            <button @click="clearImage" class="clear-btn">清除</button>
+            <button class="clear-btn" @click="clearImage">清除</button>
             <button 
-              @click="searchImage" 
               class="search-btn" 
               :disabled="isSearching"
+              @click="searchImage"
             >
               {{ isSearching ? '搜索中...' : '开始搜索' }}
             </button>
@@ -41,15 +41,15 @@
         <h3>- 或者使用网络图片链接 -</h3>
         <div class="url-input-group">
           <input 
-            type="text" 
             v-model="imageUrl" 
+            type="text"
             placeholder="输入动漫截图URL" 
             class="url-input"
-          />
+          >
           <button 
-            @click="searchByUrl" 
             :disabled="!imageUrl || isSearching" 
             class="url-search-btn"
+            @click="searchByUrl"
           >
             {{ isSearching ? '搜索中...' : '搜索' }}
           </button>
@@ -59,22 +59,22 @@
     
     <div class="search-options">
       <label class="cutborders-option">
-        <input type="checkbox" v-model="cutBorders" /> 自动裁剪黑边
+        <input v-model="cutBorders" type="checkbox" > 自动裁剪黑边
       </label>
       <div class="slider-container">
         <label>相似度阈值: {{ similarityThreshold }}%</label>
         <input 
-          type="range" 
           v-model.number="similarityThreshold" 
+          type="range"
           min="0" 
           max="100" 
           class="similarity-slider"
-        />
+        >
       </div>
     </div>
     
     <div v-if="isSearching" class="loading-container">
-      <div class="loading-spinner"></div>
+      <div class="loading-spinner"/>
       <p>正在分析图片并查找来源，这可能需要几秒钟...</p>
     </div>
     
@@ -91,7 +91,7 @@
           class="result-item"
         >
           <div class="result-preview">
-            <div class="video-container" v-if="result.video">
+            <div v-if="result.video" class="video-container">
               <video 
                 :src="result.video" 
                 controls
@@ -99,11 +99,11 @@
                 loop
                 muted
                 class="preview-video"
-              ></video>
+              />
               <div class="time-badge">{{ formatTime(result.from) }} - {{ formatTime(result.to) }}</div>
             </div>
-            <div class="image-container" v-else>
-              <img :src="result.image" :alt="result.filename" class="preview-image" />
+            <div v-else class="image-container">
+              <img :src="result.image" :alt="result.filename" class="preview-image" >
             </div>
           </div>
           
@@ -132,8 +132,8 @@
               </a>
               
               <button 
-                @click="copyText(`${result.anime} ${result.episode ? '- 第 ' + result.episode + ' 集' : ''} ${result.from ? '(' + formatTime(result.from) + ')' : ''}`)" 
                 class="action-btn copy-btn"
+                @click="copyText(`${result.anime} ${result.episode ? '- 第 ' + result.episode + ' 集' : ''} ${result.from ? '(' + formatTime(result.from) + ')' : ''}`)"
               >
                 复制信息
               </button>

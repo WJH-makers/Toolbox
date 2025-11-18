@@ -41,23 +41,25 @@ export function useRecipes() {
     const isLoading = ref(false);
     const error = ref(null);
 
-    const fetchRecipes = async () => {
+    const _updateRecipesRef = () => {
+        recipes.value = JSON.parse(JSON.stringify(MOCK_RECIPES_STORE));
+    };
+
+    const fetchRecipes = () => {
         isLoading.value = true;
         error.value = null;
-        await new Promise(resolve => setTimeout(resolve, 800));
         try {
-            recipes.value = JSON.parse(JSON.stringify(MOCK_RECIPES_STORE));
-        } catch (e) {
+            _updateRecipesRef();
+        } catch (e) { // eslint-disable-line no-unused-vars
             error.value = '获取食谱失败。';
         } finally {
             isLoading.value = false;
         }
     };
 
-    const addRecipe = async (name, ingredients, instructions, category, prepTime, cookTime, isFavorite = false) => {
+    const addRecipe = (name, ingredients, instructions, category, prepTime, cookTime, isFavorite = false) => {
         isLoading.value = true;
         error.value = null;
-        await new Promise(resolve => setTimeout(resolve, 500));
         try {
             const newRecipe = {
                 id: String(Date.now()),
@@ -69,12 +71,11 @@ export function useRecipes() {
                 cookTime,
                 isFavorite,
                 createdAt: new Date(),
-                updatedAt: new Date(),
             };
             MOCK_RECIPES_STORE.unshift(newRecipe);
-            recipes.value = JSON.parse(JSON.stringify(MOCK_RECIPES_STORE));
+            _updateRecipesRef();
             return newRecipe;
-        } catch (e) {
+        } catch (e) { // eslint-disable-line no-unused-vars
             error.value = '添加食谱失败。';
             return null;
         } finally {
@@ -82,19 +83,18 @@ export function useRecipes() {
         }
     };
 
-    const deleteRecipe = async (id) => {
+    const deleteRecipe = (id) => {
         isLoading.value = true;
         error.value = null;
-        await new Promise(resolve => setTimeout(resolve, 500));
         try {
             const index = MOCK_RECIPES_STORE.findIndex(r => r.id === id);
             if (index !== -1) {
                 MOCK_RECIPES_STORE.splice(index, 1);
-                recipes.value = JSON.parse(JSON.stringify(MOCK_RECIPES_STORE));
+                _updateRecipesRef();
                 return true;
             }
             return false;
-        } catch (e) {
+        } catch (e) { // eslint-disable-line no-unused-vars
             error.value = '删除食谱失败。';
             return false;
         } finally {
@@ -102,20 +102,19 @@ export function useRecipes() {
         }
     };
 
-    const toggleFavorite = async (item) => {
+    const toggleFavorite = (item) => {
         isLoading.value = true;
         error.value = null;
-        await new Promise(resolve => setTimeout(resolve, 300));
         try {
             const recipeInStore = MOCK_RECIPES_STORE.find(r => r.id === item.id);
             if (recipeInStore) {
                 recipeInStore.isFavorite = !recipeInStore.isFavorite;
                 recipeInStore.updatedAt = new Date();
-                recipes.value = JSON.parse(JSON.stringify(MOCK_RECIPES_STORE));
+                _updateRecipesRef();
                 return recipeInStore;
             }
             return null;
-        } catch (e) {
+        } catch (e) { // eslint-disable-line no-unused-vars
             error.value = '更新收藏状态失败。';
             return null;
         } finally {
