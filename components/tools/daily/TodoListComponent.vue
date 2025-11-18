@@ -86,8 +86,7 @@
         </div>
         <div class="todo-item-main-content">
           <span :class="{ 'completed-text': item.completed }" class="todo-title-in-list">{{ item.title }}</span>
-          <div v-if="item.endDate && !item.completed && new Date(item.endDate as string | Date) < new Date()"
-               class="todo-tag todo-tag-error small-expired-tag">
+          <div v-if="isTodoExpired(item)" class="todo-tag todo-tag-error small-expired-tag">
             已过期
           </div>
         </div>
@@ -184,44 +183,46 @@
       </ul>
     </template>
 
+    <!-- 外层仅判断显示开关 -->
     <div v-if="isModalVisible" class="modal-overlay" @click.self="closeTodoModal">
-      <div class="modal-content">
+      <!-- 内层仍判断是否真的有选中项 -->
+      <div v-if="selectedTodoItem" class="modal-content">
         <button class="modal-close-button" @click="closeTodoModal">×</button>
-        <h3 class="modal-title">{{ selectedTodoItem?.title }}</h3>
+        <h3 class="modal-title">{{ modalItem.title }}</h3>
 
         <div v-if="renderedContentHtml" class="modal-section">
           <h4>详细内容:</h4>
           <div class="modal-text-content markdown-body" v-html="renderedContentHtml"></div>
         </div>
-        <div v-else-if="selectedTodoItem?.content" class="modal-section">
+        <div v-else-if="modalItem.content" class="modal-section">
           <h4>详细内容:</h4>
-          <p class="modal-text-content">{{ selectedTodoItem?.content }}</p>
+          <p class="modal-text-content">{{ modalItem.content }}</p>
         </div>
 
-
-        <div v-if="selectedTodoItem?.image" class="modal-section">
+        <div v-if="modalItem.image" class="modal-section">
           <h4>附件图片:</h4>
-          <img :src="selectedTodoItem?.image" alt="待办图片" class="modal-image">
+          <img :src="modalItem.image" alt="待办图片" class="modal-image">
         </div>
-        <div v-if="selectedTodoItem?.startDate || selectedTodoItem?.endDate" class="modal-section modal-dates">
-            <span v-if="selectedTodoItem?.startDate" class="todo-tag todo-tag-info">
-              开始: {{ formatDate(selectedTodoItem?.startDate, 'yyyy-MM-dd HH:mm') }}
-            </span>
-          <span v-if="selectedTodoItem?.endDate"
-                :class="!selectedTodoItem?.completed && selectedTodoItem?.endDate && new Date(selectedTodoItem?.endDate as string | Date) < new Date() ? 'todo-tag-error' : 'todo-tag-info'"
+
+        <div v-if="modalItem.startDate || modalItem.endDate" class="modal-section modal-dates">
+          <span v-if="modalItem.startDate" class="todo-tag todo-tag-info">
+            开始: {{ formatDate(modalItem.startDate, 'yyyy-MM-dd HH:mm') }}
+          </span>
+          <span v-if="modalItem.endDate"
+                :class="isTodoExpired(modalItem) ? 'todo-tag-error' : 'todo-tag-info'"
                 class="todo-tag">
-              结束: {{ formatDate(selectedTodoItem?.endDate, 'yyyy-MM-dd HH:mm') }}
-              <span
-                  v-if="!selectedTodoItem?.completed && selectedTodoItem?.endDate && new Date(selectedTodoItem?.endDate as string | Date) < new Date()"> (已过期)</span>
-            </span>
+            结束: {{ formatDate(modalItem.endDate, 'yyyy-MM-dd HH:mm') }}
+            <span v-if="isTodoExpired(modalItem)"> (已过期)</span>
+          </span>
         </div>
-        <div v-if="selectedTodoItem" class="modal-section">
-            <span :class="{'is-important-tag': selectedTodoItem.important}" class="todo-tag">
-                {{ selectedTodoItem.important ? '重要事项' : '普通事项' }}
-            </span>
-          <span :class="selectedTodoItem.completed ? 'completed-status-tag' : 'active-status-tag'" class="todo-tag">
-                {{ selectedTodoItem.completed ? '已完成' : '进行中' }}
-            </span>
+
+        <div class="modal-section">
+          <span :class="{'is-important-tag': modalItem.important}" class="todo-tag">
+            {{ modalItem.important ? '重要事项' : '普通事项' }}
+          </span>
+          <span :class="modalItem.completed ? 'completed-status-tag' : 'active-status-tag'" class="todo-tag">
+            {{ modalItem.completed ? '已完成' : '进行中' }}
+          </span>
         </div>
       </div>
     </div>
@@ -232,36 +233,45 @@
 <script setup lang="ts">
 import {ref, onMounted, computed, type Ref} from 'vue';
 import {useTodos} from '~/composables/useTodos';
-import type {TodoItem} from '~/types/todo'; // 确保此类型定义已更新，包含 title, content?, image?
+import type {TodoItem} from '~/types/todo';
 import {format as formatDateFns} from 'date-fns';
-import {marked} from 'marked'; // 导入 marked
-import DOMPurify from 'dompurify'; // 导入 DOMPurify
+import {marked} from 'marked';
+import DOMPurify from 'dompurify';
 
-// 配置 marked (可选，但推荐用于 GitHub Flavored Markdown 和换行)
 marked.setOptions({
-  breaks: true, // 将 GFM 的换行符 (一个换行) 渲染为 <br>
-  gfm: true,    // 启用 GitHub Flavored Markdown
-  // renderer: new marked.Renderer(), // 可以自定义渲染器
+  breaks: true,
+  gfm: true,
 });
 
+type UITodoItem = TodoItem & {
+  title: string;
+  content?: string | null;
+  image?: string | null;
+  important?: boolean;
+  startDate?: string | Date | null;
+  endDate?: string | Date | null;
+  completed?: boolean;
+  createdAt?: string | Date | null;
+  updatedAt?: string | Date | null;
+};
 
 interface UseTodosReturnType {
-  todos: Ref<TodoItem[]>;
+  todos: Ref<UITodoItem[]>;
   isLoading: Ref<boolean>;
   error: Ref<string | null>;
   fetchTodos: () => Promise<void>;
   addTodo: (
-      title: string,
-      content: string | null,
-      important?: boolean,
-      startDate?: string | Date | null,
-      endDate?: string | Date | null,
-      image?: string | null
-  ) => Promise<TodoItem | null>;
+    title: string,
+    content: string | null,
+    important?: boolean,
+    startDate?: string | Date | null,
+    endDate?: string | Date | null,
+    image?: string | null
+  ) => Promise<UITodoItem | null>;
   deleteTodo: (id: string) => Promise<boolean>;
-  toggleComplete: (item: TodoItem) => Promise<TodoItem | null>;
-  toggleImportant: (item: TodoItem) => Promise<TodoItem | null>;
-  updateTodo: (id: string, updates: Partial<Omit<TodoItem, 'id' | 'userId' | 'createdAt' | 'updatedAt' | 'user'>>) => Promise<TodoItem | null>;
+  toggleComplete: (item: UITodoItem) => Promise<UITodoItem | null>;
+  toggleImportant: (item: UITodoItem) => Promise<UITodoItem | null>;
+  updateTodo: (id: string, updates: Partial<Omit<UITodoItem, 'id' | 'userId' | 'createdAt' | 'updatedAt' | 'user'>>) => Promise<UITodoItem | null>;
 }
 
 const {
@@ -283,10 +293,28 @@ const newItemImageBase64 = ref<string | null>(null);
 const imageInputRef = ref<HTMLInputElement | null>(null);
 
 const isModalVisible = ref(false);
-const selectedTodoItem = ref<TodoItem | null>(null);
+const selectedTodoItem = ref<UITodoItem | null>(null);
+
+// --- 关键：提供一个总是存在的占位对象，并导出 modalItem 给模板使用 ---
+const emptyItem: UITodoItem = {
+  userId: "",
+  id: '',
+  title: '',
+  content: '',
+  image: null,
+  important: false,
+  startDate: null,
+  endDate: null,
+  completed: false,
+  // 这里改为字符串以满足 TodoItem 的类型约束
+  createdAt: '',
+  updatedAt: ''
+};
+const modalItem = computed<UITodoItem>(() => selectedTodoItem.value ?? emptyItem);
+// ---------------------------------------------------------------
 
 // --- 新增：字数限制相关 ---
-const maxContentChars = ref(1000); // 详细内容的最大字符数
+const maxContentChars = ref(1000);
 const currentContentLength = computed(() => newItemContent.value?.length || 0);
 // -------------------------
 
@@ -295,13 +323,14 @@ onMounted(() => {
 });
 
 const renderedContentHtml = computed(() => {
-  if (selectedTodoItem.value?.content) {
-    const rawHtml = marked.parse(selectedTodoItem.value.content);
-    return DOMPurify.sanitize(rawHtml, {USE_PROFILES: {html: true}}); // 允许基本的 HTML 标签
+  const raw = modalItem.value.content ?? '';
+  if (!raw) return '';
+  const parsed = marked.parse(raw);
+  if (typeof parsed === 'string') {
+    return DOMPurify.sanitize(parsed, { USE_PROFILES: { html: true } });
   }
   return '';
 });
-// ---------------------------
 
 const activeTodos = computed(() => {
   const currentTime = new Date().getTime();
@@ -441,11 +470,11 @@ const confirmDeleteItem = (id: string) => {
   }
 };
 
-const handleToggleComplete = async (item: TodoItem) => {
+const handleToggleComplete = async (item: UITodoItem) => {
   await toggleCompleteInComposable(item);
 };
 
-const handleToggleImportant = async (item: TodoItem) => {
+const handleToggleImportant = async (item: UITodoItem) => {
   await toggleImportantInComposable(item);
 };
 
@@ -455,12 +484,13 @@ const formatDate = (dateInput: string | Date | null | undefined, formatString: s
     const date = new Date(dateInput as string | Date);
     if (isNaN(date.getTime())) return '无效日期';
     return formatDateFns(date, formatString);
-  } catch (e) {
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  } catch (_e) {
     return '日期格式化错误';
   }
 };
 
-const showTodoModal = (item: TodoItem) => {
+const showTodoModal = (item: UITodoItem) => {
   selectedTodoItem.value = item;
   isModalVisible.value = true;
 };
@@ -468,6 +498,12 @@ const showTodoModal = (item: TodoItem) => {
 const closeTodoModal = () => {
   isModalVisible.value = false;
   selectedTodoItem.value = null;
+};
+
+const isTodoExpired = (todo?: UITodoItem | null) => {
+  if (!todo || !todo.endDate || todo.completed) return false;
+  const endDate = todo.endDate instanceof Date ? todo.endDate : new Date(todo.endDate);
+  return !Number.isNaN(endDate.getTime()) && endDate.getTime() < Date.now();
 };
 
 </script>

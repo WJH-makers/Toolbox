@@ -1,52 +1,31 @@
 export default defineAppConfig({
     ui: {
         input: {
-            default: {
-                size: 'xl',
-                color: 'white',
-                variant: 'outline',
-                loadingIcon: 'i-heroicons-arrow-path-20-solid',
+            // 使用 CVA 形态：通过 slots 定义各插槽类名
+            slots: {
+                base: 'relative block w-full disabled:cursor-not-allowed disabled:opacity-75 focus:outline-none text-[var(--color-text)] placeholder:text-[var(--color-text-muted)] transition-colors duration-200 ease-in-out rounded-lg bg-[var(--color-input-bg)] hover:bg-[var(--color-input-bg-hover)] ring-1 ring-inset ring-[var(--color-border)] focus-visible:ring-2 focus-visible:ring-[var(--color-primary)]',
+                leading: 'ps-3.5',
+                trailing: 'pe-3.5',
+                leadingIcon: 'text-[var(--color-text-muted)] h-5 w-5',
+                trailingIcon: 'text-[var(--color-text-muted)] h-5 w-5',
             },
-            base: 'relative block w-full disabled:cursor-not-allowed disabled:opacity-75 focus:outline-none text-[var(--color-text)] placeholder:text-[var(--color-text-muted)] transition-colors duration-200 ease-in-out',
-            rounded: 'rounded-lg',
-            background: 'bg-[var(--color-input-bg)] hover:bg-[var(--color-input-bg-hover)]',
-            ring: 'ring-1 ring-inset ring-[var(--color-border)] focus-visible:ring-2 focus-visible:ring-[var(--color-primary)]',
-            icon: {
-                base: 'text-[var(--color-text-muted)]',
-                size: {'xl': 'h-5 w-5'},
-                leading: {padding: {xl: 'ps-3.5'}},
-                trailing: {padding: {xl: 'pe-3.5'}}
-            },
+            // 如需尺寸/颜色等，可在此添加 variants 组：size / color ...
+            // variants: { size: { xl: { base: 'text-base', } } }
         },
         button: {
-            default: {
-                size: 'xl',
-                color: 'primary',
-                variant: 'solid',
-                loadingIcon: 'i-heroicons-arrow-path-20-solid',
+            // 将基础类放入 slots.base
+            slots: {
+                base: 'font-semibold rounded-lg',
             },
-            font: 'font-semibold',
-            rounded: 'rounded-lg',
+            // 将样式选项挂到 variants 的某个组（如 variant）
             variants: {
-                solid: (props: { color: string }) => {
-                    const baseStyle = 'disabled:cursor-not-allowed disabled:opacity-75 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 shadow-sm';
-                    let colorStyle = '';
-                    if (props.color === 'primary') {
-                        colorStyle = `text-white bg-[var(--color-primary)] hover:bg-[var(--color-primary-hover)] focus-visible:outline-[var(--color-primary)]`;
-                    } else {
-                        colorStyle = `text-[var(--color-text)] bg-slate-700 hover:bg-slate-600 focus-visible:outline-slate-500`;
-                    }
-                    return `${baseStyle} ${colorStyle}`;
-                },
-                outline: (props: { color: string }) => {
-                    const baseStyle = 'disabled:cursor-not-allowed disabled:opacity-75 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 ring-1 ring-inset';
-                    let colorStyle = '';
-                    if (props.color === 'primary') {
-                        colorStyle = `text-[var(--color-primary)] ring-[var(--color-primary)] hover:bg-[var(--color-primary)] hover:text-white focus-visible:outline-[var(--color-primary)]`;
-                    } else {
-                        colorStyle = `text-[var(--color-text-muted)] ring-slate-600 hover:bg-slate-700 hover:text-[var(--color-text)] focus-visible:outline-slate-600`;
-                    }
-                    return `${baseStyle} ${colorStyle}`;
+                variant: {
+                    solid: {
+                        base: 'disabled:cursor-not-allowed disabled:opacity-75 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 shadow-sm text-white bg-[var(--color-primary)] hover:bg-[var(--color-primary-hover)] focus-visible:outline-[var(--color-primary)]',
+                    },
+                    outline: {
+                        base: 'disabled:cursor-not-allowed disabled:opacity-75 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 ring-1 ring-inset text-[var(--color-text-muted)] ring-[var(--color-border)] hover:bg-[var(--color-input-bg-hover)] hover:text-[var(--color-text)] focus-visible:outline-[var(--color-primary)]',
+                    },
                 },
             },
         },

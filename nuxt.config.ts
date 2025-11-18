@@ -1,17 +1,10 @@
 // nuxt.config.ts
 export default defineNuxtConfig({
     app: {
-        head: {
-            link: [
-                {
-                    rel: 'stylesheet',
-                    href: 'https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap'
-                }
-            ],
-        }
+        head: { link: [] }
     },
     compatibilityDate: '2025-05-15',
-    devtools: {enabled: true},
+    devtools: { enabled: true },
     modules: [
         'nuxt-particles',
         '@nuxt/eslint',
@@ -19,23 +12,21 @@ export default defineNuxtConfig({
         '@nuxt/fonts'
     ],
     fonts: {
+        providers: {
+            google: false,
+            bunny: false,
+            fontshare: false,
+            fontsource: false,
+            adobe: false,
+        },
         families: [
-            {
-                name: 'Roboto Local',
-                src: '/fonts/Roboto-Bold.ttf',
-                weight: '700',
-                style: 'normal'
-            },
-            {
-                name: 'Roboto Local',
-                src: '/fonts/Roboto-Light.ttf',
-                weight: '300',
-                style: 'normal'
-            }
+            { name: 'Roboto Local', src: '/fonts/Roboto-Bold.ttf', weight: '700', style: 'normal' },
+            { name: 'Roboto Local', src: '/fonts/Roboto-Light.ttf', weight: '300', style: 'normal' }
         ]
     },
     css: [
-        '~/assets/css/main.css', // 您已有的全局 CSS
-        'katex/dist/katex.min.css' // 新增：全局引入 KaTeX CSS
-    ]
+        '~/assets/css/main.css',
+        'katex/dist/katex.min.css'
+    ],
+
 });

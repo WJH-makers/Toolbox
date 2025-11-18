@@ -26,7 +26,7 @@
     "@iktakahiro/markdown-it-katex": "^4.0.0",
     "@nuxt/eslint": "^1.4.0",
     "@nuxt/ui": "^3.1.2",
-    "@prisma/client": "^6.9.0",
+    "@prisma/client": "^6.19.0",
     "@prisma/extension-accelerate": "^2.0.1",
     "@vueuse/head": "^2.0.0",
     "axios": "^1.9.0",
@@ -43,11 +43,15 @@
     "jsonwebtoken": "^9.0.2",
     "jsqr": "^1.4.0",
     "katex": "^0.16.22",
+    "latex.js": "^0.12.6",
     "lodash-es": "^4.17.21",
     "mammoth": "^1.9.0",
+    "markdown-it": "^14.1.0",
+    "markdown-it-mathjax3": "^5.2.0",
     "marked": "^15.0.12",
+    "mathjax-full": "^3.2.1",
     "mathjs": "^14.5.2",
-    "nuxt": "^3.17.3",
+    "nuxt": "^3.7.0",
     "nuxt-particles": "^0.3.0",
     "ofetch": "^1.4.1",
     "openai": "^4.103.0",
@@ -76,7 +80,10 @@
     "daisyui": "^5.0.35",
     "mysql2": "^3.14.1",
     "nodemon": "^3.1.10",
-    "prisma": "^6.9.0",
+    "prisma": "^6.19.0",
     "vfonts": "^0.0.3"
+  },
+  "overrides": {
+    "nuxt": "^3.7.0"
   }
 }

@@ -1,83 +1,63 @@
 <template>
-  <span :class="{ 'katex-display-mode': displayMode }" v-html="renderedTex"></span>
+  <component
+      :is="displayMode ? 'div' : 'span'"
+      class="katex-wrapper"
+      :class="{ 'katex-display-block': displayMode }"
+      v-html="renderedHtml"
+  ></component>
 </template>
 
-<script setup lang="ts">
-import {computed, toRefs} from 'vue';
+<script setup>
+import { computed } from 'vue';
 import katex from 'katex';
-import 'katex/dist/katex.min.css'; // 确保引入 KaTeX 样式
-
-const RENDER_CACHE = new Map<string, string>();
+import 'katex/dist/katex.min.css'; // 务必引入 CSS，否则公式会乱码
 
 const props = defineProps({
-  tex: {
-    type: String,
-    required: true,
-    default: '',
-  },
-  displayMode: {
-    type: Boolean,
-    default: false,
-  },
-  options: {
-    type: Object,
-    default: () => ({}),
-  }
+  tex: { type: String, default: '' },
+  displayMode: { type: Boolean, default: false },
+  // 允许传入额外的 katex 配置
+  options: { type: Object, default: () => ({}) }
 });
 
-const {tex, displayMode, options} = toRefs(props);
-
-const renderedTex = computed(() => {
-  const currentTex = String(tex.value).trim();
-  if (!currentTex) {
-    return '';
-  }
-
-  const cacheKey = currentTex + (displayMode.value ? '_display' : '_inline');
-
-  if (RENDER_CACHE.has(cacheKey)) {
-    return RENDER_CACHE.get(cacheKey);
-  }
+const renderedHtml = computed(() => {
+  const content = props.tex || '';
 
   try {
-    const finalOptions = {
-      throwOnError: false,
-      displayMode: displayMode.value,
-      output: "html", // 修复 `output` 属性类型不兼容问题
-      strict: (errorCode: string) => (errorCode === 'unicodeTextInMathMode' ? 'ignore' : 'warn'),
-      ...options.value,
-    };
-
-    const renderedHtml = katex.renderToString(currentTex, finalOptions);
-    RENDER_CACHE.set(cacheKey, renderedHtml);
-    return renderedHtml;
-
-  } catch (e: unknown) { // 修复 `any` 类型问题
-    const error = e as Error; // 类型断言为 `Error`
-    console.error('KaTeX rendering error:', error);
-    const errorHtml = `<span class="katex-error" title="${error.message}">渲染出错: ${currentTex}</span>`;
-    RENDER_CACHE.set(cacheKey, errorHtml);
-    return errorHtml;
+    return katex.renderToString(content, {
+      throwOnError: false, // 遇到错误不抛出异常，而是渲染错误提示
+      displayMode: props.displayMode,
+      strict: false, // 忽略一些非严格语法的警告
+      trust: true,   // 允许特定的命令（如 \url）
+      ...props.options
+    });
+  } catch (error) {
+    console.error('KaTeX Render Error:', error);
+    // 发生灾难性错误时的降级处理
+    return `<span style="color:red; font-family:monospace;">${content}</span>`;
   }
 });
 </script>
 
 <style scoped>
-.katex-display-mode {
-  display: block;
-  width: 100%;
-  text-align: center;
-  padding: 1em 0;
-  overflow-x: auto;
+/* 样式隔离，防止影响外部 */
+.katex-wrapper {
+  user-select: text;
 }
 
+.katex-display-block {
+  display: block;
+  margin: 1em 0;
+  text-align: center;
+  overflow-x: auto;
+  overflow-y: hidden;
+}
+
+/* 错误信息的默认样式 */
 :deep(.katex-error) {
-  color: #cc0000;
-  font-family: monospace;
-  border: 1px dashed #cc0000;
-  padding: 4px 6px;
+  color: #cf222e;
+  background-color: #ffebe9;
+  padding: 2px 5px;
   border-radius: 4px;
-  background-color: #fcebeb;
-  cursor: help;
+  font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
 }
 </style>
