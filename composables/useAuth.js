@@ -33,14 +33,13 @@ const _loadUserFromStorage = () => {
         if (storedUser) {
             try {
                 const parsedUser = JSON.parse(storedUser);
-                // 仅加载，不改变 authStatusResolved，也不完全信任此数据为“已登录”
-                // 真实的登录状态由 fetchCurrentUser 确认
                 if (parsedUser && parsedUser.id) {
                     user.value = parsedUser;
                 } else {
                     localStorage.removeItem('user');
                 }
             } catch (e) {
+                console.error('Failed to parse user from localStorage', e);
                 localStorage.removeItem('user');
             }
         }
@@ -83,6 +82,7 @@ export function useAuth() {
     };
 
     const login = async (loginIdentifier, passwordVal) => {
+        // TODO: Implement password encryption before sending to the server in a production environment.
         isLoadingAuth.value = true;
         authStatusResolved.value = false; // 开始登录时，可以认为状态暂时未解析完成
         let apiError = null;
@@ -117,6 +117,7 @@ export function useAuth() {
         isLoadingAuth.value = true;
         const wasLoggedIn = isLoggedIn.value; // 记录登出前的状态
         _clearUserSession();
+        authStatusResolved.value = false;
 
         try {
             await axios.post('/api/auth/logout');
@@ -124,11 +125,11 @@ export function useAuth() {
             console.error("[useAuth] Logout API call failed:", error?.message);
         } finally {
             isLoadingAuth.value = false;
-            authStatusResolved.value = true; // 登出后，认证状态已确定
-            if (redirectToLogin && wasLoggedIn) { // 仅当之前确实是登录状态时才强制跳转
+            authStatusResolved.value = true;
+            if (redirectToLogin && wasLoggedIn) {
                 try {
                     await router.push('/login');
-                } catch (routerError) {
+                } catch (routerError) { // eslint-disable-line no-unused-vars
                     if (typeof window !== 'undefined') window.location.pathname = '/login';
                 }
             }

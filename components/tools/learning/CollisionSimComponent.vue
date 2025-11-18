@@ -9,7 +9,7 @@
         <h4><span class="icon">⚙️</span> 全局与图表设置</h4>
         <div class="form-item">
           <label for="restitution">恢复系数 (
-            <KatexRenderer tex="e" :displayMode="false"/>
+            <KatexRenderer tex="e" :display-mode="false"/>
             ): {{ restitutionCoefficient.toFixed(2) }}</label>
           <input
               id="restitution" v-model.number="restitutionCoefficient" class="slider" max="1" min="0" step="0.05"
@@ -21,15 +21,15 @@
           <select id="friction-type" v-model="frictionType" class="control-select">
             <option value="none">光滑 (无摩擦/阻力)</option>
             <option value="constant">恒定摩擦力 (
-              <KatexRenderer tex="f = K" :displayMode="false"/>
+              <KatexRenderer tex="f = K" :display-mode="false"/>
               )
             </option>
             <option value="linear">线性阻力 (
-              <KatexRenderer tex="f = -kv" :displayMode="false"/>
+              <KatexRenderer tex="f = -kv" :display-mode="false"/>
               )
             </option>
             <option value="quadratic">二次阻力 (
-              <KatexRenderer tex="f = -kv^2" :displayMode="false"/>
+              <KatexRenderer tex="f = -kv^2" :display-mode="false"/>
               )
             </option>
           </select>
@@ -39,7 +39,8 @@
             <label for="friction-k">
               {{ frictionType === 'constant' ? '摩擦力大小 K (N):' : '阻力系数 k:' }}
             </label>
-            <input id="friction-k" v-model.number="frictionConstantK" min="0" step="0.01" type="number"
+            <input
+id="friction-k" v-model.number="frictionConstantK" min="0" step="0.01" type="number"
                    class="control-input-number">
           </div>
         </transition>
@@ -54,37 +55,44 @@
       <div class="control-section">
         <h4><span class="icon">➕</span> 小球管理 (最多 {{ maxBalls }} 个)</h4>
         <transition name="fade-fast" mode="out-in">
-          <div v-if="balls.length < maxBalls" class="add-ball-form" key="add-ball">
+          <div v-if="balls.length < maxBalls" key="add-ball" class="add-ball-form">
             <h5>添加新小球 ({{ balls.length > 0 ? `下一个是: 球${balls.length + 1}` : '球1' }})</h5>
             <div class="form-grid-ball">
-              <div class="form-item"><label>质量(kg):</label><input v-model.number="newBall.mass" min="0.1" step="0.1"
+              <div class="form-item"><label>质量(kg):</label><input
+v-model.number="newBall.mass" min="0.1" step="0.1"
                                                                     type="number" class="control-input-number"></div>
-              <div class="form-item"><label>半径(px):</label><input v-model.number="newBall.radius" min="5" step="1"
+              <div class="form-item"><label>半径(px):</label><input
+v-model.number="newBall.radius" min="5" step="1"
                                                                     type="number" class="control-input-number"></div>
-              <div class="form-item"><label>初始位置X(px):</label><input v-model.number="newBall.x" step="1"
+              <div class="form-item"><label>初始位置X(px):</label><input
+v-model.number="newBall.x" step="1"
                                                                          type="number" class="control-input-number">
               </div>
-              <div class="form-item"><label>初始速度X(px/s):</label><input v-model.number="newBall.vx" step="1"
+              <div class="form-item"><label>初始速度X(px/s):</label><input
+v-model.number="newBall.vx" step="1"
                                                                            type="number" class="control-input-number">
               </div>
-              <div class="form-item"><label>颜色:</label><input v-model="newBall.color" class="control-color-input"
+              <div class="form-item"><label>颜色:</label><input
+v-model="newBall.color" class="control-color-input"
                                                                 type="color"></div>
             </div>
             <button class="button button-success add-ball-button" @click="addBall"><span class="button-icon">⊕</span>添加到模拟
             </button>
           </div>
-          <div v-else class="text-muted-container" key="max-balls"><p class="text-muted">已达到最大小球数量。</p></div>
+          <div v-else key="max-balls" class="text-muted-container"><p class="text-muted">已达到最大小球数量。</p></div>
         </transition>
         <div v-if="balls.length > 0" class="ball-list">
           <h5>当前小球 (勾选以在图表中显示数据):</h5>
           <div class="ball-selector-grid">
             <div v-for="ball_item in balls" :key="ball_item.id" class="ball-selector-item">
-              <input :id="'ball-chart-select-' + ball_item.id" v-model="selectedBallIdsForChart" :value="ball_item.id"
+              <input
+:id="'ball-chart-select-' + ball_item.id" v-model="selectedBallIdsForChart" :value="ball_item.id"
                      type="checkbox" class="custom-checkbox">
-              <label :for="'ball-chart-select-' + ball_item.id"
+              <label
+:for="'ball-chart-select-' + ball_item.id"
                      :style="{ color: selectedBallIdsForChart.includes(ball_item.id) ? ball_item.color : '#555', fontWeight: selectedBallIdsForChart.includes(ball_item.id) ? 'bold': 'normal' }">
                 {{ ball_item.name }} (
-                <KatexRenderer :tex="`m=${ball_item.mass}`" :displayMode="false"/>
+                <KatexRenderer :tex="`m=${ball_item.mass}`" :display-mode="false"/>
                 kg)
               </label>
               <button class="button-icon-only button-remove-small" title="移除此球" @click="removeBall(ball_item.id)">
@@ -131,10 +139,10 @@
       <div v-if="balls.length > 0" class="data-display card">
         <p><strong>模拟时间:</strong> {{ simulationTime.toFixed(2) }} s</p>
         <p><strong>总动量 X:</strong>
-          <KatexRenderer :tex="`${totalMomentumX.toFixed(2)} \\,\\text{kg} \\cdot \\text{px/s}`" :displayMode="false"/>
+          <KatexRenderer :tex="`${totalMomentumX.toFixed(2)} \\,\\text{kg} \\cdot \\text{px/s}`" :display-mode="false"/>
         </p>
         <p><strong>总动能:</strong>
-          <KatexRenderer :tex="`${totalKineticEnergy.toFixed(2)} \\,\\text{J}`" :displayMode="false"/>
+          <KatexRenderer :tex="`${totalKineticEnergy.toFixed(2)} \\,\\text{J}`" :display-mode="false"/>
         </p>
       </div>
     </transition>
@@ -143,27 +151,28 @@
       <h3><span class="icon">🔬</span>碰撞物理学原理与扩展</h3>
       <hr>
       <h4>1. 一维碰撞中的守恒定律与能量损失</h4>
-      <div v-html="renderHtmlWithInlineKatex(explanations.conservationAndLoss)"></div>
-      <KatexRenderer tex="m_1 u_1 + m_2 u_2 = m_1 v_1 + m_2 v_2" :displayMode="true"/>
-      <div v-html="renderHtmlWithInlineKatex(explanations.energyAndRestitution)"></div>
-      <KatexRenderer tex="e = \frac{v_2 - v_1}{u_1 - u_2}" :displayMode="true"/>
-      <div v-html="renderHtmlWithInlineKatex(explanations.kineticEnergyLoss)"></div>
-      <KatexRenderer tex="\Delta K = K_{\text{initial}} - K_{\text{final}} = \frac{1}{2} \mu (u_1 - u_2)^2 (1 - e^2)"
-                     :displayMode="true"/>
-      <div v-html="renderHtmlWithInlineKatex(explanations.restitutionContext)"></div>
+      <div v-html="renderHtmlWithInlineKatex(explanations.conservationAndLoss)"/>
+      <KatexRenderer tex="m_1 u_1 + m_2 u_2 = m_1 v_1 + m_2 v_2" :display-mode="true"/>
+      <div v-html="renderHtmlWithInlineKatex(explanations.energyAndRestitution)"/>
+      <KatexRenderer tex="e = \frac{v_2 - v_1}{u_1 - u_2}" :display-mode="true"/>
+      <div v-html="renderHtmlWithInlineKatex(explanations.kineticEnergyLoss)"/>
+      <KatexRenderer
+tex="\Delta K = K_{\text{initial}} - K_{\text{final}} = \frac{1}{2} \mu (u_1 - u_2)^2 (1 - e^2)"
+                     :display-mode="true"/>
+      <div v-html="renderHtmlWithInlineKatex(explanations.restitutionContext)"/>
       <hr>
       <h4>2. 外推到二维小球碰撞</h4>
-      <div v-html="renderHtmlWithInlineKatex(explanations.intro2D)"></div>
-      <KatexRenderer tex="m_1 \vec{u_1} + m_2 \vec{u_2} = m_1 \vec{v_1} + m_2 \vec{v_2}" :displayMode="true"/>
-      <div v-html="renderHtmlWithInlineKatex(explanations.energy2D)"></div>
+      <div v-html="renderHtmlWithInlineKatex(explanations.intro2D)"/>
+      <KatexRenderer tex="m_1 \vec{u_1} + m_2 \vec{u_2} = m_1 \vec{v_1} + m_2 \vec{v_2}" :display-mode="true"/>
+      <div v-html="renderHtmlWithInlineKatex(explanations.energy2D)"/>
       <KatexRenderer
           tex="\frac{1}{2}m_1 |\vec{u_1}|^2 + \frac{1}{2}m_2 |\vec{u_2}|^2 = \frac{1}{2}m_1 |\vec{v_1}|^2 + \frac{1}{2}m_2 |\vec{v_2}|^2"
-          :displayMode="true"/>
-      <div v-html="renderHtmlWithInlineKatex(explanations.collisionResponse2D)"></div>
+          :display-mode="true"/>
+      <div v-html="renderHtmlWithInlineKatex(explanations.collisionResponse2D)"/>
       <hr>
       <h4>3. 特殊例子的情况</h4>
-      <div v-html="renderHtmlWithInlineKatex(explanations.specialCasesIntro)"></div>
-      <div v-html="renderHtmlWithInlineKatex(explanations.nonSpherical)"></div>
+      <div v-html="renderHtmlWithInlineKatex(explanations.specialCasesIntro)"/>
+      <div v-html="renderHtmlWithInlineKatex(explanations.nonSpherical)"/>
       <hr>
     </div>
   </div>

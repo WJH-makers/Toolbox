@@ -2,7 +2,8 @@
   <div class="word-memorize-component-container">
     <div v-if="authCheckLoading" class="loading-message">检查用户状态...</div>
 
-    <div v-if="!authCheckLoading && selectedLoadMode === 'api' && !currentUserId"
+    <div
+v-if="!authCheckLoading && selectedLoadMode === 'api' && !currentUserId"
          class="auth-placeholder component-level-auth-error">
       <p class="error-message">此单词列表需要登录才能追踪进度。请先<a href="/login">登录</a>，或选择其他列表。</p>
     </div>
@@ -63,7 +64,8 @@
               <p class="answer-text">{{ displayAnswer }}</p>
               <p v-if="currentWord.example_en && currentMode === 'en-to-cn'" class="example-sentence">例句:
                 {{ currentWord.example_en }}</p>
-              <p v-if="currentWord.example_cn && currentMode === 'en-to-cn' && currentWord.example_en"
+              <p
+v-if="currentWord.example_cn && currentMode === 'en-to-cn' && currentWord.example_en"
                  class="example-sentence chinese-example">翻译: {{ currentWord.example_cn }}</p>
               <p v-if="currentWord.example_en && currentMode === 'cn-to-en'" class="example-sentence">原词:
                 {{ currentWord.english }}</p>

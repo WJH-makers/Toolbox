@@ -11,10 +11,10 @@
             :disabled="isLoadingSearch"
             placeholder="例如: 鸡肉, 鱼面..."
             type="text"
-        />
+        >
       </div>
       <button :disabled="isLoadingSearch || !searchQuery.trim()" class="button-primary" type="submit">
-        <span v-if="isLoadingSearch && currentPage === 1 && !searchResults.length" class="button-spinner"></span>
+        <span v-if="isLoadingSearch && currentPage === 1 && !searchResults.length" class="button-spinner"/>
         {{ isLoadingSearch && currentPage === 1 && !searchResults.length ? '搜索中...' : '搜索' }}
       </button>
     </form>
@@ -30,13 +30,14 @@
 
     <div v-if="isLoadingSearch && searchResults.length === 0 && currentPage === 1" class="skeleton-results-grid">
       <div v-for="n in limitPerPage" :key="`sk-res-${n}`" class="skeleton-recipe-item">
-        <div class="skeleton-image"></div>
-        <div class="skeleton-text-title"></div>
-        <div class="skeleton-text-button"></div>
+        <div class="skeleton-image"/>
+        <div class="skeleton-text-title"/>
+        <div class="skeleton-text-button"/>
       </div>
     </div>
 
-    <div v-if="!isLoadingSearch && searchResults.length === 0 && lastSearchAttempted && !searchError"
+    <div
+v-if="!isLoadingSearch && searchResults.length === 0 && lastSearchAttempted && !searchError"
          class="empty-state">
       <span class="empty-state-icon">😕</span>
       <p>没有找到相关的食谱“{{ searchQuery }}”。</p>
@@ -60,7 +61,7 @@
               :src="mealSummary.imageUrl + '/preview'"
               class="summary-image"
               loading="lazy"
-          />
+          >
           <div v-else class="summary-image-placeholder">
             <span>{{ mealSummary.name ? mealSummary.name.substring(0, 1) : '?' }}</span>
           </div>
@@ -72,26 +73,29 @@
       </ul>
 
       <div v-if="totalPages > 1" class="pagination-controls">
-        <button :disabled="currentPage === 1 || isLoadingSearch"
+        <button
+:disabled="currentPage === 1 || isLoadingSearch"
                 class="page-button prev-button action-button"
                 @click="changePage(currentPage - 1)">
-          <span v-if="isLoadingSearch && changingPageTo === currentPage - 1" class="button-spinner"></span>
+          <span v-if="isLoadingSearch && changingPageTo === currentPage - 1" class="button-spinner"/>
           上一页
         </button>
         <template v-for="(page, index) in pageNumbersToDisplay" :key="`page-${page}-${index}`">
-          <button v-if="typeof page === 'number'"
+          <button
+v-if="typeof page === 'number'"
                   :class="['page-button', 'action-button', { 'active': page === currentPage }]"
                   :disabled="isLoadingSearch || page === currentPage"
                   @click="changePage(page)">
-            <span v-if="isLoadingSearch && changingPageTo === page" class="button-spinner"></span>
+            <span v-if="isLoadingSearch && changingPageTo === page" class="button-spinner"/>
             {{ page }}
           </button>
           <span v-else class="page-ellipsis">{{ page }}</span>
         </template>
-        <button :disabled="currentPage === totalPages || isLoadingSearch"
+        <button
+:disabled="currentPage === totalPages || isLoadingSearch"
                 class="page-button next-button action-button"
                 @click="changePage(currentPage + 1)">
-          <span v-if="isLoadingSearch && changingPageTo === currentPage + 1" class="button-spinner"></span>
+          <span v-if="isLoadingSearch && changingPageTo === currentPage + 1" class="button-spinner"/>
           下一页
         </button>
       </div>
@@ -111,23 +115,23 @@
     </div>
 
     <div v-if="isLoadingDetails" class="skeleton-detail-view">
-      <div class="skeleton-detail-translate-button"></div>
-      <div class="skeleton-detail-title"></div>
-      <div class="skeleton-detail-image"></div>
+      <div class="skeleton-detail-translate-button"/>
+      <div class="skeleton-detail-title"/>
+      <div class="skeleton-detail-image"/>
       <div class="skeleton-detail-tags">
-        <div class="skeleton-tag"></div>
-        <div class="skeleton-tag"></div>
-        <div class="skeleton-tag"></div>
+        <div class="skeleton-tag"/>
+        <div class="skeleton-tag"/>
+        <div class="skeleton-tag"/>
       </div>
-      <div class="skeleton-section-title"></div>
-      <div class="skeleton-line"></div>
-      <div class="skeleton-line short"></div>
-      <div class="skeleton-line"></div>
-      <div class="skeleton-section-title"></div>
-      <div class="skeleton-line"></div>
-      <div class="skeleton-line"></div>
-      <div class="skeleton-line short"></div>
-      <div class="skeleton-line"></div>
+      <div class="skeleton-section-title"/>
+      <div class="skeleton-line"/>
+      <div class="skeleton-line short"/>
+      <div class="skeleton-line"/>
+      <div class="skeleton-section-title"/>
+      <div class="skeleton-line"/>
+      <div class="skeleton-line"/>
+      <div class="skeleton-line short"/>
+      <div class="skeleton-line"/>
     </div>
 
     <div v-if="selectedMealDetails && !isLoadingDetails" class="recipe-detail-view">
@@ -136,7 +140,7 @@
             :disabled="isTranslatingDetails || selectedMealDetails._isTranslated"
             class="action-button button-translate"
             @click="translateCurrentRecipeDetails">
-          <span v-if="isTranslatingDetails" class="button-spinner"></span>
+          <span v-if="isTranslatingDetails" class="button-spinner"/>
           {{
             isTranslatingDetails ? '翻译中...' : (selectedMealDetails._isTranslated ? '已翻译 (中文)' : '将详情翻译成中文')
           }}
@@ -155,7 +159,7 @@
               :src="selectedMealDetails.imageUrl"
               class="detail-image"
               loading="lazy"
-          />
+          >
           <div v-else class="detail-image-placeholder">
             <span>{{ selectedMealDetails.name || "食谱图片" }}</span>
           </div>

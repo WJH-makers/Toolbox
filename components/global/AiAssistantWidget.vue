@@ -4,7 +4,8 @@
 
     <button class="widget-toggle-button" title="AI万能助手" @click="toggleWidget">
       <svg class="icon-new-chat" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="28" height="28">
-        <path fill="black"
+        <path
+fill="black"
               d="M21 6h-2v9H6v2c0 .55.45 1 1 1h11l4 4V7c0-.55-.45-1-1-1zm-4 6V3c0-.55-.45-1-1-1H3c-.55 0-1 .45-1 1v14l4-4h10c.55 0 1-.45 1-1z"/>
       </svg>
     </button>
@@ -66,9 +67,11 @@
                 <span>正在加载消息...</span>
               </div>
               <template v-else>
-                <div v-for="(msg, index) in messages" :key="msg.id" :class="[`message-role-${msg.role}`]"
+                <div
+v-for="(msg, index) in messages" :key="msg.id" :class="[`message-role-${msg.role}`]"
                      class="message">
-                  <div class="message-bubble"
+                  <div
+class="message-bubble"
                        :class="{'first-in-group': index === 0 || messages[index - 1].role !== msg.role}">
                     <MessageRenderer :content="msg.content"/>
                   </div>

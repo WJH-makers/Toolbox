@@ -10,7 +10,7 @@ class MathJaxBootstrap {
      */
     get config() {
         return {
-            loader: { load: ['[tex]/ams'] },
+            loader: { load: ['[tex]/ams', '[tex]/bm'] },
             tex: {
                 inlineMath: [['$', '$'], ['\\(', '\\)']],
                 displayMath: [['$$', '$$'], ['\\[', '\\]']],
@@ -84,6 +84,17 @@ class MathJaxBootstrap {
         if (mj && mj.typesetPromise) {
             mj.typesetClear([el]);
             await mj.typesetPromise([el]);
+        }
+    }
+
+    /**
+     * 清理渲染
+     */
+    async clear(el) {
+        if (!el) return;
+        const mj = await this.load();
+        if (mj && mj.typesetClear) {
+            mj.typesetClear([el]);
         }
     }
 }

@@ -22,7 +22,7 @@ export default defineEventHandler(async (event) => {
             },
         });
         return {success: true, data: healthMetrics};
-    } catch (error) {
+    } catch (error) { // eslint-disable-line no-unused-vars
         throw createError({
             statusCode: 500,
             statusMessage: 'Internal Server Error',

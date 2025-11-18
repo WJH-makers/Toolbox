@@ -4,7 +4,7 @@
       class="katex-wrapper"
       :class="{ 'katex-display-block': displayMode }"
       v-html="renderedHtml"
-  ></component>
+  />
 </template>
 
 <script setup>

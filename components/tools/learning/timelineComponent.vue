@@ -34,7 +34,7 @@
     </div>
 
     <div v-if="!isLoading && !error && filteredEvents.length > 0" class="timeline-wrapper">
-      <div class="timeline-axis"></div>
+      <div class="timeline-axis"/>
       <div
           v-for="(event, index) in filteredEvents"
           :key="event.id"
@@ -53,7 +53,7 @@
             <strong>更多信息:</strong> {{ event.details }}
           </div>
         </div>
-        <div class="timeline-event-dot"></div>
+        <div class="timeline-event-dot"/>
       </div>
     </div>
   </div>
@@ -81,7 +81,7 @@ onMounted(() => {
 
 const filteredEvents = computed(() => {
   const view = currentView.value;
-  let unsortedEventsMap = new Map<string, TimelineEvent>();
+  const unsortedEventsMap = new Map<string, TimelineEvent>();
 
   if (view === 'tech') {
     techTimelineProvider.forEach(event => unsortedEventsMap.set(event.id, event));

@@ -4,7 +4,7 @@ import {translateText} from '~/server/utils/translate.js'; // 导入翻译辅助
 export default defineEventHandler(async (event) => {
     const queryParams = getQuery(event);
     const originalIngredientName = queryParams.ingredient || queryParams.i;
-    const page = parseInt(queryParams.page) || 1; // 获取页码，默认为1
+    const page = Number(queryParams.page) || 1; // 获取页码，默认为1
     const limit = 5; // 每页固定显示5个菜品
 
     if (!originalIngredientName) {
@@ -24,7 +24,11 @@ export default defineEventHandler(async (event) => {
             ingredientNameToQueryApi = await translateText(originalIngredientName, 'auto', targetApiLang);
         } catch (e) {
             console.error("食材名称翻译失败:", e);
-            // 翻译失败，可以选择继续使用原始词（可能无结果），或返回错误
+            throw createError({
+                statusCode: 500,
+                statusMessage: 'Translation Error',
+                message: '翻译食材名称时发生错误。',
+            });
         }
     }
 
