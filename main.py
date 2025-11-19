@@ -42,6 +42,16 @@ sio = socketio.AsyncServer(
 socket_app = socketio.ASGIApp(sio)
 app.mount("/", socket_app)
 
+# 为所有训练线程准备一个全局事件循环，确保其生命周期不依赖单次请求的事件循环
+GLOBAL_TRAIN_LOOP = asyncio.new_event_loop()
+# 在单独线程里运行该事件循环
+def _run_global_loop(loop: asyncio.AbstractEventLoop):
+    asyncio.set_event_loop(loop)
+    loop.run_forever()
+
+_thread = threading.Thread(target=_run_global_loop, args=(GLOBAL_TRAIN_LOOP,), daemon=True)
+_thread.start()
+
 # --- 3. PyTorch 模型构建器和自定义模块 ---
 
 # 激活函数映射
@@ -612,6 +622,7 @@ class CNNTrainer:
             self.is_training_active = False
 
     def start_training_in_thread(self, config: Dict[str, Any]):
+        # 使用共用的全局事件循环，而不是依赖当前请求的 loop
         asyncio.run_coroutine_threadsafe(self._run_training_async(config), self.loop)
 
 
@@ -629,9 +640,9 @@ async def disconnect(sid):
 @sio.event
 async def start_training(sid, config):
     logging.info(f"[{sid}] 收到训练请求")
-    current_loop = asyncio.get_running_loop()
-    trainer = CNNTrainer(sio, sid, current_loop)
-    threading.Thread(target=trainer.start_training_in_thread, args=(config,)).start()
+    # 使用全局事件循环，避免因当前请求上下文结束导致训练中断
+    trainer = CNNTrainer(sio, sid, GLOBAL_TRAIN_LOOP)
+    threading.Thread(target=trainer.start_training_in_thread, args=(config,), daemon=True).start()
 
 
 # --- 6. 启动服务器 ---
@@ -644,4 +655,5 @@ if __name__ == '__main__':
         logging.error(
             "torchinfo 库未安装！为了获得详细的模型文本摘要，请运行 'pip install torchinfo'。否则将只显示简化模型结构。")
 
-    uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)
+    # 保持 reload=False，防止自动重启 uvicorn 进程导致训练线程被杀掉
+    uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=False)

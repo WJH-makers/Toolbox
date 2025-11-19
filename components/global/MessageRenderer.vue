@@ -1,117 +1,88 @@
 <template>
   <div class="doc-viewer relative w-full">
-    <transition name="fade">
-      <div
-v-if="isProcessing"
-           class="absolute top-0 right-0 bg-white/90 px-2 py-1 rounded text-xs text-blue-500 z-10 border border-blue-100">
-        渲染中...
-      </div>
-    </transition>
-
     <div
-        ref="containerRef"
-        class="markdown-body prose prose-slate max-w-none break-words mjx-container"
-        v-html="renderedHtml"
+        class="markdown-body prose prose-slate max-w-none dark:prose-invert"
+        v-html="renderedContent"
     />
   </div>
 </template>
 
 <script setup>
-import { ref, watch, onMounted, nextTick } from 'vue';
-// 请确保路径与您的目录结构一致
-import { mathJaxService } from '~/utils/MathJaxBootstrap.js';
-import { LatexTransformer } from '~/utils/LatexTransformer.js';
+import {computed} from 'vue';
+// 关键修正：引入 markdown.js 中的渲染函数
+// 请确保这个路径是正确的，如果你的 markdown.js 在 utils 目录下，可能需要改为 '@/utils/markdown.js' 或 '../utils/markdown.js'
+import {renderMarkdown} from '../utils/markdown.js';
 
 const props = defineProps({
-  content: { type: String, default: '' }
+  content: {type: String, default: ''}
 });
 
-const containerRef = ref(null);
-const renderedHtml = ref('');
-const isProcessing = ref(false);
-let debounceTimer = null;
-
-// === 渲染管道 ===
-const executeRender = async () => {
-  if (!props.content) {
-    renderedHtml.value = '';
-    return;
-  }
-
-  isProcessing.value = true;
-
-  try {
-    // 1. 转换: LaTeX/Markdown -> HTML
-    // 这是一个同步操作 (CPU 密集)
-    const transformer = new LatexTransformer(props.content);
-    const html = transformer.process();
-
-    renderedHtml.value = html;
-
-    // 2. 等待 Vue 更新 DOM
-    await nextTick();
-
-    // 3. MathJax 排版
-    // 这是一个异步操作，会寻找 .mjx-process 类的元素进行渲染
-    if (containerRef.value) {
-      mathJaxService.clear(containerRef.value);
-      await mathJaxService.typeset(containerRef.value);
-    }
-  } catch (error) {
-    console.error('Render Pipeline Failed:', error);
-    renderedHtml.value += `<div class="text-red-500 text-sm mt-2">渲染错误: ${error.message}</div>`;
-  } finally {
-    isProcessing.value = false;
-  }
-};
-
-// === 防抖监听 ===
-// 避免在流式输出时过于频繁地触发重排版
-watch(() => props.content, () => {
-  clearTimeout(debounceTimer);
-  isProcessing.value = true;
-  debounceTimer = setTimeout(executeRender, 150); // 150ms 防抖
-}, { immediate: true });
-
-onMounted(() => {
-  // 预加载 MathJax 脚本
-  mathJaxService.load();
+// 直接调用 markdown.js 的强大渲染能力（包含 KaTeX 和 智能清洗）
+const renderedContent = computed(() => {
+  if (!props.content) return '';
+  return renderMarkdown(props.content);
 });
 </script>
 
-<style scoped>
-/* DeepSeek 默认输出 Markdown，推荐引入 github-markdown-css 或 Tailwind Typography
-  以下是针对 MathJax 的必要微调
-*/
-
-.doc-viewer :deep(.mjx-process) {
-  display: inline-block;
-  overflow-x: auto;
-  max-width: 100%;
-  vertical-align: middle;
+<style>
+/* --- 1. Markdown 基础排版 --- */
+.markdown-body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+  font-size: 15px;
+  line-height: 1.7;
+  color: #334155;
+  word-wrap: break-word;
 }
 
-/* 块级公式样式修正 */
-.doc-viewer :deep(div.mjx-process) {
-  display: block;
+/* --- 2. 代码块样式 (用于显示真正的代码，如 \documentclass) --- */
+.markdown-body pre {
+  background-color: #282c34 !important;
+  border-radius: 8px;
+  padding: 1rem;
   margin: 1rem 0;
+  overflow-x: auto;
+  border: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+.markdown-body pre code {
+  font-family: "Fira Code", "Consolas", monospace;
+  background-color: transparent;
+  color: #abb2bf;
+  white-space: pre;
+  font-size: 0.9em;
+}
+
+/* --- 3. KaTeX 公式样式 --- */
+/* 隐藏 MathML 防止重影，只显示 HTML/SVG */
+.katex-mathml {
+  display: none;
+}
+
+/* 块级公式容器 */
+.katex-display {
+  overflow-x: auto;
+  overflow-y: hidden;
+  margin: 1em 0;
+  padding: 0.5em 0;
   text-align: center;
 }
 
-/* 修复表格在某些 CSS reset 下的显示问题 */
-.doc-viewer :deep(table) {
-  display: block;
-  width: max-content;
-  max-width: 100%;
-  overflow: auto;
+/* 行内公式 */
+.katex {
+  font-size: 1.1em;
 }
 
-.fade-enter-active,
-.fade-leave-active {
-  transition: opacity 0.3s;
+/* --- 其他元素 --- */
+.markdown-body ul, .markdown-body ol {
+  padding-left: 1.5em;
+  margin-bottom: 1em;
 }
-.fade-enter-from,
-.fade-leave-to {
-  opacity: 0;
+
+.markdown-body blockquote {
+  border-left: 4px solid #2563EB;
+  background: #F8FAFC;
+  padding: 0.5em 1em;
+  color: #64748B;
+  margin: 1em 0;
 }
 </style>

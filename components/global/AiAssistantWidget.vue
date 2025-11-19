@@ -1,101 +1,149 @@
 <template>
   <div :class="{ 'is-open': isOpen }" class="ai-assistant-widget">
-    <div v-if="isOpen" class="widget-overlay" @click="closeWidget"/>
+    <transition name="fade">
+      <div v-if="isOpen" class="widget-overlay" @click="closeWidget"/>
+    </transition>
 
-    <button class="widget-toggle-button" title="AI万能助手" @click="toggleWidget">
-      <svg class="icon-new-chat" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="28" height="28">
-        <path
-fill="black"
-              d="M21 6h-2v9H6v2c0 .55.45 1 1 1h11l4 4V7c0-.55-.45-1-1-1zm-4 6V3c0-.55-.45-1-1-1H3c-.55 0-1 .45-1 1v14l4-4h10c.55 0 1-.45 1-1z"/>
-      </svg>
+    <button class="widget-toggle-button" title="AI 助手" @click="toggleWidget">
+      <transition name="scale" mode="out-in">
+        <svg v-if="!isOpen" class="icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="28" height="28">
+          <path fill="white" d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z"/>
+        </svg>
+        <svg v-else class="icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="28" height="28">
+          <path fill="white"
+                d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
+        </svg>
+      </transition>
     </button>
 
-    <transition name="widget-fade">
-      <div v-if="isOpen" class="widget-chat-window">
-        <aside class="chat-sidebar">
+    <transition name="widget-zoom">
+      <div v-if="isOpen" class="widget-window">
+
+        <aside class="sidebar">
           <div class="sidebar-header">
-            <button
-                :disabled="isCreatingSession" class="new-session-button"
-                @click="handleCreateNewSession">
-              <span>+ 新建对话</span>
+            <div class="brand">
+              <span class="brand-logo">✨</span>
+              <span class="brand-name">AI Assistant</span>
+            </div>
+            <button :disabled="isCreatingSession" class="btn-new-chat" @click="handleCreateNewSession">
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
+                   stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <line x1="12" y1="5" x2="12" y2="19"></line>
+                <line x1="5" y1="12" x2="19" y2="12"></line>
+              </svg>
+              <span>新对话</span>
             </button>
-            <div class="model-selector-container">
-              <select id="model-select" v-model="selectedModel">
-                <option value="deepseek-chat">DeepSeek V3 (通用对话)</option>
-                <option value="deepseek-reasoner">DeepSeek R1 (推理模型)</option>
-              </select>
+          </div>
+
+          <div class="sidebar-list custom-scroll">
+            <div class="list-label">历史记录</div>
+
+            <div v-if="isLoadingSessions" class="loading-state">
+              <div class="spinner-mini"></div>
+            </div>
+
+            <ul v-else-if="historySessions.length > 0" class="session-ul">
+              <li v-for="session in historySessions"
+                  :key="session.id"
+                  :class="{ active: currentSessionId === session.id }"
+                  class="session-li"
+                  @click="handleSelectSession(session.id)">
+                <div class="session-content">
+                  <div class="session-title">{{ session.title || '未命名对话' }}</div>
+                  <div class="session-date">{{ formatRelativeTime(session.updatedAt) }}</div>
+                </div>
+                <button class="btn-delete" @click.stop="handleDeleteSession(session.id)">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none"
+                       stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <polyline points="3 6 5 6 21 6"></polyline>
+                    <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                  </svg>
+                </button>
+              </li>
+            </ul>
+
+            <div v-else class="empty-state-sidebar">
+              暂无历史
             </div>
           </div>
-          <div class="sidebar-content">
-            <div class="history-section">
-              <h3 class="category-title">历史会话</h3>
-              <div v-if="isLoadingSessions" class="sidebar-loading"><span>加载中...</span></div>
-              <ul v-if="historySessions.length > 0" class="sessions-list">
-                <li
-                    v-for="session in historySessions"
-                    :key="session.id"
-                    :class="{ active: currentSessionId === session.id }"
-                    class="session-item"
-                    @click="handleSelectSession(session.id)">
-                  <span class="session-title">{{ session.title || `对话 ${session.id.substring(0, 6)}` }}</span>
-                  <button
-                      :disabled="isDeletingSession === session.id"
-                      class="delete-session-button"
-                      title="删除此对话"
-                      @click.stop="handleDeleteSession(session.id)">
-                    <svg class="delete-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
-                      <path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/>
-                    </svg>
-                  </button>
-                </li>
-              </ul>
-              <p v-if="!isLoadingSessions && historySessions.length === 0 && !sessionsError" class="no-sessions">
-                暂无历史</p>
+
+          <div class="sidebar-footer">
+            <div class="model-select-box">
+              <svg class="model-icon" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"
+                   fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M12 2a10 10 0 1 0 10 10H12V2z"></path>
+                <path d="M12 2a10 10 0 0 1 10 10"></path>
+                <path d="M12 22c5.523 0 10-4.477 10-10"></path>
+              </svg>
+              <select v-model="selectedModel">
+                <option value="deepseek-chat">DeepSeek V3</option>
+                <option value="deepseek-reasoner">DeepSeek R1</option>
+              </select>
+              <svg class="chevron" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24"
+                   fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="6 9 12 15 18 9"></polyline>
+              </svg>
             </div>
           </div>
         </aside>
-        <main class="chat-main-area">
+
+        <main class="chat-area">
           <header class="chat-header">
-            <span class="header-title">{{ currentSessionTitle }}</span>
-          </header>
-          <div class="chat-messages-wrapper">
-            <div v-if="!currentSessionId" class="empty-chat-area">
-              <p>点击“新建对话”或选择历史会话开始</p>
+            <div class="header-info">
+              <span class="current-title">{{ currentSessionTitle }}</span>
+              <span v-if="selectedModel" class="model-tag">{{ selectedModel === 'deepseek-chat' ? 'V3' : 'R1' }}</span>
             </div>
-            <div v-else ref="chatMessagesContainer" class="chat-messages" @scroll="handleScroll">
-              <div v-if="isLoadingMessages" class="chat-loading">
-                <span>正在加载消息...</span>
-              </div>
-              <template v-else>
-                <div
-v-for="(msg, index) in messages" :key="msg.id" :class="[`message-role-${msg.role}`]"
-                     class="message">
-                  <div
-class="message-bubble"
-                       :class="{'first-in-group': index === 0 || messages[index - 1].role !== msg.role}">
-                    <MessageRenderer :content="msg.content"/>
-                  </div>
+          </header>
+
+          <div class="messages-container custom-scroll" ref="chatMessagesContainer" @scroll="handleScroll">
+            <div v-if="!currentSessionId" class="welcome-screen">
+              <div class="welcome-icon">👋</div>
+              <h3>有什么可以帮你的吗？</h3>
+            </div>
+
+            <div v-else class="message-list">
+              <div v-for="(msg, index) in messages" :key="msg.id" :class="['message-row', `role-${msg.role}`]">
+                <div class="avatar">
+                  {{ msg.role === 'user' ? '我' : 'AI' }}
                 </div>
-              </template>
+                <div class="bubble">
+                  <MessageRenderer :content="msg.content"/>
+                </div>
+              </div>
+
+              <div v-if="isLoadingReply" class="message-row role-assistant">
+                <div class="avatar">AI</div>
+                <div class="bubble typing">
+                  <div class="dots">
+                    <span></span><span></span><span></span>
+                  </div>
+                  <span class="text">AI 正在思考...</span>
+                </div>
+              </div>
+
+              <div v-if="chatError" class="error-notice">
+                {{ chatError }}
+              </div>
             </div>
           </div>
-          <footer class="chat-input-area">
-            <form class="chat-input-form" @submit.prevent="sendMessage()">
+
+          <footer class="input-footer">
+            <form class="input-box" @submit.prevent="sendMessage()">
               <textarea
                   ref="messageInput"
                   v-model="newMessage"
                   :disabled="isLoadingReply || !currentSessionId"
-                  placeholder="问我任何事情... (Shift + Enter 换行)"
-                  rows="1"
+                  placeholder="输入消息... (Shift+Enter 换行)"
                   @input="autoResizeTextarea"
                   @keydown.enter.exact.prevent="sendMessage()"
-                  @keydown.enter.shift.exact.prevent="newMessage += '\n'"/>
-              <button
-                  :disabled="isLoadingReply || !currentSessionId || !newMessage.trim()"
-                  class="send-button"
-                  type="submit">
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="22" height="22">
-                  <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/>
+                  @keydown.enter.shift.exact.prevent="newMessage += '\n'"
+              ></textarea>
+              <button type="submit" :disabled="!newMessage.trim() || isLoadingReply || !currentSessionId"
+                      class="btn-send">
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none"
+                     stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <line x1="22" y1="2" x2="11" y2="13"></line>
+                  <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
                 </svg>
               </button>
             </form>
@@ -107,13 +155,13 @@ class="message-bubble"
 </template>
 
 <script setup>
-import {ref, onMounted, nextTick, watch, computed} from 'vue';
+import {ref, nextTick, watch, computed} from 'vue';
 import {debounce} from 'lodash-es';
 import {formatDistanceToNowStrict} from 'date-fns';
 import {zhCN} from 'date-fns/locale';
 import MessageRenderer from './MessageRenderer.vue';
 
-// --- State ---
+// --- 状态管理 ---
 const isOpen = ref(false);
 const messages = ref([]);
 const newMessage = ref('');
@@ -121,44 +169,44 @@ const isLoadingReply = ref(false);
 const currentSessionId = ref(null);
 const isCreatingSession = ref(false);
 const selectedModel = ref('deepseek-chat');
-
-const chatMessagesContainer = ref(null);
-const messageInput = ref(null);
-const userHasScrolledUp = ref(false);
-
 const historySessions = ref([]);
 const isLoadingSessions = ref(false);
-const isLoadingMessages = ref(false);
-const sessionsError = ref('');
-const isDeletingSession = ref(null);
 const chatError = ref('');
+const userHasScrolledUp = ref(false);
 
-// --- Computed ---
+// --- DOM Refs ---
+const chatMessagesContainer = ref(null);
+const messageInput = ref(null);
+
+// --- 计算属性 ---
 const currentSessionTitle = computed(() => {
-  if (!currentSessionId.value) return 'AI 万能助手';
-  const session = historySessions.value.find(s => s.id === currentSessionId.value);
-  return session?.title || '对话...';
+  if (!currentSessionId.value) return 'AI 助手';
+  const s = historySessions.value.find(x => x.id === currentSessionId.value);
+  return s?.title || '新对话';
 });
 
-// --- UI Helper Functions ---
+// --- 工具函数 ---
+const formatRelativeTime = (date) => {
+  try {
+    return formatDistanceToNowStrict(new Date(date), {addSuffix: true, locale: zhCN});
+  } catch {
+    return '';
+  }
+};
+
 const autoResizeTextarea = () => {
   nextTick(() => {
     if (!messageInput.value) return;
     messageInput.value.style.height = 'auto';
-    const scrollHeight = messageInput.value.scrollHeight;
-    const maxHeight = 120;
-    messageInput.value.style.height = `${Math.min(scrollHeight, maxHeight)}px`;
+    messageInput.value.style.height = Math.min(messageInput.value.scrollHeight, 120) + 'px';
   });
 };
 
-const scrollToBottom = (instant = false) => {
-  if (!userHasScrolledUp.value || instant) {
+const scrollToBottom = (force = false) => {
+  if (!userHasScrolledUp.value || force) {
     nextTick(() => {
       if (chatMessagesContainer.value) {
-        chatMessagesContainer.value.scrollTo({
-          top: chatMessagesContainer.value.scrollHeight,
-          behavior: instant ? 'auto' : 'smooth'
-        });
+        chatMessagesContainer.value.scrollTo({top: chatMessagesContainer.value.scrollHeight, behavior: 'smooth'});
       }
     });
   }
@@ -166,586 +214,609 @@ const scrollToBottom = (instant = false) => {
 
 const handleScroll = debounce(() => {
   if (!chatMessagesContainer.value) return;
-  const {scrollTop, scrollHeight, clientHeight} = chatMessagesContainer.value;
-  const nearBottom = scrollTop + clientHeight >= scrollHeight - 50;
-  userHasScrolledUp.value = !nearBottom;
+  const {scrollTop, clientHeight, scrollHeight} = chatMessagesContainer.value;
+  userHasScrolledUp.value = scrollTop + clientHeight < scrollHeight - 50;
 }, 100);
 
-function formatRelativeTime(dateString) {
-  if (!dateString) return '';
-  try {
-    return formatDistanceToNowStrict(new Date(dateString), {addSuffix: true, locale: zhCN});
-  } catch {
-    return '未知时间';
-  }
-}
-
-// --- Session Management ---
+// --- 业务逻辑 ---
 async function fetchSessions() {
   isLoadingSessions.value = true;
-  sessionsError.value = '';
   try {
-    const response = await fetch('/api/ai/sessions');
-    if (!response.ok) throw new Error('网络响应错误');
-    const responseData = await response.json();
-    historySessions.value = responseData.data.sort((a, b) => new Date(b.updatedAt) - new Date(a.updatedAt)) || [];
-  } catch (error) {
-    sessionsError.value = "无法加载历史会话。";
-    console.error(error);
+    const res = await fetch('/api/ai/sessions');
+    const data = await res.json();
+    historySessions.value = data.data?.sort((a, b) => new Date(b.updatedAt) - new Date(a.updatedAt)) || [];
+  } catch (e) {
+    console.error(e);
   } finally {
     isLoadingSessions.value = false;
   }
 }
 
-async function handleSelectSession(sessionId, focus = true) {
-  if (!sessionId || currentSessionId.value === sessionId) return;
-
-  currentSessionId.value = sessionId;
-  isLoadingMessages.value = true;
-  chatError.value = '';
+async function handleSelectSession(id) {
+  if (currentSessionId.value === id) return;
+  currentSessionId.value = id;
   messages.value = [];
+  chatError.value = '';
+
   try {
-    const response = await fetch(`/api/ai/sessions/${sessionId}`);
-    if (!response.ok) throw new Error('网络响应错误');
-    const responseData = await response.json();
-    messages.value = (responseData.data || []).map(msg => ({...msg, id: msg.id || Date.now()}));
-  } catch (error) {
-    chatError.value = `加载会话失败: ${error.message}`;
-    console.error(error);
-  } finally {
-    isLoadingMessages.value = false;
-    userHasScrolledUp.value = false;
-    scrollToBottom(true);
-    if (focus) nextTick(() => messageInput.value?.focus());
+    const res = await fetch(`/api/ai/sessions/${id}`);
+    const data = await res.json();
+    messages.value = (data.data || []).map(m => ({...m, id: m.id || Date.now()}));
+    nextTick(() => scrollToBottom(true));
+  } catch (e) {
+    chatError.value = '加载失败';
   }
 }
 
-async function createNewSessionInternal({title, initialMessage = null}) {
+async function handleCreateNewSession() {
   if (isCreatingSession.value) return;
   isCreatingSession.value = true;
-  chatError.value = '';
   try {
-    const response = await fetch('/api/ai/sessions', {
+    const res = await fetch('/api/ai/sessions', {
       method: 'POST',
       headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({title})
+      body: JSON.stringify({title: '新对话'})
     });
-    if (!response.ok) throw new Error('网络响应错误');
-    const responseData = await response.json();
-    const newSession = responseData.data;
-    if (!newSession) throw new Error("创建会话失败");
-
-    historySessions.value.unshift(newSession);
-    await handleSelectSession(newSession.id, false);
-
-    if (initialMessage) {
-      await sendMessage(initialMessage);
-    }
-  } catch (error) {
-    sessionsError.value = `创建失败: ${error.message}`;
-    console.error(error);
+    const data = await res.json();
+    historySessions.value.unshift(data.data);
+    await handleSelectSession(data.data.id);
+  } catch (e) {
+    console.error(e);
   } finally {
     isCreatingSession.value = false;
-    if (!initialMessage) nextTick(() => messageInput.value?.focus());
   }
 }
 
-function handleCreateNewSession() {
-  createNewSessionInternal({title: '新对话'});
-}
-
-async function handleDeleteSession(sessionId) {
-  if (!sessionId || isDeletingSession.value === sessionId) return;
-  const sessionToDelete = historySessions.value.find(s => s.id === sessionId);
-  const confirmed = window.confirm(`确定要删除对话 "${sessionToDelete?.title || '此对话'}" 吗？`);
-  if (!confirmed) return;
-
-  isDeletingSession.value = sessionId;
+async function handleDeleteSession(id) {
+  if (!confirm('确认删除？')) return;
   try {
-    await fetch(`/api/ai/sessions/${sessionId}`, {method: 'DELETE'});
-    const deletedIndex = historySessions.value.findIndex(s => s.id === sessionId);
-    if (deletedIndex > -1) historySessions.value.splice(deletedIndex, 1);
-    if (currentSessionId.value === sessionId) {
+    await fetch(`/api/ai/sessions/${id}`, {method: 'DELETE'});
+    historySessions.value = historySessions.value.filter(s => s.id !== id);
+    if (currentSessionId.value === id) {
       currentSessionId.value = null;
       messages.value = [];
     }
-  } catch (error) {
-    sessionsError.value = `删除会话失败: ${error.message}`;
-    console.error(error);
+  } catch (e) {
+    console.error(e);
+  }
+}
+
+async function sendMessage() {
+  const content = newMessage.value.trim();
+  if (!content || isLoadingReply.value || !currentSessionId.value) return;
+
+  newMessage.value = '';
+  autoResizeTextarea();
+
+  messages.value.push({id: Date.now(), role: 'user', content});
+  isLoadingReply.value = true;
+  chatError.value = '';
+  userHasScrolledUp.value = false;
+  scrollToBottom();
+
+  try {
+    const apiMsgs = messages.value.map(m => ({role: m.role, content: m.content}));
+    const res = await fetch('/api/ai/chat', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({messages: apiMsgs, sessionId: currentSessionId.value, model: selectedModel.value})
+    });
+
+    if (!res.ok) throw new Error('API Error');
+
+    const reader = res.body.getReader();
+    const decoder = new TextDecoder();
+    let fullText = '';
+
+    while (true) {
+      const {done, value} = await reader.read();
+      if (done) break;
+      fullText += decoder.decode(value, {stream: true});
+    }
+
+    messages.value.push({id: Date.now() + 1, role: 'assistant', content: fullText});
+
+  } catch (e) {
+    chatError.value = e.message || '请求出错';
   } finally {
-    isDeletingSession.value = null;
+    isLoadingReply.value = false;
+    nextTick(() => scrollToBottom(true));
   }
 }
 
 function toggleWidget() {
   isOpen.value = !isOpen.value;
-  if (isOpen.value && historySessions.value.length === 0) {
-    fetchSessions();
-  }
+  if (isOpen.value && historySessions.value.length === 0) fetchSessions();
 }
 
 function closeWidget() {
   isOpen.value = false;
 }
 
-async function sendMessage(presetMessage = null) {
-  const contentToSend = presetMessage || newMessage.value.trim();
-  if (!currentSessionId.value || isLoadingReply.value || !contentToSend) return;
-
-  if (!presetMessage) {
-    newMessage.value = '';
-    autoResizeTextarea();
-  }
-
-  messages.value.push({id: `user-${Date.now()}`, role: 'user', content: contentToSend});
-  isLoadingReply.value = true;
-  chatError.value = '';
-  userHasScrolledUp.value = false;
-  scrollToBottom();
-
-  const finalApiMessages = messages.value.slice(-10).map(m => ({role: m.role, content: m.content}));
-  const assistantMessageObject = {id: `asst-${Date.now()}`, role: 'assistant', content: ''};
-  messages.value.push(assistantMessageObject);
-
-  try {
-    const response = await fetch('/api/ai/chat', {
-      method: 'POST',
-      headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({messages: finalApiMessages, sessionId: currentSessionId.value, model: selectedModel.value})
-    });
-    if (!response.ok) throw new Error((await response.json()).message || 'API 请求失败');
-    if (!response.body) throw new Error('响应体为空');
-
-    const reader = response.body.getReader();
-    const decoder = new TextDecoder();
-
-    while (true) {
-      const {done, value} = await reader.read();
-      if (done) break;
-      const chunk = decoder.decode(value, {stream: true});
-      assistantMessageObject.content += chunk;
-      scrollToBottom();
-    }
-  } catch (error) {
-    assistantMessageObject.content = `⚠️ 抱歉，请求出错: ${error.message}`;
-  } finally {
-    isLoadingReply.value = false;
-    nextTick(() => messageInput.value?.focus());
-    const sessionIdx = historySessions.value.findIndex(s => s.id === currentSessionId.value);
-    if (sessionIdx > -1) {
-      const session = historySessions.value.splice(sessionIdx, 1)[0];
-      session.updatedAt = new Date().toISOString();
-      historySessions.value.unshift(session);
-    }
-  }
-}
-
-onMounted(() => {
-  // 移除了自动获取会话的逻辑，改为在打开时获取
+watch(isOpen, (v) => {
+  if (v) fetchSessions();
 });
-
-watch(isOpen, (newValue) => {
-  if (newValue && historySessions.value.length === 0 && !isLoadingSessions.value) {
-    fetchSessions();
-  }
-});
-
-watch(messages, () => {
-  if (!userHasScrolledUp.value) {
-    scrollToBottom();
-  }
-}, {deep: true});
 </script>
 
 <style scoped>
-/* Using the "Modern Gradient & Glassmorphism" theme */
+/* --- 变量定义 --- */
 :root {
-  --font-primary: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-  --bg-primary: rgba(255, 255, 255, 0.7);
-  --bg-secondary: rgba(245, 245, 247, 0.5);
-  --bg-tertiary-hover: rgba(0, 0, 0, 0.04);
-  --border-color: rgba(0, 0, 0, 0.08);
-  --text-primary: #1F2937;
-  --text-secondary: #000000;
-  --text-tertiary: #6B7280;
-  --accent-gradient: linear-gradient(135deg, #3B82F6, #8B5CF6);
-  --accent-gradient-hover: linear-gradient(135deg, #60A5FA, #A78BFA);
-  --accent-active-bg: rgba(59, 130, 246, 0.1);
-  --accent-active-border: #3B82F6;
-  --overlay-bg: rgba(17, 24, 39, 0.3);
-  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1);
-  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -4px rgba(0, 0, 0, 0.1);
+  --primary: #2563EB; /* 品牌蓝 */
+  --primary-dark: #1D4ED8;
+  --bg-window: #ffffff; /* 窗口背景 */
+  --bg-sidebar: #F8FAFC; /* 侧边栏背景 */
+  --border: #E2E8F0; /* 边框颜色 */
+  --text-main: #0F172A; /* 主文字 */
+  --text-sub: #64748B; /* 副文字 */
+  --shadow-lg: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.01);
+  --radius: 16px;
 }
 
+/* 基础容器 */
 .ai-assistant-widget {
   position: fixed;
   bottom: 30px;
   right: 30px;
-  z-index: 2000;
-  font-family: var(--font-primary);
-  color: var(--text-primary);
+  z-index: 9999;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  color: var(--text-main);
 }
 
+/* 遮罩 */
+.widget-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.2);
+  backdrop-filter: blur(2px);
+  z-index: 0;
+}
+
+/* 开关按钮 */
 .widget-toggle-button {
-  background: var(--accent-gradient);
-  color: white;
-  border: none;
-  border-radius: 50%;
+  position: relative;
+  z-index: 10001; /* 保证在最顶层 */
   width: 60px;
   height: 60px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--primary), #4F46E5);
+  border: none;
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.2s;
+}
+
+.widget-toggle-button:hover {
+  transform: scale(1.05);
+}
+
+/* 主窗口 - 修复核心：绝对居中定位 */
+.widget-window {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%); /* 核心：屏幕正中间 */
+  width: 900px;
+  height: 700px;
+  max-width: 90vw;
+  max-height: 80vh;
+  background: var(--bg-window);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-lg);
+  border: 1px solid rgba(0, 0, 0, 0.05);
+  display: flex;
+  overflow: hidden;
+  z-index: 10000; /* 位于遮罩之上 */
+}
+
+/* --- 侧边栏 --- */
+.sidebar {
+  width: 260px;
+  background: var(--bg-sidebar);
+  border-right: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+}
+
+.sidebar-header {
+  padding: 20px;
+  border-bottom: 1px solid var(--border);
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 16px;
+  font-weight: 700;
+  font-size: 16px;
+  color: var(--text-main);
+}
+
+.btn-new-chat {
+  width: 100%;
+  padding: 10px;
+  background: var(--primary);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-weight: 500;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-  box-shadow: var(--shadow-lg);
+  gap: 8px;
+  transition: background 0.2s;
 }
 
-.widget-toggle-button:hover {
-  transform: translateY(-4px) scale(1.05);
-  box-shadow: 0 15px 25px -5px rgba(59, 130, 246, 0.3);
+.btn-new-chat:hover {
+  background: var(--primary-dark);
 }
 
-.icon-close {
-  font-size: 24px;
-  font-weight: bold;
-}
-
-.widget-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100vw;
-  height: 100vh;
-  background-color: var(--overlay-bg);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  z-index: 2001;
-}
-
-.widget-chat-window {
-  position: fixed;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  width: 90vw;
-  max-width: 1024px;
-  height: 88vh;
-  max-height: 768px;
-  background-color: var(--bg-primary);
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  display: flex;
-  overflow: hidden;
-  z-index: 2002;
-  border-radius: 16px;
-  box-shadow: var(--shadow-lg);
-}
-
-.chat-sidebar {
-  width: 320px;
-  min-width: 300px;
-  background-color: var(--bg-secondary);
-  border-right: 1px solid var(--border-color);
-  display: flex;
-  flex-direction: column;
-}
-
-.sidebar-header {
-  padding: 1rem;
-  border-bottom: 1px solid var(--border-color);
-}
-
-.new-session-button {
-  width: 100%;
-  padding: 10px;
-  background: var(--accent-gradient);
-  color: #000000;
-  border: none;
-  border-radius: 8px;
-  font-size: 0.9rem;
-  font-weight: 500;
-  cursor: pointer;
-  margin-bottom: 1rem;
-  transition: all 0.2s ease;
-}
-
-.new-session-button:hover:not(:disabled) {
-  background: var(--accent-gradient-hover);
-  box-shadow: var(--shadow-md);
-}
-
-.new-session-button:disabled {
-  cursor: not-allowed;
-  opacity: 0.7;
-}
-
-.model-selector-container select {
-  width: 100%;
-  padding: 8px 12px;
-  background-color: rgba(255, 255, 255, 0.5);
-  border: 1px solid var(--border-color);
-  border-radius: 8px;
-  color: var(--text-secondary);
-}
-
-.sidebar-content {
-  flex-grow: 1;
+/* 列表 */
+.sidebar-list {
+  flex: 1;
   overflow-y: auto;
-  padding: 0.5rem 1rem;
+  padding: 16px;
 }
 
-.category-title {
-  font-size: 0.8rem;
+.list-label {
+  font-size: 12px;
+  color: var(--text-sub);
+  margin-bottom: 8px;
   font-weight: 600;
-  color: var(--text-tertiary);
-  margin: 1.5rem 0 0.75rem 0.25rem;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
 }
 
-.sessions-list {
+.session-ul {
   list-style: none;
   padding: 0;
   margin: 0;
 }
 
-.session-item {
+.session-li {
+  padding: 10px 12px;
+  margin-bottom: 4px;
+  border-radius: 8px;
+  cursor: pointer;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 0.75rem;
-  margin-bottom: 0.25rem;
-  border-radius: 8px;
-  cursor: pointer;
-  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-  position: relative;
+  transition: background 0.2s;
+  border: 1px solid transparent;
+}
+
+.session-li:hover {
+  background: rgba(0, 0, 0, 0.03);
+}
+
+.session-li.active {
+  background: white;
+  border-color: #BFDBFE;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+
+.session-li.active .session-title {
+  color: var(--primary);
+  font-weight: 500;
+}
+
+.session-content {
   overflow: hidden;
-}
-
-.session-item:hover {
-  background-color: var(--bg-tertiary-hover);
-}
-
-.session-item.active {
-  background-color: var(--accent-active-bg);
-  font-weight: 600;
-}
-
-.session-item.active::before {
-  content: '';
-  position: absolute;
-  left: 0;
-  top: 25%;
-  bottom: 25%;
-  width: 4px;
-  background-color: var(--accent-active-border);
-  border-radius: 0 4px 4px 0;
+  flex: 1;
 }
 
 .session-title {
+  font-size: 14px;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  margin-right: 8px;
+  color: var(--text-main);
 }
 
-.delete-session-button {
+.session-date {
+  font-size: 11px;
+  color: #94A3B8;
+  margin-top: 2px;
+}
+
+.btn-delete {
   background: none;
   border: none;
+  color: #94A3B8;
+  padding: 4px;
   cursor: pointer;
-  color: var(--text-tertiary);
   opacity: 0;
   transition: opacity 0.2s;
-  padding: 4px;
-  flex-shrink: 0;
 }
 
-.session-item:hover .delete-session-button {
+.btn-delete:hover {
+  color: #EF4444;
+}
+
+.session-li:hover .btn-delete {
   opacity: 1;
 }
 
-.delete-session-button:hover {
-  color: var(--text-primary);
+/* 底部模型选择 */
+.sidebar-footer {
+  padding: 16px;
+  border-top: 1px solid var(--border);
 }
 
-.delete-icon {
-  width: 16px;
-  height: 16px;
-  fill: currentColor;
+.model-select-box {
+  position: relative;
+  display: flex;
+  align-items: center;
+  background: white;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 0 10px;
+  height: 36px;
 }
 
-.sidebar-loading, .no-sessions {
-  padding: 1rem;
-  text-align: center;
-  color: var(--text-tertiary);
+.model-select-box select {
+  flex: 1;
+  border: none;
+  outline: none;
+  background: transparent;
+  font-size: 13px;
+  color: var(--text-main);
+  cursor: pointer;
+  appearance: none;
 }
 
-.chat-main-area {
-  flex-grow: 1;
+.model-icon, .chevron {
+  color: var(--text-sub);
+  pointer-events: none;
+}
+
+.model-icon {
+  margin-right: 8px;
+}
+
+/* --- 聊天区 --- */
+.chat-area {
+  flex: 1;
   display: flex;
   flex-direction: column;
-  background-color: transparent;
+  background: white;
+  min-width: 0;
 }
 
 .chat-header {
-  padding: 0 1.5rem;
-  height: 65px;
+  height: 60px;
+  border-bottom: 1px solid var(--border);
   display: flex;
-  justify-content: space-between;
   align-items: center;
-  border-bottom: 1px solid var(--border-color);
-  flex-shrink: 0;
+  padding: 0 24px;
 }
 
-.header-title {
-  font-size: 1.1rem;
+.current-title {
   font-weight: 600;
+  font-size: 15px;
+  margin-right: 8px;
 }
 
-.chat-messages-wrapper {
-  flex-grow: 1;
-  position: relative;
-  overflow: hidden;
+.model-tag {
+  font-size: 11px;
+  background: #F1F5F9;
+  color: var(--text-sub);
+  padding: 2px 6px;
+  border-radius: 4px;
 }
 
-.chat-messages {
-  height: 100%;
+.messages-container {
+  flex: 1;
   overflow-y: auto;
-  padding: 1.5rem;
+  padding: 24px;
+  background: #F9FAFB;
 }
 
-.chat-loading {
+/* 消息气泡 */
+.message-row {
   display: flex;
-  justify-content: center;
-  align-items: center;
-  height: 100%;
-  color: var(--text-tertiary);
-  font-size: 1rem;
+  gap: 12px;
+  margin-bottom: 24px;
 }
 
-.empty-chat-area {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  height: 100%;
-  color: var(--text-tertiary);
+.role-user {
+  flex-direction: row-reverse;
 }
 
-.message {
-  display: flex;
-  margin-bottom: 0.5rem;
-}
-
-.message-role-user {
-  justify-content: flex-end;
-}
-
-.message-role-assistant {
-  justify-content: flex-start;
-}
-
-.message-bubble {
-  max-width: 80%;
-  padding: 0.75rem 1.1rem;
-  border-radius: 20px;
-  line-height: 1.6;
-  word-wrap: break-word;
-  box-shadow: var(--shadow-md);
-}
-
-.message-bubble.first-in-group {
-  margin-top: 1rem;
-}
-
-.message-role-assistant .message-bubble {
-  background-color: #FFFFFF;
-  color: var(--text-primary);
-  border-bottom-left-radius: 5px;
-}
-
-.message-role-user .message-bubble {
-  background-color: var(--accent-active-bg);
-  color: var(--text-secondary);
-  border-bottom-right-radius: 5px;
-}
-
-.chat-input-area {
-  padding: 1rem 1.5rem;
-  border-top: 1px solid var(--border-color);
-  background-color: rgba(255, 255, 255, 0.5);
-  backdrop-filter: blur(10px);
-}
-
-.chat-input-form {
-  display: flex;
-  align-items: flex-end;
-  background-color: #FFFFFF;
-  border-radius: 12px;
-  border: 1px solid var(--border-color);
-  transition: all 0.2s ease;
-}
-
-.chat-input-form:focus-within {
-  border-color: var(--accent-active-border);
-  box-shadow: 0 0 0 3px var(--accent-active-bg);
-}
-
-.chat-input-form textarea {
-  width: 100%;
-  padding: 12px 16px;
-  background-color: transparent;
-  border: none;
-  resize: none;
-  font-size: 1rem;
-  line-height: 1.5;
-  color: var(--text-primary);
-  outline: none;
-  max-height: 120px;
-}
-
-.send-button {
-  background: var(--accent-gradient);
-  border: none;
-  border-radius: 8px;
+.avatar {
   width: 36px;
   height: 36px;
+  border-radius: 8px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: bold;
+}
+
+.role-user .avatar {
+  background: #CBD5E1;
+  color: white;
+}
+
+.role-assistant .avatar {
+  background: linear-gradient(135deg, var(--primary), #4F46E5);
+  color: white;
+}
+
+.bubble {
+  max-width: 80%;
+  padding: 12px 16px;
+  border-radius: 12px;
+  font-size: 15px;
+  line-height: 1.6;
+  word-wrap: break-word;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+
+.role-user .bubble {
+  background: var(--primary);
+  color: white;
+  border-top-right-radius: 2px;
+}
+
+.role-assistant .bubble {
+  background: white;
+  border: 1px solid var(--border);
+  color: var(--text-main);
+  border-top-left-radius: 2px;
+}
+
+/* 思考动画 */
+.bubble.typing {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--text-sub);
+  font-size: 13px;
+}
+
+.dots {
+  display: flex;
+  gap: 4px;
+}
+
+.dots span {
+  width: 4px;
+  height: 4px;
+  background: var(--text-sub);
+  border-radius: 50%;
+  animation: bounce 1.4s infinite ease-in-out;
+}
+
+.dots span:nth-child(1) {
+  animation-delay: -0.32s;
+}
+
+.dots span:nth-child(2) {
+  animation-delay: -0.16s;
+}
+
+@keyframes bounce {
+  0%, 80%, 100% {
+    transform: scale(0);
+  }
+  40% {
+    transform: scale(1);
+  }
+}
+
+/* 欢迎页 */
+.welcome-screen {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-sub);
+}
+
+.welcome-icon {
+  font-size: 48px;
+  margin-bottom: 16px;
+}
+
+/* 输入区 */
+.input-footer {
+  padding: 20px;
+  border-top: 1px solid var(--border);
+  background: white;
+}
+
+.input-box {
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+  background: var(--bg-sidebar);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 8px;
+  transition: all 0.2s;
+}
+
+.input-box:focus-within {
+  background: white;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+}
+
+textarea {
+  flex: 1;
+  background: transparent;
+  border: none;
+  outline: none;
+  font-size: 14px;
+  resize: none;
+  max-height: 120px;
+  padding: 8px;
+}
+
+.btn-send {
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  border: none;
+  background: var(--primary);
+  color: white;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  margin: 8px;
-  flex-shrink: 0;
-  transition: all 0.2s ease;
+  transition: opacity 0.2s;
 }
 
-.send-button svg {
-  fill: white;
-}
-
-.send-button:hover:not(:disabled) {
-  background: var(--accent-gradient-hover);
-  transform: scale(1.05);
-}
-
-.send-button:disabled {
+.btn-send:disabled {
   opacity: 0.5;
   cursor: not-allowed;
 }
 
-.widget-fade-enter-active, .widget-fade-leave-active {
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+/* 滚动条 */
+.custom-scroll::-webkit-scrollbar {
+  width: 6px;
 }
 
-.widget-fade-enter-from, .widget-fade-leave-to {
+.custom-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.custom-scroll::-webkit-scrollbar-thumb {
+  background: #CBD5E1;
+  border-radius: 3px;
+}
+
+/* 动画定义 - 适配居中缩放 */
+.fade-enter-active, .fade-leave-active {
+  transition: opacity 0.2s;
+}
+
+.fade-enter-from, .fade-leave-to {
   opacity: 0;
-  transform: translate(-50%, -49%) scale(0.97);
 }
 
-.icon-fade-enter-active, .icon-fade-leave-active {
-  transition: opacity 0.15s ease-in-out;
+.widget-zoom-enter-active, .widget-zoom-leave-active {
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-.icon-fade-enter-from, .icon-fade-leave-to {
+.widget-zoom-enter-from, .widget-zoom-leave-to {
   opacity: 0;
+  transform: translate(-50%, -45%) scale(0.95); /* 居中状态下的缩放起点 */
+}
+
+.scale-enter-active, .scale-leave-active {
+  transition: all 0.2s;
+}
+
+.scale-enter-from, .scale-leave-to {
+  opacity: 0;
+  transform: scale(0.5);
 }
 </style>

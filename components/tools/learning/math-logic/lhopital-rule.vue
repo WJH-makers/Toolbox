@@ -619,7 +619,7 @@ onMounted(() => {
 .solve-button {
   padding: 0.9rem 1rem;
   background-color: var(--primary-color);
-  color: white;
+  color: black;
   border: none;
   border-radius: 8px;
   font-size: 1.1em;
@@ -635,7 +635,7 @@ onMounted(() => {
 }
 
 .solve-button:disabled {
-  background-color: #94a3b8;
+  background-color: #222324;
   cursor: wait;
 }
 
