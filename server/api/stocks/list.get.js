@@ -3,7 +3,7 @@ import {defineEventHandler, createError} from 'h3';
 const licence = process.env.MAIRUI_API_LICENCE;
 const baseUrl = process.env.MAIRUI_BASE_URL;
 
-export default defineEventHandler(async (event) => { // eslint-disable-line no-unused-vars
+export default defineEventHandler(async (event) => {
     if (!licence || !baseUrl) {
         throw createError({
             statusCode: 500,
@@ -20,11 +20,15 @@ export default defineEventHandler(async (event) => { // eslint-disable-line no-u
         // 1. 先尝试以文本形式获取响应
         rawTextResponse = await $fetch(targetUrl, {
             method: 'GET',
-            transform: (response) => response,
+            responseType: 'text' // 获取原始文本，而不是尝试自动解析
         });
         // 2. 尝试手动解析JSON
         let parsedResponse;
         try {
+            // 如果响应可能包含BOM，可以先移除它
+            if (rawTextResponse.charCodeAt(0) === 0xFEFF) {
+                rawTextResponse = rawTextResponse.substring(1);
+            }
             parsedResponse = JSON.parse(rawTextResponse);
         } catch (parseError) {
             throw createError({
@@ -48,11 +52,23 @@ export default defineEventHandler(async (event) => { // eslint-disable-line no-u
         }
 
     } catch (error) {
-        console.error('[Stock List Proxy] Error fetching stock list:', error);
+        // 这个 catch 块现在主要捕获 $fetch 本身的错误 (如网络问题, HTTP 状态码错误)
+        // 或者上面手动抛出的 createError
+
+        if (error.statusCode && error.statusMessage) { // 如果是已通过 createError 包装的错误
+            throw error; // 直接重新抛出
+        }
+        if (error.response) { // $fetch 错误对象可能包含 response
+            console.error('[Stock List Proxy] External API status:', error.response.status);
+            console.error('[Stock List Proxy] External API response data (if any):', await error.response.text().catch(() => 'Could not read error response text'));
+        } else {
+            console.error('[Stock List Proxy] Raw text that might have caused fetch error (if available):', rawTextResponse.substring(0, 200));
+        }
+
         throw createError({
-            statusCode: 502,
-            statusMessage: 'Bad Gateway',
-            message: '从外部API获取股票列表时发生错误。',
+            statusCode: error.statusCode || 502,
+            statusMessage: error.statusMessage || 'Bad Gateway',
+            message: error.data?.message || error.data?.msg || error.message || '从外部API获取股票列表时发生错误。',
         });
     }
 });
